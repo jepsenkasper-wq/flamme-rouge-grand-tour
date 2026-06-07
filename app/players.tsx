@@ -8,6 +8,7 @@ const PLAYER_COLORS = ['Blue', 'White', 'Green', 'Red', 'Black', 'Pink'];
 
 export default function PlayersScreen() {
   const params = useLocalSearchParams();
+  
 
   const playerCount = Number(params.players ?? 4);
 
@@ -46,7 +47,17 @@ export default function PlayersScreen() {
 
      <Pressable
         style={styles.button}
-        onPress={() => router.push('/rest-days')}>
+        onPress={() =>
+  router.push({
+    pathname: '/rest-days',
+  params: {
+  gameName: params.gameName,
+  stages: params.stages,
+  restDays: params.restDays,
+  playerNames: JSON.stringify(playerNames),
+},
+  })
+}>
         <Text style={styles.buttonText}>Next</Text>
       </Pressable>
       
@@ -126,4 +137,5 @@ buttonText: {
   fontSize: 18,
   fontWeight: '900',
 },
+
 });
