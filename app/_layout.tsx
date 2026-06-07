@@ -13,6 +13,8 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="create-game" options={{ title: 'Create Game' }} />
+        <Stack.Screen name="players" options={{ title: 'Players' }} />
+        <Stack.Screen name="rest-days" options={{ title: 'Rest Days' }} />
         <Stack.Screen name="my-games" options={{ title: 'My Games' }} />
         <Stack.Screen name="follow-game" options={{ title: 'Follow Game' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
