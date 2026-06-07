@@ -20,14 +20,39 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="house.fill" color={color} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="explore"
+        name="standings"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Standings',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="list.bullet" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="stages"
+        options={{
+          title: 'Stages',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="flag.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="ellipsis.circle.fill" color={color} />
+          ),
         }}
       />
     </Tabs>

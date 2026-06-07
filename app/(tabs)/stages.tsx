@@ -1,14 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function HomeScreen() {
+export default function StagesScreen() {
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>FLAMME ROUGE</Text>
-      <Text style={styles.subtitle}>Grand Tour</Text>
+      <Text style={styles.title}>Stages</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Home</Text>
-        <Text style={styles.cardText}>This will become the race dashboard.</Text>
+        <Text style={styles.cardTitle}>Stage List</Text>
+        <Text style={styles.cardText}>
+          Completed and upcoming stages will appear here.
+        </Text>
       </View>
     </View>
   );
@@ -18,25 +19,16 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4e8c8',
-    alignItems: 'center',
-    justifyContent: 'center',
     padding: 24,
+    paddingTop: 72,
   },
   title: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: '900',
     color: '#3a261f',
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 24,
-    color: '#8b2f20',
-    marginTop: 8,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   card: {
-    width: '100%',
     backgroundColor: '#fff6dc',
     borderRadius: 18,
     padding: 24,
@@ -44,8 +36,8 @@ const styles = StyleSheet.create({
     borderColor: '#c8a96a',
   },
   cardTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#3a261f',
     marginBottom: 8,
   },
