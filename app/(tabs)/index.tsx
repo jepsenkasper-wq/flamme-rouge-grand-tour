@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Colors } from '@/constants/colors';
+import { PodiumCard } from '@/components/PodiumCard';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 
 export default function HomeScreen() {
   return (
@@ -6,10 +8,40 @@ export default function HomeScreen() {
       <Text style={styles.title}>FLAMME ROUGE</Text>
       <Text style={styles.subtitle}>Grand Tour</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Home</Text>
-        <Text style={styles.cardText}>This will become the race dashboard.</Text>
+      <View style={styles.stageBar}>
+  <Text style={styles.stageText}>Stage 7 of 21</Text>
+</View>
+
+      {/* Podium */}
+    <PodiumCard />
+
+      {/* Jerseys */}
+      <View style={styles.jerseyGrid}>
+        <View style={styles.jerseyCard}>
+          <Text style={styles.jerseyTitle}>Yellow</Text>
+          <Text>Kasper</Text>
+        </View>
+
+        <View style={styles.jerseyCard}>
+          <Text style={styles.jerseyTitle}>Mountain</Text>
+          <Text>Jesper</Text>
+        </View>
+
+        <View style={styles.jerseyCard}>
+          <Text style={styles.jerseyTitle}>Sprint</Text>
+          <Text>Kenneth</Text>
+        </View>
+
+        <View style={styles.jerseyCard}>
+          <Text style={styles.jerseyTitle}>Team</Text>
+          <Text>Peter</Text>
+        </View>
       </View>
+
+      {/* Main button */}
+      <Pressable style={styles.button}>
+        <Text style={styles.buttonText}>Enter Stage 8</Text>
+      </Pressable>
     </View>
   );
 }
@@ -17,40 +49,96 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f4e8c8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: Colors.paper,
+    padding: 20,
+    paddingTop: 60,
   },
+
   title: {
-    fontSize: 42,
+    fontSize: 36,
     fontWeight: '900',
     color: '#3a261f',
     textAlign: 'center',
-    letterSpacing: 1,
   },
+
   subtitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: '#8b2f20',
-    marginTop: 8,
-    marginBottom: 32,
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  card: {
-    width: '100%',
-    backgroundColor: '#fff6dc',
+
+  podiumCard: {
+    backgroundColor: Colors.card,
     borderRadius: 18,
-    padding: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 16,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: Colors.brown,
+  },
+
+ 
+
+  jerseyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 20,
+  },
+
+  jerseyCard: {
+    width: '48%',
+    backgroundColor: '#fff6dc',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#c8a96a',
   },
-  cardTitle: {
-    fontSize: 24,
+
+  jerseyTitle: {
     fontWeight: '800',
+    marginBottom: 6,
     color: '#3a261f',
-    marginBottom: 8,
   },
-  cardText: {
-    fontSize: 16,
-    color: '#5c4a3f',
+
+  button: {
+    backgroundColor: '#8b2f20',
+    padding: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 'auto',
   },
+
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  stageBar: {
+  backgroundColor: '#3a261f',
+  borderRadius: 999,
+  paddingVertical: 8,
+  paddingHorizontal: 16,
+  alignSelf: 'center',
+  marginBottom: 16,
+},
+
+stageText: {
+  color: '#fff6dc',
+  fontWeight: '800',
+  fontSize: 14,
+  letterSpacing: 0.5,
+},
+
+
+
 });
