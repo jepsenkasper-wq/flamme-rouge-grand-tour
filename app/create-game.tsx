@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 
 export default function CreateGameScreen() {
@@ -48,17 +48,14 @@ export default function CreateGameScreen() {
 
       <Pressable
   style={styles.button}
-  onPress={() =>
-    router.push({
-      pathname: '/players',
-      params: {
-        gameName,
-        players,
-        stages,
-        restDays,
-      },
-    })
-  }>
+  onPress={() => {
+    createGameDraft.gameName = gameName;
+    createGameDraft.players = players;
+    createGameDraft.stages = stages;
+    createGameDraft.restDays = restDays;
+
+    router.push('/players');
+  }}>
   <Text style={styles.buttonText}>Next</Text>
 </Pressable>
     </View>

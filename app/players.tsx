@@ -1,26 +1,43 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 
-const PLAYER_COLORS = ['Blue', 'White', 'Green', 'Red', 'Black', 'Pink'];
+const PLAYER_COLORS = [
+  { name: 'Blue', value: '#2f5fb3' },
+  { name: 'White', value: '#f7f1df' },
+  { name: 'Green', value: '#2f8a3e' },
+  { name: 'Red', value: '#b7372f' },
+  { name: 'Black', value: '#222222' },
+  { name: 'Pink', value: '#d97aa7' },
+];
 
 export default function PlayersScreen() {
   const params = useLocalSearchParams();
   
 
-  const playerCount = Number(params.players ?? 4);
+ const playerCount = Number(createGameDraft.players || 4);
 
   const [playerNames, setPlayerNames] = useState(
     Array.from({ length: playerCount }, () => '')
   );
+
+    const [playerColors, setPlayerColors] = useState(
+  Array.from({ length: playerCount }, (_, index) => PLAYER_COLORS[index].name)
+    );
 
   function updatePlayerName(index: number, value: string) {
     const nextNames = [...playerNames];
     nextNames[index] = value;
     setPlayerNames(nextNames);
   }
+
+  function updatePlayerColor(index: number, colorName: string) {
+  const nextColors = [...playerColors];
+  nextColors[index] = colorName;
+  setPlayerColors(nextColors);
+}
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -39,27 +56,40 @@ export default function PlayersScreen() {
           />
 
           <Text style={styles.label}>Color</Text>
-          <View style={styles.colorBadge}>
-            <Text style={styles.colorText}>{PLAYER_COLORS[index]}</Text>
-          </View>
+          <View style={styles.colorRow}>
+  {PLAYER_COLORS.map((color) => {
+    const isSelected = playerColors[index] === color.name;
+    const isUsedByOtherPlayer = playerColors.some(
+      (selectedColor, selectedIndex) =>
+        selectedColor === color.name && selectedIndex !== index
+    );
+
+    return (
+      <Pressable
+        key={color.name}
+        onPress={() => updatePlayerColor(index, color.name)}
+        style={[
+          styles.colorCircle,
+          { backgroundColor: color.value },
+          isSelected && styles.selectedColorCircle,
+        ]}
+      />
+    );
+  })}
+</View>
         </View> 
       ))}
 
      <Pressable
-        style={styles.button}
-        onPress={() =>
-  router.push({
-    pathname: '/rest-days',
-  params: {
-  gameName: params.gameName,
-  stages: params.stages,
-  restDays: params.restDays,
-  playerNames: JSON.stringify(playerNames),
-},
-  })
-}>
-        <Text style={styles.buttonText}>Next</Text>
-      </Pressable>
+  style={styles.button}
+  onPress={() => {
+    createGameDraft.playerNames = playerNames;
+    createGameDraft.playerColors = playerColors;
+
+    router.push('/rest-days');
+  }}>
+  <Text style={styles.buttonText}>Next</Text>
+</Pressable>
       
     </ScrollView>
   );
@@ -136,6 +166,28 @@ buttonText: {
   color: Colors.white,
   fontSize: 18,
   fontWeight: '900',
+},
+colorRow: {
+  flexDirection: 'row',
+  gap: 10,
+  marginTop: 4,
+},
+
+colorCircle: {
+  width: 34,
+  height: 34,
+  borderRadius: 17,
+  borderWidth: 1,
+  borderColor: Colors.border,
+},
+
+selectedColorCircle: {
+  borderWidth: 4,
+  borderColor: Colors.red,
+},
+
+disabledColorCircle: {
+  opacity: 0.25,
 },
 
 });

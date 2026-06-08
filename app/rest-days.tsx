@@ -1,15 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
+import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 
 export default function RestDaysScreen() {
   const params = useLocalSearchParams();
-  
+ 
 
-  const stageCount = Number(params.stages ?? 21);
-  const restDayCount = Number(params.restDays ?? 0);
+  const stageCount = Number(createGameDraft.stages || 21);
+const restDayCount = Number(createGameDraft.restDays || 0);
 
   const [restDayStages, setRestDayStages] = useState(
     Array.from({ length: restDayCount }, () => '')
@@ -48,18 +48,11 @@ export default function RestDaysScreen() {
       ))}
       <Pressable
   style={styles.button}
-  onPress={() =>
-    router.push({
-      pathname: '/review-game',
-  params: {
-  gameName: params.gameName,
-  stages: params.stages,
-  restDays: params.restDays,
-  playerNames: params.playerNames,
-  restDayStages: JSON.stringify(restDayStages),
-},
-    })
-  }>
+  onPress={() => {
+  createGameDraft.restDayStages = restDayStages;
+
+  router.push('/review-game');
+}}>
   <Text style={styles.buttonText}>Review Game</Text>
 </Pressable>
     </ScrollView>
