@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -9,7 +10,7 @@ export default function ReviewGameScreen() {
   const restDayStages = createGameDraft.restDayStages;
 
   return (
-    <View style={styles.screen}>
+  <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Review Game</Text>
 
       <Text style={styles.text}>Game name: {createGameDraft.gameName}</Text>
@@ -31,7 +32,14 @@ export default function ReviewGameScreen() {
           Rest Day {index + 1}: After Stage {stage || '-'}
         </Text>
       ))}
-    </View>
+
+    <Pressable
+  style={styles.button}
+  onPress={() => router.replace('/(tabs)')}>
+  <Text style={styles.buttonText}>Create Game</Text>
+</Pressable>
+
+    </ScrollView>
   );
 }
 
@@ -39,8 +47,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 72,
   },
   title: {
     fontSize: 36,
@@ -60,4 +66,22 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
+  button: {
+  backgroundColor: Colors.red,
+  padding: 18,
+  borderRadius: 16,
+  alignItems: 'center',
+  marginTop: 32,
+},
+
+buttonText: {
+  color: Colors.white,
+  fontSize: 18,
+  fontWeight: '900',
+},
+content: {
+  padding: 24,
+  paddingTop: 72,
+  paddingBottom: 40,
+},
 });
