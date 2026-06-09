@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
+import { gameState } from '@/lib/gameState';
 
 export default function HomeScreen() {
   const playerNames = createGameDraft.playerNames;
@@ -18,7 +19,7 @@ export default function HomeScreen() {
 
       <View style={styles.stageBar}>
         <Text style={styles.stageText}>
-          Stage 0 of {createGameDraft.stages || '21'}
+          Stage {gameState.currentStage} of {createGameDraft.stages || '21'}
         </Text>
       </View>
 
@@ -54,7 +55,7 @@ export default function HomeScreen() {
     stageDraft.initialize(createGameDraft.playerNames.length);
     router.push('/enter-stage');
   }}>
-  <Text style={styles.buttonText}>Enter Stage 1</Text>
+  <Text style={styles.buttonText}>Enter Stage {gameState.currentStage}</Text>
 </Pressable>
     </View>
   );

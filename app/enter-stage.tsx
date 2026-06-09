@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
+import { gameState } from '@/lib/gameState';
 
 export default function EnterStageScreen() {
   const playerNames = createGameDraft.playerNames;
@@ -10,7 +11,7 @@ export default function EnterStageScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Stage 1</Text>
+      <Text style={styles.title}>Stage {gameState.currentStage}</Text>
 
       <View style={styles.playerList}>
         {playerNames.map((name, index) => (

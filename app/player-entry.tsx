@@ -5,6 +5,20 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
+import { gameState } from '@/lib/gameState';
+
+function formatTimeInput(value: string) {
+  const digits = value.replace(/\D/g, '');
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  const minutes = digits.slice(0, -2);
+  const seconds = digits.slice(-2);
+
+  return `${minutes}:${seconds}`;
+}
 
 export default function PlayerEntryScreen() {
   const params = useLocalSearchParams();
@@ -40,7 +54,9 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
 
   return (
   <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.stageTitle}>Stage 1</Text>
+      <Text style={styles.stageTitle}>
+  Stage {gameState.currentStage}
+</Text>
       <Text style={styles.playerTitle}>{playerName}</Text>
 
       <View style={styles.riderToggle}>
@@ -80,7 +96,10 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
         <TextInput
   style={styles.input}
   value={currentEntry.time}
-  onChangeText={(value) => updateEntry('time', value)}
+  onChangeText={(value) =>
+    updateEntry('time', formatTimeInput(value))
+  }
+  keyboardType="number-pad"
   placeholder="0:00"
 />
 
@@ -130,10 +149,22 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
   style={styles.navButton}
   onPress={() => {
     if (playerIndex === playerCount - 1) {
-      router.push('/enter-stage');
-    } else {
-      goToPlayer(playerIndex + 1);
-    }
+  const restDayStages = createGameDraft.restDayStages.map(Number);
+
+  if (
+    gameState.currentEntryType === 'stage' &&
+    restDayStages.includes(gameState.currentStage)
+  ) {
+    gameState.currentEntryType = 'restDay';
+  } else {
+    gameState.currentStage = Number(gameState.currentStage || 1) + 1;
+    gameState.currentEntryType = 'stage';
+  }
+
+  router.replace('/(tabs)');
+} else {
+  goToPlayer(playerIndex + 1);
+}
   }}>
   <Text style={styles.navButtonText}>
     {playerIndex === playerCount - 1 ? 'Finish Stage' : 'Next Player'}
