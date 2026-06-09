@@ -4,10 +4,21 @@ import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
 import { gameState } from '@/lib/gameState';
+import { gameResults } from '@/lib/gameResults';
 
 export default function HomeScreen() {
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
+
+const entryTitle =
+  gameState.currentEntryType === 'restDay'
+    ? `Rest Day after Stage ${gameState.currentStage}`
+    : `Stage ${gameState.currentStage} of ${createGameDraft.stages || '21'}`;
+
+const buttonTitle =
+  gameState.currentEntryType === 'restDay'
+    ? 'Enter Rest Day'
+    : `Enter Stage ${gameState.currentStage}`;
 
   return (
     <View style={styles.screen}>
@@ -19,8 +30,8 @@ export default function HomeScreen() {
 
       <View style={styles.stageBar}>
         <Text style={styles.stageText}>
-          Stage {gameState.currentStage} of {createGameDraft.stages || '21'}
-        </Text>
+  {entryTitle}
+</Text>
       </View>
 
       <View style={styles.card}>
@@ -45,17 +56,22 @@ export default function HomeScreen() {
         <Text style={styles.cardTitle}>Tour Setup</Text>
         <Text style={styles.cardText}>Stages: {createGameDraft.stages}</Text>
         <Text style={styles.cardText}>
-          Rest days: {createGameDraft.restDays}
+          Rest days: {createGameDraft.restDays}        
         </Text>
+        <Text style={styles.cardText}>
+  Saved entries: {gameResults.entries.length}
+</Text>
       </View>
 
       <Pressable
   style={styles.button}
   onPress={() => {
-    stageDraft.initialize(createGameDraft.playerNames.length);
-    router.push('/enter-stage');
-  }}>
-  <Text style={styles.buttonText}>Enter Stage {gameState.currentStage}</Text>
+  stageDraft.initialize(createGameDraft.playerNames.length);
+  router.push('/enter-stage');
+}}>
+  <Text style={styles.buttonText}>
+  {buttonTitle}
+</Text>
 </Pressable>
     </View>
   );

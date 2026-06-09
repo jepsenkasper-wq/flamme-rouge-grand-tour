@@ -17,6 +17,8 @@ export default function RootLayout() {
         <Stack.Screen name="rest-days" options={{ title: 'Rest Days' }} />
         <Stack.Screen name="review-game" options={{ title: 'Review Game' }} />
         <Stack.Screen name="enter-stage" options={{ title: 'Enter Stage' }} />
+        <Stack.Screen name="player-entry" options={{ title: 'Player Entry' }} />
+        <Stack.Screen name="stage-detail" options={{ title: 'Stage Details' }} />
         <Stack.Screen name="my-games" options={{ title: 'My Games' }} />
         <Stack.Screen name="follow-game" options={{ title: 'Follow Game' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -6,6 +6,7 @@ import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
 import { gameState } from '@/lib/gameState';
+import { gameResults } from '@/lib/gameResults';
 
 function formatTimeInput(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -29,6 +30,11 @@ export default function PlayerEntryScreen() {
     
 const playerCount = createGameDraft.playerNames.length;
 
+const isRestDay = gameState.currentEntryType === 'restDay';
+
+const entryTitle = isRestDay
+  ? `Rest Day after Stage ${gameState.currentStage}`
+  : `Stage ${gameState.currentStage}`;
 
 const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
   'sprinteur'
@@ -54,9 +60,7 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
 
   return (
   <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.stageTitle}>
-  Stage {gameState.currentStage}
-</Text>
+      <Text style={styles.stageTitle}>{entryTitle}</Text>
       <Text style={styles.playerTitle}>{playerName}</Text>
 
       <View style={styles.riderToggle}>
@@ -92,47 +96,56 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
 </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Time</Text>
-        <TextInput
-  style={styles.input}
-  value={currentEntry.time}
-  onChangeText={(value) =>
-    updateEntry('time', formatTimeInput(value))
-  }
-  keyboardType="number-pad"
-  placeholder="0:00"
-/>
+        {!isRestDay && (
+  <>
+    <Text style={styles.label}>Time</Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.time}
+      onChangeText={(value) =>
+        updateEntry('time', formatTimeInput(value))
+      }
+      keyboardType="number-pad"
+      placeholder="0:00"
+    />
+  </>
+)}
 
-        <Text style={styles.label}>Tour Points</Text>
-        <TextInput
+<Text style={styles.label}>Tour Points</Text>
+<TextInput
   style={styles.input}
   value={currentEntry.tourPoints}
   onChangeText={(value) => updateEntry('tourPoints', value)}
   keyboardType="number-pad"
 />
-        <Text style={styles.label}>Mountain Points</Text>
-        <TextInput
-  style={styles.input}
-  value={currentEntry.mountainPoints}
-  onChangeText={(value) => updateEntry('mountainPoints', value)}
-  keyboardType="number-pad"
-/>
 
-        <Text style={styles.label}>Sprint Points</Text>
-        <TextInput
-  style={styles.input}
-  value={currentEntry.sprintPoints}
-  onChangeText={(value) => updateEntry('sprintPoints', value)}
-  keyboardType="number-pad"
-/>
+{!isRestDay && (
+  <>
+    <Text style={styles.label}>Mountain Points</Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.mountainPoints}
+      onChangeText={(value) => updateEntry('mountainPoints', value)}
+      keyboardType="number-pad"
+    />
 
-        <Text style={styles.label}>Fatigue Cards</Text>
-        <TextInput
-  style={styles.input}
-  value={currentEntry.fatigueCards}
-  onChangeText={(value) => updateEntry('fatigueCards', value)}
-  keyboardType="number-pad"
-/>
+    <Text style={styles.label}>Sprint Points</Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.sprintPoints}
+      onChangeText={(value) => updateEntry('sprintPoints', value)}
+      keyboardType="number-pad"
+    />
+
+    <Text style={styles.label}>Fatigue Cards</Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.fatigueCards}
+      onChangeText={(value) => updateEntry('fatigueCards', value)}
+      keyboardType="number-pad"
+    />
+  </>
+)}
       </View>
       <View style={styles.navigationRow}>
   <Pressable
@@ -149,7 +162,12 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
   style={styles.navButton}
   onPress={() => {
     if (playerIndex === playerCount - 1) {
-  const restDayStages = createGameDraft.restDayStages.map(Number);
+  gameResults.addEntry({
+  entryType: gameState.currentEntryType,
+  stageNumber: gameState.currentStage,
+  players: JSON.parse(JSON.stringify(stageDraft.players)),
+});
+        const restDayStages = createGameDraft.restDayStages.map(Number);
 
   if (
     gameState.currentEntryType === 'stage' &&

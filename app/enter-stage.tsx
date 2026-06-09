@@ -1,17 +1,31 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { gameState } from '@/lib/gameState';
+import { gameResults } from '@/lib/gameResults';
+import { stageDraft } from '@/lib/stageDraft';
 
 export default function EnterStageScreen() {
+  const params = useLocalSearchParams();
+const editEntryIndex =
+  params.editEntryIndex !== undefined ? Number(params.editEntryIndex) : null;
+
+
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
 
+const entryTitle =
+  gameState.currentEntryType === 'restDay'
+    ? `Edit Rest Day after Stage ${gameState.currentStage}`
+    : editEntryIndex !== null
+      ? `Edit Stage ${gameState.currentStage}`
+      : `Stage ${gameState.currentStage}`;
+
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Stage {gameState.currentStage}</Text>
+      <Text style={styles.title}>{entryTitle}</Text>
 
       <View style={styles.playerList}>
         {playerNames.map((name, index) => (
