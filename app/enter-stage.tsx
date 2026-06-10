@@ -16,11 +16,16 @@ const editEntryIndex =
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
 
+const editedEntry =
+  editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
+
 const entryTitle =
-  gameState.currentEntryType === 'restDay'
-    ? `Edit Rest Day after Stage ${gameState.currentStage}`
-    : editEntryIndex !== null
-      ? `Edit Stage ${gameState.currentStage}`
+  editedEntry
+    ? editedEntry.entryType === 'restDay'
+      ? `Edit Rest Day after Stage ${editedEntry.stageNumber}`
+      : `Edit Stage ${editedEntry.stageNumber}`
+    : gameState.currentEntryType === 'restDay'
+      ? `Rest Day after Stage ${gameState.currentStage}`
       : `Stage ${gameState.currentStage}`;
 
   return (
@@ -32,14 +37,25 @@ const entryTitle =
           <Pressable
   key={index}
   style={styles.playerRow}
-  onPress={() =>
+  onPress={() => {
+    if (editEntryIndex !== null) {
+      const editedEntry = gameResults.entries[editEntryIndex];
+
+      if (editedEntry) {
+        stageDraft.players = JSON.parse(JSON.stringify(editedEntry.players));
+      }
+    }
+
     router.push({
       pathname: '/player-entry',
       params: {
         playerIndex: String(index),
+        ...(editEntryIndex !== null && {
+          editEntryIndex: String(editEntryIndex),
+        }),
       },
-    })
-  }>
+    });
+  }}>
             <View
               style={[
                 styles.colorDot,
@@ -56,9 +72,6 @@ const entryTitle =
         ))}
       </View>
 
-      <Pressable style={styles.button}>
-        <Text style={styles.buttonText}>Finish Stage</Text>
-      </Pressable>
     </View>
   );
 }
@@ -133,17 +146,4 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  button: {
-    backgroundColor: Colors.red,
-    padding: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 'auto',
-  },
-
-  buttonText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: '900',
-  },
 });

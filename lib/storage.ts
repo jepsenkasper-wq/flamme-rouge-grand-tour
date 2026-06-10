@@ -1,3 +1,4 @@
+let activeGameId: string | null = null;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { createGameDraft } from './createGameDraft';
@@ -73,8 +74,52 @@ export async function saveGameToLibrary() {
 
   games.push(newGame);
 
+  activeGameId = newGame.id;
+
   await AsyncStorage.setItem(
   SAVED_GAMES_KEY,
   JSON.stringify(games)
 );
+}
+export async function openSavedGame(gameId: string) {
+  const games = await getSavedGames();
+  const game = games.find((savedGame) => savedGame.id === gameId);
+
+  if (!game) {
+    return false;
+  }
+
+  Object.assign(createGameDraft, game.createGameDraft);
+  Object.assign(gameResults, game.gameResults);
+  Object.assign(gameState, game.gameState);
+
+ activeGameId = game.id;
+
+  await saveGame();
+
+  return true;
+}
+export async function updateActiveSavedGame() {
+  if (!activeGameId) {
+    return;
+  }
+
+  const games = await getSavedGames();
+
+  const updatedGames = games.map((game) =>
+    game.id === activeGameId
+      ? {
+          ...game,
+          name: createGameDraft.gameName || game.name,
+          createGameDraft: JSON.parse(JSON.stringify(createGameDraft)),
+          gameResults: JSON.parse(JSON.stringify(gameResults)),
+          gameState: JSON.parse(JSON.stringify(gameState)),
+        }
+      : game
+  );
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(updatedGames)
+  );
 }

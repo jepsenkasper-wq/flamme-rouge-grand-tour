@@ -26,6 +26,7 @@ const hasNext = entryIndex < gameResults.entries.length - 1;
 const riderResults: {
   riderName: string;
   time: string;
+  tieBreakOrder: number;
 }[] = [];
 
 if (entry) {
@@ -34,14 +35,16 @@ if (entry) {
       createGameDraft.playerNames[index] || `Player ${index + 1}`;
 
     riderResults.push({
-      riderName: `${playerName} - Sprinteur`,
-      time: player.sprinteur.time,
-    });
+  riderName: `${playerName} - Sprinteur`,
+  time: player.sprinteur.time,
+  tieBreakOrder: player.sprinteur.tieBreakOrder ?? 0,
+});
 
     riderResults.push({
-      riderName: `${playerName} - Rouleur`,
-      time: player.rouleur.time,
-    });
+  riderName: `${playerName} - Rouleur`,
+  time: player.rouleur.time,
+  tieBreakOrder: player.rouleur.tieBreakOrder ?? 0,
+});
   });
 }
 
@@ -53,9 +56,16 @@ function timeToSeconds(time: string) {
   return minutes * 60 + seconds;
 }
 
-riderResults.sort(
-  (a, b) => timeToSeconds(a.time) - timeToSeconds(b.time)
-);
+riderResults.sort((a, b) => {
+  const timeDifference =
+    timeToSeconds(a.time) - timeToSeconds(b.time);
+
+  if (timeDifference !== 0) {
+    return timeDifference;
+  }
+
+  return a.tieBreakOrder - b.tieBreakOrder;
+});
 
   return (
   <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -120,7 +130,14 @@ riderResults.sort(
   </View>
 ))}
 
-<Pressable style={styles.button}>
+<Pressable
+  style={styles.button}
+  onPress={() =>
+    router.push({
+      pathname: '/enter-stage',
+      params: { editEntryIndex: String(entryIndex) },
+    })
+  }>
   <Text style={styles.buttonText}>Edit Stage</Text>
 </Pressable>
 

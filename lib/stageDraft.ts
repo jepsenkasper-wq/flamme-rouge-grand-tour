@@ -6,6 +6,7 @@ export type RiderStageEntry = {
   mountainPoints: string;
   sprintPoints: string;
   fatigueCards: string;
+  tieBreakOrder: number;
 };
 
 export type PlayerStageEntry = {
@@ -20,6 +21,7 @@ function createEmptyRiderEntry(): RiderStageEntry {
     mountainPoints: '',
     sprintPoints: '',
     fatigueCards: '',
+    tieBreakOrder: 0,
   };
 }
 

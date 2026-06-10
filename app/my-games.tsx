@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
-import { SavedGame, getSavedGames } from '@/lib/storage';
+import { SavedGame, getSavedGames, openSavedGame } from '@/lib/storage';
 
 export default function MyGamesScreen() {
   const [games, setGames] = useState<SavedGame[]>([]);
@@ -15,6 +16,7 @@ export default function MyGamesScreen() {
 
     loadGames();
   }, []);
+
 
   return (
     <ScrollView
@@ -31,7 +33,16 @@ export default function MyGamesScreen() {
         </View>
       ) : (
         games.map((game) => (
-          <View key={game.id} style={styles.card}>
+          <Pressable
+  key={game.id}
+  style={styles.card}
+  onPress={async () => {
+    const didOpen = await openSavedGame(game.id);
+
+    if (didOpen) {
+      router.replace('/(tabs)');
+    }
+  }}>
             <Text style={styles.cardTitle}>{game.name}</Text>
 
             <Text style={styles.cardText}>
@@ -41,7 +52,7 @@ export default function MyGamesScreen() {
             <Text style={styles.cardText}>
               Created: {new Date(game.createdAt).toLocaleDateString()}
             </Text>
-          </View>
+          </Pressable>
         ))
       )}
     </ScrollView>

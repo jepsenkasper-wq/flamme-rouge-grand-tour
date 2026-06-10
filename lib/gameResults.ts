@@ -12,4 +12,8 @@ export const gameResults = {
   addEntry(entry: GameResultEntry) {
     this.entries.push(entry);
   },
+
+  updateEntry(index: number, entry: GameResultEntry) {
+    this.entries[index] = entry;
+  },
 };

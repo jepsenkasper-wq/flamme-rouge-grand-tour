@@ -7,7 +7,7 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
 import { gameState } from '@/lib/gameState';
 import { gameResults } from '@/lib/gameResults';
-import { saveGame } from '@/lib/storage';
+import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 
 function formatTimeInput(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -25,17 +25,28 @@ function formatTimeInput(value: string) {
 export default function PlayerEntryScreen() {
   const params = useLocalSearchParams();
   const playerIndex = Number(params.playerIndex ?? 0);
+  const editEntryIndex =
+  params.editEntryIndex !== undefined ? Number(params.editEntryIndex) : null;
+
+const editedEntry =
+  editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
 
   const playerName =
     createGameDraft.playerNames[playerIndex] || `Player ${playerIndex + 1}`;
     
 const playerCount = createGameDraft.playerNames.length;
 
-const isRestDay = gameState.currentEntryType === 'restDay';
+const isRestDay = editedEntry
+  ? editedEntry.entryType === 'restDay'
+  : gameState.currentEntryType === 'restDay';
 
-const entryTitle = isRestDay
-  ? `Rest Day after Stage ${gameState.currentStage}`
-  : `Stage ${gameState.currentStage}`;
+const entryTitle = editedEntry
+  ? editedEntry.entryType === 'restDay'
+    ? `Edit Rest Day after Stage ${editedEntry.stageNumber}`
+    : `Edit Stage ${editedEntry.stageNumber}`
+  : isRestDay
+    ? `Rest Day after Stage ${gameState.currentStage}`
+    : `Stage ${gameState.currentStage}`;
 
 const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
   'sprinteur'
@@ -48,6 +59,9 @@ function goToPlayer(nextIndex: number) {
     pathname: '/player-entry',
     params: {
       playerIndex: String(nextIndex),
+      ...(editEntryIndex !== null && {
+        editEntryIndex: String(editEntryIndex),
+      }),
     },
   });
 }
@@ -159,34 +173,55 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
     <Text style={styles.navButtonText}>Previous Player</Text>
   </Pressable>
 
-  <Pressable
+<Pressable
   style={styles.navButton}
   onPress={() => {
     if (playerIndex === playerCount - 1) {
-  gameResults.addEntry({
-  entryType: gameState.currentEntryType,
-  stageNumber: gameState.currentStage,
-  players: JSON.parse(JSON.stringify(stageDraft.players)),
+      const editedEntry =
+        editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
+
+      const playersToSave = JSON.parse(
+  JSON.stringify(stageDraft.players)
+);
+
+let tieBreakOrder = 0;
+
+playersToSave.forEach((player: any) => {
+  player.sprinteur.tieBreakOrder = tieBreakOrder++;
+  player.rouleur.tieBreakOrder = tieBreakOrder++;
 });
 
-saveGame();
+const entryToSave = {
+  entryType: editedEntry?.entryType || gameState.currentEntryType,
+  stageNumber: editedEntry?.stageNumber || gameState.currentStage,
+  players: playersToSave,
+};
+
+      if (editEntryIndex !== null) {
+        gameResults.updateEntry(editEntryIndex, entryToSave);
+      } else {
+        gameResults.addEntry(entryToSave);
 
         const restDayStages = createGameDraft.restDayStages.map(Number);
 
-  if (
-    gameState.currentEntryType === 'stage' &&
-    restDayStages.includes(gameState.currentStage)
-  ) {
-    gameState.currentEntryType = 'restDay';
-  } else {
-    gameState.currentStage = Number(gameState.currentStage || 1) + 1;
-    gameState.currentEntryType = 'stage';
-  }
+        if (
+          gameState.currentEntryType === 'stage' &&
+          restDayStages.includes(gameState.currentStage)
+        ) {
+          gameState.currentEntryType = 'restDay';
+        } else {
+          gameState.currentStage = Number(gameState.currentStage || 1) + 1;
+          gameState.currentEntryType = 'stage';
+        }
+      }
 
-  router.replace('/(tabs)');
-} else {
-  goToPlayer(playerIndex + 1);
-}
+      saveGame();
+      updateActiveSavedGame();
+
+      router.replace('/(tabs)');
+    } else {
+      goToPlayer(playerIndex + 1);
+    }
   }}>
   <Text style={styles.navButtonText}>
     {playerIndex === playerCount - 1 ? 'Finish Stage' : 'Next Player'}
