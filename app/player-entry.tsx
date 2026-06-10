@@ -7,6 +7,7 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
 import { gameState } from '@/lib/gameState';
 import { gameResults } from '@/lib/gameResults';
+import { saveGame } from '@/lib/storage';
 
 function formatTimeInput(value: string) {
   const digits = value.replace(/\D/g, '');
@@ -167,6 +168,9 @@ function updateEntry(field: keyof typeof currentEntry, value: string) {
   stageNumber: gameState.currentStage,
   players: JSON.parse(JSON.stringify(stageDraft.players)),
 });
+
+saveGame();
+
         const restDayStages = createGameDraft.restDayStages.map(Number);
 
   if (

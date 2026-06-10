@@ -3,6 +3,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
+import { gameResults } from '@/lib/gameResults';
+import { gameState } from '@/lib/gameState';
+import { stageDraft } from '@/lib/stageDraft';
+import { saveGame } from '@/lib/storage';
 
 export default function ReviewGameScreen() {
   const playerNames = createGameDraft.playerNames;
@@ -35,7 +39,18 @@ export default function ReviewGameScreen() {
 
     <Pressable
   style={styles.button}
-  onPress={() => router.replace('/(tabs)')}>
+  onPress={() => {
+  gameResults.entries = [];
+
+  gameState.currentStage = 1;
+  gameState.currentEntryType = 'stage';
+
+  stageDraft.initialize(createGameDraft.playerNames.length);
+
+  saveGame();
+
+  router.replace('/(tabs)');
+}}>
   <Text style={styles.buttonText}>Create Game</Text>
 </Pressable>
 
