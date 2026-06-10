@@ -7,6 +7,7 @@ import { gameResults } from '@/lib/gameResults';
 import { gameState } from '@/lib/gameState';
 import { stageDraft } from '@/lib/stageDraft';
 import { saveGame } from '@/lib/storage';
+import { saveGameToLibrary } from '@/lib/storage';
 
 export default function ReviewGameScreen() {
   const playerNames = createGameDraft.playerNames;
@@ -39,7 +40,7 @@ export default function ReviewGameScreen() {
 
     <Pressable
   style={styles.button}
-  onPress={() => {
+onPress={async () => {
   gameResults.entries = [];
 
   gameState.currentStage = 1;
@@ -47,7 +48,8 @@ export default function ReviewGameScreen() {
 
   stageDraft.initialize(createGameDraft.playerNames.length);
 
-  saveGame();
+  await saveGameToLibrary();
+  await saveGame();
 
   router.replace('/(tabs)');
 }}>
