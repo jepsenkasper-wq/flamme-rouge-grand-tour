@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { gameResults } from '@/lib/gameResults';
 import { createGameDraft } from '@/lib/createGameDraft';
+import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 
 export default function StageDetailScreen() {
   const params = useLocalSearchParams();
   const entryIndex = Number(params.entryIndex ?? 0);
 
   const entry = gameResults.entries[entryIndex];
+const [tieVersion, setTieVersion] = useState(0);
 
   const hasPrevious = entryIndex > 0;
 const hasNext = entryIndex < gameResults.entries.length - 1;
@@ -27,6 +30,8 @@ const riderResults: {
   riderName: string;
   time: string;
   tieBreakOrder: number;
+  playerIndex: number;
+  riderType: 'sprinteur' | 'rouleur';
 }[] = [];
 
 if (entry) {
@@ -38,12 +43,16 @@ if (entry) {
   riderName: `${playerName} - Sprinteur`,
   time: player.sprinteur.time,
   tieBreakOrder: player.sprinteur.tieBreakOrder ?? 0,
+  playerIndex: index,
+  riderType: 'sprinteur',
 });
 
     riderResults.push({
   riderName: `${playerName} - Rouleur`,
   time: player.rouleur.time,
   tieBreakOrder: player.rouleur.tieBreakOrder ?? 0,
+  playerIndex: index,
+  riderType: 'rouleur',
 });
   });
 }
@@ -64,8 +73,59 @@ riderResults.sort((a, b) => {
     return timeDifference;
   }
 
-  return a.tieBreakOrder - b.tieBreakOrder;
+  const aOrder =
+    entry.players[a.playerIndex][a.riderType].tieBreakOrder ?? 0;
+
+  const bOrder =
+    entry.players[b.playerIndex][b.riderType].tieBreakOrder ?? 0;
+
+  return aOrder - bOrder + tieVersion * 0;
 });
+
+function hasSameTimeNeighbor(index: number) {
+  const current = riderResults[index];
+  const previous = riderResults[index - 1];
+  const next = riderResults[index + 1];
+
+  return (
+    (previous && previous.time === current.time) ||
+    (next && next.time === current.time)
+  );
+}
+
+function moveTieBreaker(
+  riderToMove: (typeof riderResults)[number],
+  direction: 'up' | 'down'
+) {
+  const index = riderResults.findIndex(
+    (rider) =>
+      rider.playerIndex === riderToMove.playerIndex &&
+      rider.riderType === riderToMove.riderType
+  );
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+  const current = riderResults[index];
+  const target = riderResults[targetIndex];
+
+
+  if (!current || !target || current.time !== target.time) {
+    return;
+  }
+
+  const newOrder = [...riderResults];
+
+  newOrder[index] = target;
+  newOrder[targetIndex] = current;
+
+  newOrder.forEach((rider, order) => {
+    entry.players[rider.playerIndex][rider.riderType].tieBreakOrder = order;
+  });
+
+saveGame();
+updateActiveSavedGame();
+
+setTieVersion((version) => version + 1);
+}
 
   return (
   <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -121,12 +181,32 @@ riderResults.sort((a, b) => {
       <Text style={styles.subtitle}>Results</Text>
 
 {riderResults.map((rider, index) => (
-  <View key={index} style={styles.resultRow}>
+  <View key={`${rider.playerIndex}-${rider.riderType}`} style={styles.resultRow}>
     <Text style={styles.position}>{index + 1}</Text>
 
     <Text style={styles.riderName}>{rider.riderName}</Text>
 
     <Text style={styles.time}>{rider.time || '-'}</Text>
+
+    {hasSameTimeNeighbor(index) && (
+      <View style={styles.tieButtons}>
+      <Pressable
+  style={styles.tiePressable}
+  onPress={() => {
+    moveTieBreaker(rider, 'up');
+  }}>
+  <Text style={styles.tieButton}>↑</Text>
+</Pressable>
+
+<Pressable
+  style={styles.tiePressable}
+  onPress={() => {
+    moveTieBreaker(rider, 'down');
+  }}>
+  <Text style={styles.tieButton}>↓</Text>
+</Pressable>
+      </View>
+    )}
   </View>
 ))}
 
@@ -233,5 +313,22 @@ buttonText: {
   color: Colors.white,
   fontSize: 18,
   fontWeight: '900',
+},
+tieButtons: {
+  flexDirection: 'row',
+  gap: 6,
+  marginLeft: 10,
+},
+
+tieButton: {
+  fontSize: 18,
+  fontWeight: '900',
+  color: Colors.red,
+},
+tiePressable: {
+  width: 36,
+  height: 36,
+  alignItems: 'center',
+  justifyContent: 'center',
 },
 });
