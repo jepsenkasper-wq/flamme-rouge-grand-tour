@@ -6,13 +6,22 @@ import { useEffect } from 'react';
 import { loadGame } from '@/lib/storage';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useFonts } from 'expo-font';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  
+
+  const [fontsLoaded] = useFonts({
+    BebasNeue: require('../assets/fonts/BebasNeue-Regular.ttf'),
+  });
+
   useEffect(() => {
-  loadGame();
-}, []);
+    loadGame();
+  }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

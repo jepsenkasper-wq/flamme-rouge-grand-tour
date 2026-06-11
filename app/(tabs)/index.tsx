@@ -1,4 +1,5 @@
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +21,15 @@ import {
   calculateTeamClassification,
 } from '@/lib/classifications';
 
+const riderImages: Record<string, any> = {
+  Blue: require('@/assets/images/riders/rider-blue.png'),
+  White: require('@/assets/images/riders/rider-white.png'),
+  Green: require('@/assets/images/riders/rider-green.png'),
+  Red: require('@/assets/images/riders/rider-red.png'),
+  Black: require('@/assets/images/riders/rider-black.png'),
+  Pink: require('@/assets/images/riders/rider-pink.png'),
+};
+
 export default function HomeScreen() {
   const [, setRefreshVersion] = useState(0);
 
@@ -31,7 +41,14 @@ useFocusEffect(
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
   const overallClassification = calculateOverallClassification();
+
   const podium = overallClassification.slice(0, 3);
+  function getRiderImage(playerName: string) {
+  const playerIndex = playerNames.findIndex((name) => name === playerName);
+  const playerColor = playerColors[playerIndex];
+
+  return riderImages[playerColor];
+}
 const remainingPlayers = overallClassification.slice(3);
   const yellowLeader = calculateYellowClassification()[0];
 const mountainLeader = calculateMountainClassification()[0];
@@ -53,84 +70,106 @@ const buttonTitle =
     style={styles.screen}
     contentContainerStyle={styles.content}
   >
-      <Text style={styles.title}>
-        {createGameDraft.gameName || 'FLAMME ROUGE'}
-      </Text>
-
-      <Text style={styles.subtitle}>Grand Tour</Text>
-
-      <View style={styles.stageBar}>
-        <Text style={styles.stageText}>
-  {entryTitle}
-</Text>
-      </View>
-
-      <View style={styles.card}>
-  <Text style={styles.cardTitle}>Overall Standings</Text>
-
-<View style={styles.podiumContainer}>
-  {podium[0] && (
-    <View style={styles.firstPlace}>
-      <Text style={styles.podiumTitle}>
-    Overall Leader
+      <View style={styles.header}>
+  <Text style={styles.title}>
+    {createGameDraft.gameName || 'GRAND TOUR'}
   </Text>
-      <Text style={styles.firstPlacePosition}>1</Text>
-      <Text style={styles.firstPlaceName}>
-        {podium[0].playerName}
-      </Text>
-      <Text style={styles.firstPlacePoints}>
-        {podium[0].points} pts
-      </Text>
+
+  <View style={styles.stageBadge}>
+    <Text style={styles.stageText}>
+      {entryTitle.toUpperCase()}
+    </Text>
+  </View>
+</View>
+
+      <View style={styles.podium}>
+  <View style={styles.podiumRow}>
+    <View style={styles.podiumColumn}>
+      {podium[1] && (
+        <Image
+          source={getRiderImage(podium[1].playerName)}
+          style={styles.podiumAvatar}
+        />
+      )}
+      <Text style={styles.podiumName}>
+  {podium[1].playerName}
+</Text>
+
+<Text style={styles.podiumPoints}>
+  {podium[1].points} pts
+</Text>
+
+      <View style={[styles.podiumBlock, styles.secondBlock]}>
+        <Text style={styles.podiumNumber}>2</Text>
+      </View>
     </View>
-  )}
 
-  <View style={styles.lowerPodium}>
-    {podium[1] && (
-      <View style={styles.podiumSide}>
-        <Text style={styles.position}>2</Text>
-        <Text style={styles.playerText}>
-          {podium[1].playerName}
-        </Text>
-        <Text style={styles.pointsText}>
-          {podium[1].points} pts
-        </Text>
-      </View>
-    )}
+    <View style={styles.podiumColumn}>
+      {podium[0] && (
+        <Image
+          source={getRiderImage(podium[0].playerName)}
+          style={styles.podiumAvatar}          
+        />
+      )}
 
-    {podium[2] && (
-      <View style={styles.podiumSide}>
-        <Text style={styles.position}>3</Text>
-        <Text style={styles.playerText}>
-          {podium[2].playerName}
-        </Text>
-        <Text style={styles.pointsText}>
-          {podium[2].points} pts
-        </Text>
+<Text style={styles.podiumName}>
+  {podium[0].playerName}
+</Text>
+
+<Text style={styles.podiumPoints}>
+  {podium[0].points} pts
+</Text>
+
+      <View style={[styles.podiumBlock, styles.firstBlock]}>
+        <Text style={styles.podiumNumber}>1</Text>
       </View>
-    )}
+    </View>
+
+    <View style={styles.podiumColumn}>
+      {podium[2] && (
+        <Image
+          source={getRiderImage(podium[2].playerName)}
+          style={styles.podiumAvatar}
+        />
+      )}
+
+      <Text style={styles.podiumName}>
+  {podium[2].playerName}
+</Text>
+
+      <Text style={styles.podiumPoints}>
+  {podium[2].points} pts
+</Text>
+
+      <View style={[styles.podiumBlock, styles.thirdBlock]}>
+        <Text style={styles.podiumNumber}>3</Text>
+      </View>
+    </View>
   </View>
 </View>
 
 {remainingPlayers.length > 0 && (
-  <View style={styles.remainingContainer}>
+  <View style={styles.remainingPodiumList}>
     {remainingPlayers.map((player, index) => (
-      <View key={index} style={styles.playerRow}>
-        <Text style={styles.position}>
-          {index + 4}
-        </Text>
+      <View key={player.playerName} style={styles.remainingPodiumRow}>
+        <Text style={styles.remainingPosition}>{index + 4}</Text>
 
-        <Text style={styles.playerText}>
+        <Image
+          source={getRiderImage(player.playerName)}
+          style={styles.remainingAvatar}
+        />
+
+        <Text style={styles.remainingName} numberOfLines={1}>
           {player.playerName}
         </Text>
 
-        <Text style={styles.pointsText}>
+        <Text style={styles.remainingPoints}>
           {player.points} pts
         </Text>
       </View>
     ))}
   </View>
 )}
-</View>
 
 <View style={styles.card}>
   <Text style={styles.cardTitle}>Current Leaders</Text>
@@ -215,35 +254,45 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
 
-  title: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: Colors.brown,
-    textAlign: 'center',
-  },
+header: {
+  alignItems: 'center',
+  marginBottom: 22,
+},
 
-  subtitle: {
-    fontSize: 20,
-    color: Colors.red,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
+title: {
+  fontFamily: 'BebasNeue',
+  fontSize: 28,
+  lineHeight: 56,
+  color: '#2A241C',
+  textAlign: 'center',
+  letterSpacing: 2,
+},
 
-  stageBar: {
-    backgroundColor: Colors.brown,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
+subtitle: {
+  fontSize: 26,
+  color: '#4A3328',
+  textAlign: 'center',
+  marginTop: -6,
+  marginBottom: 14,
+  fontStyle: 'italic',
+  fontWeight: '700',
+},
 
-  stageText: {
-    color: Colors.card,
-    fontWeight: '800',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
+stageBadge: {
+  backgroundColor: '#D4A235',
+  borderColor: '#9B6C16',
+  borderWidth: 1,
+  paddingVertical: 5,
+  paddingHorizontal: 18,
+  alignSelf: 'center',
+},
+
+stageText: {
+  color: '#2A241C',
+  fontFamily: 'BebasNeue',
+  fontSize: 16,
+  letterSpacing: 1.5,
+},
 
   card: {
     backgroundColor: Colors.card,
@@ -419,5 +468,127 @@ podiumTitle: {
   color: Colors.brown,
   textTransform: 'uppercase',
   marginBottom: 4,
+},
+
+podium: {
+  height: 320,
+  justifyContent: 'flex-end',
+  marginBottom: 22,
+},
+
+podiumRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+  gap: 10,
+},
+
+podiumBlock: {
+  width: 100,
+  borderWidth: 2,
+  borderRadius: 6,
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: '#000',
+shadowOpacity: 0.14,
+shadowRadius: 6,
+shadowOffset: {
+  width: 0,
+  height: 3,
+},
+elevation: 3,
+},
+
+firstBlock: {
+  height: 125,
+  backgroundColor: '#D4A235',
+  borderColor: '#9B6C16',
+},
+
+secondBlock: {
+  height: 90,
+  backgroundColor: '#B8B2A3',
+  borderColor: '#7C7568',
+},
+
+thirdBlock: {
+  height: 75,
+  backgroundColor: '#B87333',
+  borderColor: '#8A4E22',
+},
+
+podiumNumber: {
+  fontFamily: 'BebasNeue',
+  fontSize: 54,
+  color: 'rgba(42, 36, 28, 0.55)',
+},
+podiumColumn: {
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+},
+
+podiumAvatar: {
+  width: 54,
+  height: 54,
+  marginBottom: -4,
+},
+podiumName: {
+  fontSize: 15,
+  fontWeight: '700',
+  color: Colors.brown,
+  textAlign: 'center',
+  minHeight: 36,
+  marginBottom: 6,
+},
+podiumPoints: {
+  fontFamily: 'BebasNeue',
+  fontSize: 18,
+  color: '#7A1D12',
+  marginBottom: 6,
+  letterSpacing: 0.5,
+},
+remainingPodiumList: {
+  marginTop: -20,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 14,
+  overflow: 'hidden',
+  backgroundColor: 'rgba(250, 241, 222, 0.72)',
+},
+
+remainingPodiumRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 7,
+  paddingHorizontal: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.border,
+},
+
+remainingPosition: {
+  width: 22,
+  fontFamily: 'BebasNeue',
+  fontSize: 22,
+  color: '#7A1D12',
+},
+
+remainingAvatar: {
+  width: 28,
+  height: 28,
+  marginRight: 8,
+},
+
+remainingName: {
+  flex: 1,
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
+},
+
+remainingPoints: {
+  fontFamily: 'BebasNeue',
+  fontSize: 18,
+  color: '#7A1D12',
+  letterSpacing: 0.5,
 },
 });
