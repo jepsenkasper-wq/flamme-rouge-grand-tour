@@ -1,3 +1,5 @@
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
@@ -9,17 +11,24 @@ import {
   calculateOverallClassification,
   secondsToTime,
 } from '@/lib/classifications';
-import { useState } from 'react';
 
 export default function StandingsScreen() {
-const [activeTab, setActiveTab] =
-  useState<'yellow' | 'mountain' | 'sprint' | 'team' | 'overall'>('yellow');
+  const [, setRefreshVersion] = useState(0);
 
-const yellowClassification = calculateYellowClassification();
-const mountainClassification = calculateMountainClassification();
-const sprintClassification = calculateSprintClassification();
-const teamClassification = calculateTeamClassification();
-const overallClassification = calculateOverallClassification();
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshVersion((version) => version + 1);
+    }, [])
+  );
+
+  const [activeTab, setActiveTab] =
+    useState<'yellow' | 'mountain' | 'sprint' | 'team' | 'overall'>('yellow');
+
+  const yellowClassification = calculateYellowClassification();
+  const mountainClassification = calculateMountainClassification();
+  const sprintClassification = calculateSprintClassification();
+  const teamClassification = calculateTeamClassification();
+  const overallClassification = calculateOverallClassification();
 
 const activeClassification =
   activeTab === 'yellow'

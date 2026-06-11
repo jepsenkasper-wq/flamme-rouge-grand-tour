@@ -5,7 +5,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
@@ -20,6 +21,13 @@ import {
 } from '@/lib/classifications';
 
 export default function HomeScreen() {
+  const [, setRefreshVersion] = useState(0);
+
+useFocusEffect(
+  useCallback(() => {
+    setRefreshVersion((version) => version + 1);
+  }, [])
+);
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
   const overallClassification = calculateOverallClassification();
