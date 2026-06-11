@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
+import { getClassificationBonusRules } from '@/lib/classifications';
 
 export default function CreateGameScreen() {
   const [gameName, setGameName] = useState('');
@@ -53,6 +54,8 @@ export default function CreateGameScreen() {
     createGameDraft.players = players;
     createGameDraft.stages = stages;
     createGameDraft.restDays = restDays;
+    createGameDraft.scoringRules =
+  getClassificationBonusRules(Number(stages));
 
     router.push('/players');
   }}>

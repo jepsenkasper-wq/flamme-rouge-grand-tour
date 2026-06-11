@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +13,13 @@ import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { gameResults } from '@/lib/gameResults';
+import { getClassificationBonusRules } from '@/lib/classifications';
+
+function getStageCategory(numberOfStages: number) {
+  if (numberOfStages <= 7) return 'short';
+  if (numberOfStages <= 14) return 'medium';
+  return 'long';
+}
 
 export default function EditGameSettingsScreen() {
   const [gameName, setGameName] = useState(createGameDraft.gameName);
@@ -134,14 +142,48 @@ const [restDayStage, setRestDayStage] = useState(1);
 
 <Pressable
           style={styles.button}
-          onPress={() => {
-  createGameDraft.gameName = gameName;
-  createGameDraft.stages = String(stages);
+   onPress={() => {
+  const oldStages = Number(createGameDraft.stages || 21);
+  const oldCategory = getStageCategory(oldStages);
+  const newCategory = getStageCategory(stages);
 
-  saveGame();
-  updateActiveSavedGame();
+  const saveSettings = (resetScoringRules: boolean) => {
+    createGameDraft.gameName = gameName;
+    createGameDraft.stages = String(stages);
 
-  router.back();
+    if (resetScoringRules) {
+      createGameDraft.scoringRules =
+        getClassificationBonusRules(stages);
+    }
+
+    saveGame();
+    updateActiveSavedGame();
+
+    router.back();
+  };
+
+  if (oldCategory !== newCategory) {
+    Alert.alert(
+      'Tour category changed',
+      'The default scoring rules for this tour length are different. Do you want to reset scoring rules to the recommended values?',
+      [
+        {
+          text: 'Keep Current Rules',
+          style: 'cancel',
+          onPress: () => saveSettings(false),
+        },
+        {
+          text: 'Reset Rules',
+          style: 'destructive',
+          onPress: () => saveSettings(true),
+        },
+      ]
+    );
+
+    return;
+  }
+
+  saveSettings(false);
 }}>
           <Text style={styles.buttonText}>Save</Text>
         </Pressable>

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
+import { deleteActiveSavedGame } from '@/lib/storage';
 
 export default function MoreScreen() {
   return (
@@ -37,13 +38,37 @@ export default function MoreScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Danger Zone</Text>
+     
 
         <MenuButton
-          title="Delete Game"
-          danger
-          onPress={() => {}}
-        />
+  title="Delete Game"
+  danger
+  onPress={() => {
+    Alert.alert(
+      'Delete game?',
+      'This will permanently delete the current game.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const remainingGames = await deleteActiveSavedGame();
+
+            if (remainingGames.length > 0) {
+              router.replace('/my-games');
+            } else {
+              router.replace('/');
+            }
+          },
+        },
+      ]
+    );
+  }}
+/>
       </View>
     </View>
   );

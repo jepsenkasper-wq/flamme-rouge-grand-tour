@@ -139,10 +139,11 @@ export function calculateTeamClassification() {
   return teams.sort((a, b) => a.totalTime - b.totalTime);
 }
 export function calculateOverallClassification() {
-  const bonusRules = getClassificationBonusRules(
-    Number(createGameDraft.stages || 21)
-  );
+ const bonusRules =
+  createGameDraft.scoringRules ||
+  getClassificationBonusRules(Number(createGameDraft.stages || 21));
 
+console.log('bonusRules used in overall', bonusRules);
   const yellowClassification = calculateYellowClassification();
   const mountainClassification = calculateMountainClassification();
   const sprintClassification = calculateSprintClassification();
@@ -211,20 +212,20 @@ export function calculateOverallClassification() {
 
   return players.sort((a, b) => b.points - a.points);
 }
-function getClassificationBonusRules(numberOfStages: number) {
+export function getClassificationBonusRules(numberOfStages: number) {
   if (numberOfStages <= 7) {
     return {
       yellow: [3, 2, 1],
-      team: [1],
-      sprint: [2, 1],
-      mountain: [2, 1],
+      team: [1, 0, 0],
+      sprint: [2, 1, 0],
+      mountain: [2, 1, 0],
     };
   }
 
   if (numberOfStages <= 14) {
     return {
       yellow: [4, 3, 2, 1],
-      team: [2, 1],
+      team: [2, 1, 0],
       sprint: [3, 2, 1],
       mountain: [3, 2, 1],
     };

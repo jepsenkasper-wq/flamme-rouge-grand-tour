@@ -17,25 +17,27 @@ useFocusEffect(
     <View style={styles.screen}>
       <Text style={styles.title}>Players</Text>
 
-      {createGameDraft.playerNames.map((name, index) => (
-<Pressable
-  key={index}
-  style={styles.playerRow}
-  onPress={() =>
-    router.push({
-      pathname: '/edit-player',
-      params: { playerIndex: String(index) },
-    })
-  }>          <Text style={styles.playerName}>
-            {name || `Player ${index + 1}`}
-          </Text>
+   {createGameDraft.playerNames.map((name, index) => (
+  <Pressable
+    key={index}
+    style={styles.playerRow}
+    onPress={() =>
+      router.push({
+        pathname: '/edit-player',
+        params: { playerIndex: String(index) },
+      })
+    }>
+    <Text style={styles.playerName}>
+      {name || `Player ${index + 1}`}
+    </Text>
 
-          <Text style={styles.playerColor}>
-            {createGameDraft.playerColors[index]}
-            <Text style={styles.arrow}>›</Text>
-          </Text>
-        </Pressable>
-      ))}
+    <Text style={styles.playerColor}>
+      {createGameDraft.playerColors[index]}
+    </Text>
+
+    <Text style={styles.arrow}>›</Text>
+  </Pressable>
+))}
       {createGameDraft.playerNames.length < 6 && (
   <Pressable
     style={styles.addButton}

@@ -123,3 +123,25 @@ export async function updateActiveSavedGame() {
     JSON.stringify(updatedGames)
   );
 }
+export async function deleteActiveSavedGame() {
+  if (!activeGameId) {
+    return [];
+  }
+
+  const games = await getSavedGames();
+
+  const remainingGames = games.filter(
+    (game) => game.id !== activeGameId
+  );
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(remainingGames)
+  );
+
+  activeGameId = null;
+
+  await AsyncStorage.removeItem(ACTIVE_GAME_KEY);
+
+  return remainingGames;
+}

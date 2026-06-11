@@ -24,7 +24,7 @@ export default function EditGameScreen() {
 
       <Pressable
         style={styles.menuButton}
-        onPress={() => {}}>
+        onPress={() => router.push('/edit-scoring-rules')}>
         <Text style={styles.menuText}>Scoring Rules</Text>
         <Text style={styles.arrow}>›</Text>
       </Pressable>

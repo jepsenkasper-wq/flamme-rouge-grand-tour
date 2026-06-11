@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-  Pressable,
+  Alert, Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +11,7 @@ import {
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
+import { gameResults } from '@/lib/gameResults';
 
 export default function EditPlayerScreen() {
   const params = useLocalSearchParams();
@@ -65,6 +66,60 @@ export default function EditPlayerScreen() {
   <Text style={styles.buttonText}>Save</Text>
 </Pressable>
       </View>
+{createGameDraft.playerNames.length > 2 && (
+  <Pressable
+    style={styles.deleteButton}
+    onPress={() => {
+      if (gameResults.entries.length > 0) {
+  Alert.alert(
+    'Delete player?',
+    'This will remove the player and all stage results for this player.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          createGameDraft.playerNames.splice(playerIndex, 1);
+          createGameDraft.playerColors.splice(playerIndex, 1);
+
+          gameResults.entries.forEach((entry) => {
+  entry.players.splice(playerIndex, 1);
+
+  let tieBreakOrder = 0;
+
+  entry.players.forEach((player) => {
+    player.sprinteur.tieBreakOrder = tieBreakOrder++;
+    player.rouleur.tieBreakOrder = tieBreakOrder++;
+  });
+});
+
+          saveGame();
+          updateActiveSavedGame();
+
+          router.back();
+        },
+      },
+    ]
+  );
+
+  return;
+}
+
+      createGameDraft.playerNames.splice(playerIndex, 1);
+      createGameDraft.playerColors.splice(playerIndex, 1);
+
+      saveGame();
+      updateActiveSavedGame();
+
+      router.back();
+    }}>
+    <Text style={styles.deleteButtonText}>Delete Player</Text>
+  </Pressable>
+)}
     </View>
   );
 }
@@ -154,5 +209,20 @@ colorOptionText: {
   fontSize: 14,
   fontWeight: '800',
   color: Colors.brown,
+},
+deleteButton: {
+  backgroundColor: Colors.card,
+  borderWidth: 1,
+  borderColor: Colors.red,
+  padding: 16,
+  borderRadius: 14,
+  alignItems: 'center',
+  marginTop: 12,
+},
+
+deleteButtonText: {
+  color: Colors.red,
+  fontSize: 18,
+  fontWeight: '900',
 },
 });
