@@ -10,7 +10,7 @@ export default function EditGameScreen() {
 
       <Pressable
         style={styles.menuButton}
-        onPress={() => {}}>
+        onPress={() => router.push('/edit-game-settings')}>
         <Text style={styles.menuText}>Game Settings</Text>
         <Text style={styles.arrow}>›</Text>
       </Pressable>
