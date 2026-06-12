@@ -1,4 +1,5 @@
 import {
+  ImageBackground,
   Image,
   Pressable,
   ScrollView,
@@ -19,6 +20,7 @@ import {
   calculateMountainClassification,
   calculateSprintClassification,
   calculateTeamClassification,
+  secondsToTime,
 } from '@/lib/classifications';
 
 const riderImages: Record<string, any> = {
@@ -29,6 +31,7 @@ const riderImages: Record<string, any> = {
   Black: require('@/assets/images/riders/rider-black.png'),
   Pink: require('@/assets/images/riders/rider-pink.png'),
 };
+
 
 export default function HomeScreen() {
   const [, setRefreshVersion] = useState(0);
@@ -48,6 +51,22 @@ useFocusEffect(
   const playerColor = playerColors[playerIndex];
 
   return riderImages[playerColor];
+}
+
+function getRiderImageFromRiderName(riderName?: string) {
+  if (!riderName) {
+    return riderImages.Blue;
+  }
+
+  const playerIndex = playerNames.findIndex((playerName) =>
+    riderName.startsWith(playerName)
+  );
+
+  if (playerIndex === -1) {
+    return riderImages.Blue;
+  }
+
+  return riderImages[playerColors[playerIndex]];
 }
 const remainingPlayers = overallClassification.slice(3);
   const yellowLeader = calculateYellowClassification()[0];
@@ -70,7 +89,13 @@ const buttonTitle =
     style={styles.screen}
     contentContainerStyle={styles.content}
   >
+
       <View style={styles.header}>
+  <ImageBackground
+   source={require('@/assets/images/header/home-header.png')}
+  style={styles.headerBackground}
+  imageStyle={styles.headerImage}
+>
   <Text style={styles.title}>
     {createGameDraft.gameName || 'GRAND TOUR'}
   </Text>
@@ -80,6 +105,7 @@ const buttonTitle =
       {entryTitle.toUpperCase()}
     </Text>
   </View>
+  </ImageBackground>
 </View>
 
       <View style={styles.podium}>
@@ -171,37 +197,123 @@ const buttonTitle =
   </View>
 )}
 
-<View style={styles.card}>
-  <Text style={styles.cardTitle}>Current Leaders</Text>
+<View style={styles.classificationList}>
+  <View style={styles.classificationRow}>
+    <View style={styles.jerseyIconBox}>
+  <Image
+    source={require('@/assets/images/jerseys/yellow-jersey.png')}
+    style={styles.jerseyIcon}
+  />
+</View>
 
-  <View style={styles.leadersGrid}>
-    <View style={[styles.leaderBox, styles.yellowLeaderBox]}>
-      <Text style={styles.leaderLabel}>Yellow Jersey</Text>
-      <Text style={styles.leaderName}>
-        {formatLeaderName(yellowLeader?.riderName)}
-      </Text>
+    <View style={styles.classificationInfo}>
+      <Text style={styles.classificationLabel}>Yellow Jersey</Text>
+
+      <View style={styles.classificationRider}>
+        <Image
+          source={getRiderImageFromRiderName(yellowLeader?.riderName)}
+          style={styles.classificationAvatar}
+        />
+
+        <Text style={styles.classificationName}>
+          {formatRiderNameShort(yellowLeader?.riderName)}
+        </Text>
+      </View>
     </View>
 
-    <View style={[styles.leaderBox, styles.mountainLeaderBox]}>
-      <Text style={styles.leaderLabel}>Mountain Jersey</Text>
-      <Text style={styles.leaderName}>
-        {formatLeaderName(mountainLeader?.riderName)}
-      </Text>
+    <Text style={styles.classificationValue}>
+  {yellowLeader ? secondsToTime(yellowLeader.totalTime) : '-'}
+</Text>
+  </View>
+
+  <View style={styles.classificationDivider} />
+
+  <View style={styles.classificationRow}>
+    <View style={styles.jerseyIconBox}>
+  <Image
+    source={require('@/assets/images/jerseys/mountain-jersey.png')}
+    style={styles.jerseyIcon}
+  />
+</View>
+
+    <View style={styles.classificationInfo}>
+      <Text style={styles.classificationLabel}>Mountain Jersey</Text>
+
+      <View style={styles.classificationRider}>
+        <Image
+          source={getRiderImageFromRiderName(mountainLeader?.riderName)}
+          style={styles.classificationAvatar}
+        />
+
+        <Text style={styles.classificationName}>
+          {formatRiderNameShort(mountainLeader?.riderName)}
+        </Text>
+      </View>
     </View>
 
-    <View style={[styles.leaderBox, styles.sprintLeaderBox]}>
-      <Text style={styles.leaderLabel}>Sprint Jersey</Text>
-      <Text style={styles.leaderName}>
-        {formatLeaderName(sprintLeader?.riderName)}
-      </Text>
+    <Text style={styles.classificationValue}>
+      {mountainLeader?.points ?? '-'} pts
+    </Text>
+  </View>
+
+  <View style={styles.classificationDivider} />
+
+  <View style={styles.classificationRow}>
+    <View style={styles.jerseyIconBox}>
+  <Image
+    source={require('@/assets/images/jerseys/sprint-jersey.png')}
+    style={styles.jerseyIcon}
+  />
+</View>
+
+    <View style={styles.classificationInfo}>
+      <Text style={styles.classificationLabel}>Sprint Jersey</Text>
+
+      <View style={styles.classificationRider}>
+        <Image
+          source={getRiderImageFromRiderName(sprintLeader?.riderName)}
+          style={styles.classificationAvatar}
+        />
+
+        <Text style={styles.classificationName}>
+          {formatRiderNameShort(sprintLeader?.riderName)}
+        </Text>
+      </View>
     </View>
 
-    <View style={[styles.leaderBox, styles.teamLeaderBox]}>
-      <Text style={styles.leaderLabel}>Team GC</Text>
-      <Text style={styles.leaderName}>
-        {teamLeader?.playerName || '-'}
-      </Text>
+    <Text style={styles.classificationValue}>
+      {sprintLeader?.points ?? '-'} pts
+    </Text>
+  </View>
+
+  <View style={styles.classificationDivider} />
+
+  <View style={styles.classificationRow}>
+     <View style={styles.jerseyIconBox}>
+  <Image
+    source={require('@/assets/images/jerseys/team-jersey.png')}
+    style={styles.jerseyIcon}
+  />
+</View>
+
+    <View style={styles.classificationInfo}>
+      <Text style={styles.classificationLabel}>Team GC</Text>
+
+      <View style={styles.classificationRider}>
+        <Image
+          source={getRiderImage(teamLeader?.playerName || '')}
+          style={styles.classificationAvatar}
+        />
+
+        <Text style={styles.classificationName}>
+          {teamLeader?.playerName || '-'}
+        </Text>
+      </View>
     </View>
+
+    <Text style={styles.classificationValue}>
+  {teamLeader ? secondsToTime(teamLeader.totalTime) : '-'}
+</Text>
   </View>
 </View>
 
@@ -246,13 +358,18 @@ function formatLeaderName(name?: string) {
     .replace(' - Sprinteur', ' - S')
     .replace(' - Rouleur', ' - R');
 }
+function formatRiderNameShort(name?: string) {
+  if (!name) return '-';
+
+  return name
+    .replace(' - Sprinteur', ' S')
+    .replace(' - Rouleur', ' R');
+}
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-    padding: 20,
-    paddingTop: 60,
-  },
+screen: {
+  flex: 1,
+  backgroundColor: Colors.paper,
+},
 
 header: {
   alignItems: 'center',
@@ -344,6 +461,7 @@ stageText: {
     borderRadius: 16,
     alignItems: 'center',
     marginTop: 'auto',
+    marginBottom: -20,
   },
 
   buttonText: {
@@ -406,6 +524,8 @@ leaderName: {
   color: Colors.brown,
 },
 content: {
+  paddingHorizontal: 20,
+  paddingTop: 60,
   paddingBottom: 40,
 },
 podiumContainer: {
@@ -590,5 +710,117 @@ remainingPoints: {
   fontSize: 18,
   color: '#7A1D12',
   letterSpacing: 0.5,
+},
+classificationList: {
+  backgroundColor: 'rgba(250, 241, 222, 0.76)',
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 16,
+  overflow: 'hidden',
+  marginBottom: 16,
+},
+
+classificationRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 12,
+  paddingHorizontal: 12,
+},
+
+jerseyPlaceholder: {
+  width: 38,
+  height: 38,
+  borderRadius: 10,
+  backgroundColor: '#F7E08C',
+  borderWidth: 1,
+  borderColor: '#D4A235',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginRight: 12,
+},
+
+jerseyText: {
+  fontFamily: 'BebasNeue',
+  fontSize: 22,
+  color: '#7A1D12',
+},
+
+classificationInfo: {
+  flex: 1,
+},
+
+classificationLabel: {
+  fontFamily: 'BebasNeue',
+  fontSize: 14,
+  color: '#7A1D12',
+  letterSpacing: 0.7,
+},
+
+classificationName: {
+  fontSize: 17,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginTop: 2,
+},
+
+classificationValue: {
+  fontFamily: 'BebasNeue',
+  fontSize: 22,
+  color: '#2A241C',
+},
+classificationRider: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginTop: 2,
+},
+
+classificationAvatar: {
+  width: 24,
+  height: 24,
+  marginRight: 6,
+},
+classificationDivider: {
+  height: 1,
+  backgroundColor: Colors.border,
+  marginLeft: 56,
+},
+
+yellowJersey: {
+  backgroundColor: '#F7E08C',
+  borderColor: '#D4A235',
+},
+
+mountainJersey: {
+  backgroundColor: '#F4C7C3',
+  borderColor: '#C85B4B',
+},
+
+sprintJersey: {
+  backgroundColor: '#CFE8C8',
+  borderColor: '#5C9B4A',
+},
+
+teamJersey: {
+  backgroundColor: '#D9E4F5',
+  borderColor: '#5A78A8',
+},
+jerseyIconBox: {
+  width: 50,
+  height: 48,
+  marginRight: 0,
+},
+
+jerseyIcon: {
+  width: 50,
+  height: 48,
+},
+headerBackground: {
+  marginHorizontal: -20,
+  paddingHorizontal: 80,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingTop: 10,
+  paddingBottom: 10,
+  marginBottom: -70,
 },
 });
