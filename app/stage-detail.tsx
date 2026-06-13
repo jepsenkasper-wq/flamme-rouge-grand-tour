@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { gameResults } from '@/lib/gameResults';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
+import { Ionicons } from '@expo/vector-icons';
+
+const riderImages: Record<string, any> = {
+  Blue: require('@/assets/images/riders/rider-blue.png'),
+  White: require('@/assets/images/riders/rider-white.png'),
+  Green: require('@/assets/images/riders/rider-green.png'),
+  Red: require('@/assets/images/riders/rider-red.png'),
+  Black: require('@/assets/images/riders/rider-black.png'),
+  Pink: require('@/assets/images/riders/rider-pink.png'),
+};
 
 export default function StageDetailScreen() {
   const params = useLocalSearchParams();
@@ -127,87 +137,123 @@ updateActiveSavedGame();
 setTieVersion((version) => version + 1);
 }
 
+function getRiderImage(playerIndex: number) {
+  const playerColor = createGameDraft.playerColors[playerIndex];
+  return riderImages[playerColor] || riderImages.Blue;
+}
+
   return (
   <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
     
-    <View style={styles.stageNav}>
+<View style={styles.stageNav}>
   <Pressable
     disabled={!hasPrevious}
+    style={[styles.stageNavSide, !hasPrevious && styles.disabledNavButton]}
     onPress={() =>
       router.replace({
         pathname: '/stage-detail',
         params: { entryIndex: String(entryIndex - 1) },
       })
     }>
-    <Text
-      style={[
-        styles.stageNavButton,
-        !hasPrevious && styles.disabledNavButton,
-      ]}>
-      Previous
-    </Text>
+    <Ionicons name="arrow-back" size={20} color={Colors.brown} />
+    <Text style={styles.stageNavButton}>Prev</Text>
   </Pressable>
 
-  <Text style={styles.stageNavTitle}>
-    {entry.entryType === 'restDay'
-      ? 'Rest Day'
-      : `Stage ${entry.stageNumber}`}
-  </Text>
+  <View style={styles.stageNavCenter}>
+    <Text style={styles.stageNavTitle}>
+      {entry.entryType === 'restDay'
+        ? 'Rest Day'
+        : `Stage ${entry.stageNumber}`}
+    </Text>
+  </View>
 
   <Pressable
     disabled={!hasNext}
+    style={[styles.stageNavSide, !hasNext && styles.disabledNavButton]}
     onPress={() =>
       router.replace({
         pathname: '/stage-detail',
         params: { entryIndex: String(entryIndex + 1) },
       })
     }>
-    <Text
-      style={[
-        styles.stageNavButton,
-        !hasNext && styles.disabledNavButton,
-      ]}>
-      Next
-    </Text>
+    <Text style={styles.stageNavButton}>Next</Text>
+    <Ionicons name="arrow-forward" size={20} color={Colors.brown} />
   </Pressable>
 </View>
 
-      <Text style={styles.title}>
-        {entry.entryType === 'restDay'
-          ? `Rest Day after Stage ${entry.stageNumber}`
-          : `Stage ${entry.stageNumber}`}
-      </Text>
+<View style={styles.winnerSection}>
+  <View style={styles.doubleLine}>
+    <View style={styles.lineThin} />
+    <View style={styles.lineThin} />
+  </View>
 
-      <Text style={styles.subtitle}>Results</Text>
+  <Text style={styles.winnerHeadline}>
+    WINNER!
+  </Text>
+
+  <View style={styles.doubleLine}>
+    <View style={styles.lineThin} />
+    <View style={styles.lineThin} />
+  </View>
+
+  <Image
+    source={require('@/assets/images/stages/stage-winner.png')}
+    style={styles.winnerImage}
+    resizeMode="stretch"
+  />
+
+  <Text style={styles.winnerName}>
+    {riderResults[0]?.riderName
+      .replace(' - Sprinteur', ' S')
+      .replace(' - Rouleur', ' R')}
+  </Text>
+
+  <Text style={styles.winnerSubline}>
+    Stage Winner
+  </Text>
+  <View style={styles.newspaperLine} />
+  </View>
+
+
+    
 
 {riderResults.map((rider, index) => (
-  <View key={`${rider.playerIndex}-${rider.riderType}`} style={styles.resultRow}>
-    <Text style={styles.position}>{index + 1}</Text>
+<View key={`${rider.playerIndex}-${rider.riderType}`} style={styles.resultRow}>
+  <Text style={styles.position}>{index + 1}</Text>
 
-    <Text style={styles.riderName}>{rider.riderName}</Text>
+  <Image
+    source={getRiderImage(rider.playerIndex)}
+    style={styles.riderAvatar}
+  />
 
-    <Text style={styles.time}>{rider.time || '-'}</Text>
+  <Text style={styles.riderName}>
+    {rider.riderName
+      .replace(' - Sprinteur', ' S')
+      .replace(' - Rouleur', ' R')}
+  </Text>
 
+  <View style={styles.tieColumn}>
     {hasSameTimeNeighbor(index) && (
       <View style={styles.tieButtons}>
-      <Pressable
-  style={styles.tiePressable}
-  onPress={() => {
-    moveTieBreaker(rider, 'up');
-  }}>
-  <Text style={styles.tieButton}>↑</Text>
-</Pressable>
+        <Pressable
+          style={styles.tiePressable}
+          onPress={() => moveTieBreaker(rider, 'up')}
+        >
+          <Text style={styles.tieButton}>↑</Text>
+        </Pressable>
 
-<Pressable
-  style={styles.tiePressable}
-  onPress={() => {
-    moveTieBreaker(rider, 'down');
-  }}>
-  <Text style={styles.tieButton}>↓</Text>
-</Pressable>
+        <Pressable
+          style={styles.tiePressable}
+          onPress={() => moveTieBreaker(rider, 'down')}
+        >
+          <Text style={styles.tieButton}>↓</Text>
+        </Pressable>
       </View>
     )}
   </View>
+
+  <Text style={styles.time}>{rider.time || '-'}</Text>
+</View>
 ))}
 
 <Pressable
@@ -248,12 +294,9 @@ const styles = StyleSheet.create({
 resultRow: {
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: Colors.card,
-  borderWidth: 1,
-  borderColor: Colors.border,
-  borderRadius: 14,
-  padding: 14,
-  marginBottom: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.border,
+  paddingVertical: 12,
 },
 
 position: {
@@ -280,24 +323,7 @@ content: {
   paddingTop: 72,
   paddingBottom: 40,
 },
-stageNav: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: 20,
-},
 
-stageNavButton: {
-  color: Colors.red,
-  fontWeight: '900',
-  fontSize: 14,
-},
-
-stageNavTitle: {
-  color: Colors.brown,
-  fontWeight: '900',
-  fontSize: 18,
-},
 disabledNavButton: {
   opacity: 0.3,
 },
@@ -330,5 +356,135 @@ tiePressable: {
   height: 36,
   alignItems: 'center',
   justifyContent: 'center',
+},
+riderAvatar: {
+  width: 34,
+  height: 34,
+  marginRight: 8,
+},
+tieColumn: {
+  width: 54,
+  alignItems: 'center',
+},
+
+time: {
+  width: 54,
+  textAlign: 'right',
+  fontFamily: 'BebasNeue',
+  fontSize: 22,
+  color: Colors.brown,
+},
+
+tieButtons: {
+  flexDirection: 'row',
+  gap: 2,
+},
+
+tiePressable: {
+  width: 24,
+  height: 28,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+winnerSection: {
+  alignItems: 'center',
+  marginBottom: 24,
+  marginHorizontal: -24,
+},
+
+winnerHeadline: {
+  fontFamily: 'BebasNeue',
+  fontSize: 42,
+  color: Colors.brown,
+  letterSpacing: 2,
+  marginBottom: -10,
+  marginTop: -8,
+},
+
+winnerImage: {
+  width: 320,
+  height: 180,
+  marginTop: -30,
+
+
+},
+
+winnerName: {
+  fontFamily: 'BebasNeue',
+  fontSize: 20,
+  color: Colors.brown,
+  marginTop: 8,
+},
+
+winnerSubline: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.red,
+  textTransform: 'uppercase',
+},
+newspaperLine: {
+  height: 1,
+  backgroundColor: Colors.brown,
+  opacity: 0.4,
+  width: 320,
+  marginVertical: 10,
+  marginBottom: -26,
+},
+doubleLine: {
+  width: 320,
+  marginVertical: 8,
+
+},
+
+lineThin: {
+  height: 1,
+  backgroundColor: Colors.brown,
+  opacity: 0.4,
+  marginVertical: 1,
+},
+stageNav: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 18,
+  marginTop: -50,
+},
+
+stageNavSide: {
+  minWidth: 88,
+  height: 44,
+  borderWidth: 1,
+  borderColor: '#8c7446',
+  borderRadius: 10,
+
+  backgroundColor: '#a34c0e',
+
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+},
+
+stageNavCenter: {
+  flex: 1,
+  alignItems: 'center',
+},
+
+stageNavButton: {
+  color: Colors.brown,
+  fontFamily: 'BebasNeue',
+  fontSize: 18,
+  letterSpacing: 0.7,
+},
+
+stageNavTitle: {
+  color: Colors.brown,
+  fontFamily: 'BebasNeue',
+  fontSize: 34,
+  letterSpacing: 1.5,
+},
+
+disabledNavButton: {
+  opacity: 0.3,
 },
 });
