@@ -8,6 +8,40 @@ function timeToSeconds(time: string) {
 
   return minutes * 60 + seconds;
 }
+function getLatestStageRankings() {
+  const latestStage = [...gameResults.entries]
+    .filter((entry) => entry.entryType === 'stage')
+    .at(-1);
+
+  if (!latestStage) {
+    return new Map<string, number>();
+  }
+
+  const rankings = latestStage.players.flatMap((player, playerIndex) => [
+    {
+      riderName: `${createGameDraft.playerNames[playerIndex]} - Sprinteur`,
+      time: timeToSeconds(player.sprinteur.time),
+      tieBreakOrder: player.sprinteur.tieBreakOrder,
+    },
+    {
+      riderName: `${createGameDraft.playerNames[playerIndex]} - Rouleur`,
+      time: timeToSeconds(player.rouleur.time),
+      tieBreakOrder: player.rouleur.tieBreakOrder,
+    },
+  ]);
+
+  rankings.sort((a, b) => {
+    if (a.time !== b.time) {
+      return a.time - b.time;
+    }
+
+    return a.tieBreakOrder - b.tieBreakOrder;
+  });
+
+  return new Map(
+    rankings.map((rider, index) => [rider.riderName, index])
+  );
+}
 
 export function calculateYellowClassification() {
   const riders: {
@@ -39,7 +73,18 @@ export function calculateYellowClassification() {
       });
     });
 
-  return riders.sort((a, b) => a.totalTime - b.totalTime);
+ const latestStageRankings = getLatestStageRankings();
+
+return riders.sort((a, b) => {
+  if (a.totalTime !== b.totalTime) {
+    return a.totalTime - b.totalTime;
+  }
+
+  return (
+    (latestStageRankings.get(a.riderName) ?? 999) -
+    (latestStageRankings.get(b.riderName) ?? 999)
+  );
+});
 }
 
 export function secondsToTime(totalSeconds: number) {
@@ -79,7 +124,18 @@ export function secondsToTime(totalSeconds: number) {
       });
     });
 
-  return riders.sort((a, b) => b.points - a.points);
+  const latestStageRankings = getLatestStageRankings();
+
+return riders.sort((a, b) => {
+  if (a.points !== b.points) {
+    return b.points - a.points;
+  }
+
+  return (
+    (latestStageRankings.get(a.riderName) ?? 999) -
+    (latestStageRankings.get(b.riderName) ?? 999)
+  );
+});
 }
 export function calculateSprintClassification() {
   const riders: {
@@ -111,7 +167,18 @@ export function calculateSprintClassification() {
       });
     });
 
-  return riders.sort((a, b) => b.points - a.points);
+ const latestStageRankings = getLatestStageRankings();
+
+return riders.sort((a, b) => {
+  if (a.points !== b.points) {
+    return b.points - a.points;
+  }
+
+  return (
+    (latestStageRankings.get(a.riderName) ?? 999) -
+    (latestStageRankings.get(b.riderName) ?? 999)
+  );
+});
 }
 export function calculateTeamClassification() {
   const teams: {
@@ -136,7 +203,25 @@ export function calculateTeamClassification() {
       });
     });
 
-  return teams.sort((a, b) => a.totalTime - b.totalTime);
+  const latestStageRankings = getLatestStageRankings();
+
+function getBestTeamStageRank(playerName: string) {
+  const sprinteurRank =
+    latestStageRankings.get(`${playerName} - Sprinteur`) ?? 999;
+
+  const rouleurRank =
+    latestStageRankings.get(`${playerName} - Rouleur`) ?? 999;
+
+  return Math.min(sprinteurRank, rouleurRank);
+}
+
+return teams.sort((a, b) => {
+  if (a.totalTime !== b.totalTime) {
+    return a.totalTime - b.totalTime;
+  }
+
+  return getBestTeamStageRank(a.playerName) - getBestTeamStageRank(b.playerName);
+});
 }
 export function calculateOverallClassification() {
  const bonusRules =

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Image, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame } from '@/lib/storage';
@@ -13,6 +13,10 @@ export default function MoreScreen() {
   style={styles.watermark}
   resizeMode="cover"
 />
+<ScrollView
+  contentContainerStyle={styles.content}
+  showsVerticalScrollIndicator={false}
+>
       <Text style={styles.title}>More</Text>
 
       <View style={styles.section}>
@@ -32,6 +36,11 @@ export default function MoreScreen() {
   title="Edit Game"
   onPress={() => router.push('/edit-game')}
 />
+<MenuButton
+  title="Tour Points Overview"
+  onPress={() => router.push('/tour-points-overview')}
+/>
+
       </View>
 
       <View style={styles.section}>
@@ -76,7 +85,9 @@ export default function MoreScreen() {
   }}
 />
       </View>
+      </ScrollView>
     </View>
+
   );
 }
 
@@ -105,8 +116,7 @@ const styles = StyleSheet.create({
     screen: {
       flex: 1,
       backgroundColor: Colors.paper,
-      padding: 24,
-      paddingTop: 50,
+    
     },
 
   title: {
@@ -167,5 +177,10 @@ watermark: {
   bottom: 0,
 
   opacity: 0.2,
+},
+content: {
+  padding: 24,
+  paddingTop: 50,
+  paddingBottom: 40,
 },
 });
