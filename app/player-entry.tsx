@@ -74,7 +74,30 @@ const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
   'sprinteur'
 );
 
-const currentEntry = stageDraft.players[playerIndex][selectedRider];
+const currentPlayerEntry = stageDraft.players[playerIndex];
+
+if (!currentPlayerEntry) {
+  return (
+    <View style={styles.screen}>
+      <View style={styles.unavailableCard}>
+        <Text style={styles.playerTitle}>{playerName}</Text>
+
+        <Text style={styles.helperText}>
+          This player was not part of this stage when it was entered.
+        </Text>
+
+        <Pressable
+          style={styles.button}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.buttonText}>Go Back</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const currentEntry = currentPlayerEntry[selectedRider];
 
 function goToPlayer(nextIndex: number) {
   router.replace({
@@ -267,16 +290,28 @@ const riderLabel =
         </View>
       </View>
 
-      <View style={styles.fatigueRow}>
-        <Text style={styles.gridLabel}>Fatigue Cards</Text>
-        <TextInput
-          style={styles.fatigueInput}
-          value={currentEntry.fatigueCards}
-          onChangeText={(value) => updateEntry('fatigueCards', value)}
-          keyboardType="number-pad"
-        />
-      </View>
+     <View style={styles.fatigueRow}>
+  <View style={styles.gridInputRow}>
+    <MaterialCommunityIcons
+      name="cards-outline"
+      size={26}
+      color={Colors.brown}
+      style={styles.gridIcon}
+    />
+
+    <View style={styles.inputColumn}>
+      <Text style={styles.gridLabel}>Fatigue Cards</Text>
+
+      <TextInput
+        style={styles.fatigueInput}
+        value={currentEntry.fatigueCards}
+        onChangeText={(value) => updateEntry('fatigueCards', value)}
+        keyboardType="number-pad"
+      />
     </View>
+  </View>
+</View>
+</View>
   )}
 </View>
       <View style={styles.navigationRow}>
@@ -572,5 +607,23 @@ gridLabel: {
   color: Colors.brown,
   marginBottom: 6,
   textAlign: 'center',
+},
+unavailableCard: {
+  margin: 24,
+  marginTop: 120,
+  backgroundColor: Colors.card,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 18,
+  padding: 20,
+  alignItems: 'center',
+},
+
+helperText: {
+  fontSize: 16,
+  color: Colors.brown,
+  textAlign: 'center',
+  lineHeight: 22,
+  marginBottom: 20,
 },
 });

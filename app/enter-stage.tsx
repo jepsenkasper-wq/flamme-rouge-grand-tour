@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -30,6 +30,11 @@ const entryTitle =
 
   return (
     <View style={styles.screen}>
+      <Image
+              source={require('@/assets/images/background-blackwhite.png')}
+              style={styles.watermark}
+              resizeMode="cover"
+            />
       <Text style={styles.title}>{entryTitle}</Text>
 
       <View style={styles.playerList}>
@@ -100,7 +105,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 30,
   },
 
   title: {
@@ -145,5 +150,13 @@ const styles = StyleSheet.create({
     color: Colors.red,
     fontWeight: '900',
   },
+  watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
+},
 
 });

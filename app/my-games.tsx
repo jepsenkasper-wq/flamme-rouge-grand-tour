@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { SavedGame, getSavedGames, openSavedGame } from '@/lib/storage';
@@ -19,8 +19,14 @@ export default function MyGamesScreen() {
 
 
   return (
+    <View style={styles.screen}>
+          <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
     <ScrollView
-      style={styles.screen}
+  
       contentContainerStyle={styles.content}>
       <Text style={styles.title}>My Games</Text>
 
@@ -56,6 +62,7 @@ export default function MyGamesScreen() {
         ))
       )}
     </ScrollView>
+    </View>
   );
 }
 
@@ -67,7 +74,7 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 20,
     paddingBottom: 40,
   },
 
@@ -98,4 +105,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.brown,
   },
+  watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
+},
 });

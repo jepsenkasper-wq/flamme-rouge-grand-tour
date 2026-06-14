@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -18,6 +19,12 @@ export default function AddPlayerScreen() {
 
   return (
     <View style={styles.screen}>
+      
+      <Image
+  source={require('@/assets/images/background-blackwhite.png')}
+  style={styles.watermark}
+  resizeMode="cover"
+/>
       <Text style={styles.title}>Add Player</Text>
 
       <View style={styles.card}>
@@ -153,4 +160,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+    watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+
+  right: -120,
+  bottom: 0,
+
+  opacity: 0.2,
+},
 });

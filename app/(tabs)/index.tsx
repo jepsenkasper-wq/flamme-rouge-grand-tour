@@ -96,9 +96,13 @@ const buttonTitle =
   style={styles.headerBackground}
   imageStyle={styles.headerImage}
 >
-  <Text style={styles.title}>
-    {createGameDraft.gameName || 'GRAND TOUR'}
-  </Text>
+  <Text
+  style={styles.title}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+>
+  {createGameDraft.gameName || 'GRAND TOUR'}
+</Text>
 
   <View style={styles.stageBadge}>
     <Text style={styles.stageText}>
@@ -817,10 +821,11 @@ jerseyIcon: {
 headerBackground: {
   marginHorizontal: -20,
   paddingHorizontal: 80,
+  alignSelf: 'stretch',
   alignItems: 'center',
   justifyContent: 'center',
-  paddingTop: 10,
+  paddingTop: 0,
   paddingBottom: 10,
-  marginBottom: -70,
+  marginBottom: -90,
 },
 });

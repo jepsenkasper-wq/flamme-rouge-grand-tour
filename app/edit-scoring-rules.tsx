@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -38,6 +39,11 @@ export default function EditScoringRulesScreen() {
 
   return (
     <View style={styles.screen}>
+      <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
       <Text style={styles.title}>Scoring Rules</Text>
 
    <View style={styles.card}>
@@ -106,7 +112,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 20,
   },
 
   title: {
@@ -162,15 +168,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.brown,
   },
-  ruleInput: {
-  width: 54,
-  height: 54,
+ruleInput: {
+  width: 42,
+  height: 42,
   backgroundColor: Colors.white,
   borderWidth: 1,
   borderColor: Colors.border,
-  borderRadius: 12,
+  borderRadius: 10,
   textAlign: 'center',
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: '900',
   color: Colors.brown,
 },
@@ -186,5 +192,13 @@ buttonText: {
   color: Colors.white,
   fontSize: 18,
   fontWeight: '900',
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

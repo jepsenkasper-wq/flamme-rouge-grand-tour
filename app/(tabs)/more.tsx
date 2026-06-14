@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame } from '@/lib/storage';
@@ -7,6 +7,12 @@ import { deleteActiveSavedGame } from '@/lib/storage';
 export default function MoreScreen() {
   return (
     <View style={styles.screen}>
+      
+      <Image
+  source={require('@/assets/images/background-blackwhite.png')}
+  style={styles.watermark}
+  resizeMode="cover"
+/>
       <Text style={styles.title}>More</Text>
 
       <View style={styles.section}>
@@ -96,12 +102,12 @@ function MenuButton({
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 72,
-  },
+    screen: {
+      flex: 1,
+      backgroundColor: Colors.paper,
+      padding: 24,
+      paddingTop: 50,
+    },
 
   title: {
     fontSize: 36,
@@ -152,4 +158,14 @@ const styles = StyleSheet.create({
   dangerText: {
     color: Colors.red,
   },
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+
+  right: -120,
+  bottom: 0,
+
+  opacity: 0.2,
+},
 });

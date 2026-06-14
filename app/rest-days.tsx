@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 
@@ -22,8 +22,13 @@ const restDayCount = Number(createGameDraft.restDays || 0);
   }
 
  return (
+   <View style={styles.screen}>
+    <Image
+      source={require('@/assets/images/background-blackwhite.png')}
+      style={styles.watermark}
+      resizeMode="cover"
+    />
   <ScrollView
-    style={styles.screen}
     contentContainerStyle={styles.content}>
       <Text style={styles.title}>Rest Days</Text>
 
@@ -56,6 +61,7 @@ const restDayCount = Number(createGameDraft.restDays || 0);
   <Text style={styles.buttonText}>Review Game</Text>
 </Pressable>
     </ScrollView>
+    </View>
   );
 }
 
@@ -119,7 +125,15 @@ buttonText: {
 },
 content: {
   padding: 24,
-  paddingTop: 72,
+  paddingTop: 50,
   paddingBottom: 40,
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert, Pressable,
+  Image, Alert, Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -26,6 +26,11 @@ export default function EditPlayerScreen() {
 
   return (
     <View style={styles.screen}>
+      <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
       <Text style={styles.title}>Edit Player</Text>
 
       <View style={styles.card}>
@@ -224,5 +229,13 @@ deleteButtonText: {
   color: Colors.red,
   fontSize: 18,
   fontWeight: '900',
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Image,
   Alert,
   Pressable,
   StyleSheet,
@@ -37,8 +38,19 @@ const [stages, setStages] = useState(
 
 const [restDayStage, setRestDayStage] = useState(1);
 
+const [restDays, setRestDays] = useState(
+  createGameDraft.restDayStages.map(Number)
+);
+
+const [, setRefreshVersion] = useState(0);
+
   return (
     <View style={styles.screen}>
+      <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
       <Text style={styles.title}>Game Settings</Text>
 
       <View style={styles.card}>
@@ -111,33 +123,31 @@ const [restDayStage, setRestDayStage] = useState(1);
 <Pressable
   style={styles.secondaryButton}
   onPress={() => {
-    const existing = createGameDraft.restDayStages.map(Number);
+    const updatedRestDays = [...restDays, restDayStage]
+      .filter((stage, index, array) => array.indexOf(stage) === index)
+      .sort((a, b) => a - b);
 
-    if (!existing.includes(restDayStage)) {
-      createGameDraft.restDayStages.push(String(restDayStage));
+    setRestDays(updatedRestDays);
+    createGameDraft.restDayStages = updatedRestDays.map(String);
 
-      saveGame();
-      updateActiveSavedGame();
-    }
+    saveGame();
+    updateActiveSavedGame();
   }}>
   <Text style={styles.secondaryButtonText}>
     Add Rest Day
   </Text>
- </Pressable> 
+</Pressable> 
 
 <Text style={styles.label}>Current Rest Days</Text>
 
-{createGameDraft.restDayStages.length === 0 ? (
+{restDays.length === 0 ? (
   <Text style={styles.helperText}>No rest days added</Text>
 ) : (
-  createGameDraft.restDayStages
-    .map(Number)
-    .sort((a, b) => a - b)
-    .map((stage) => (
-      <Text key={stage} style={styles.restDayText}>
-        After Stage {stage}
-      </Text>
-    ))
+  restDays.map((stage) => (
+    <Text key={stage} style={styles.restDayText}>
+      After Stage {stage}
+    </Text>
+  ))
 )}
 
 <Pressable
@@ -197,14 +207,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 20,
   },
 
   title: {
     fontSize: 36,
     fontWeight: '900',
     color: Colors.brown,
-    marginBottom: 24,
+    marginBottom: 8,
   },
 
   card: {
@@ -309,5 +319,13 @@ restDayText: {
   fontWeight: '800',
   color: Colors.brown,
   marginBottom: 6,
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

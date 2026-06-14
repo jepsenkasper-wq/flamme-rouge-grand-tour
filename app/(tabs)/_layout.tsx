@@ -5,24 +5,46 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+  <Tabs
+    screenOptions={{
+      tabBarActiveTintColor: '#8F2F23',
+      tabBarInactiveTintColor: '#4A3328',
+
+      headerShown: false,
+      tabBarButton: HapticTab,
+
+      tabBarStyle: {
+        backgroundColor: '#FAF1DE',
+        borderTopColor: '#C8A96A',
+        borderTopWidth: 1,
+        height: 100,
+        paddingTop: 8,
+        paddingBottom: 8,
+      },
+
+      tabBarLabelStyle: {
+        fontSize: 12,
+        fontWeight: '800',
+      },
+    }}
+  >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
+  <MaterialCommunityIcons
+    name="home"
+    size={28}
+    color={color}
+  />
+),
         }}
       />
 
@@ -31,8 +53,12 @@ export default function TabLayout() {
         options={{
           title: 'Standings',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="list.bullet" color={color} />
-          ),
+  <MaterialCommunityIcons
+    name="trophy-outline"
+    size={28}
+    color={color}
+  />
+),
         }}
       />
 
@@ -41,8 +67,12 @@ export default function TabLayout() {
         options={{
           title: 'Stages',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="flag.fill" color={color} />
-          ),
+  <MaterialCommunityIcons
+    name="flag-checkered"
+    size={28}
+    color={color}
+  />
+),
         }}
       />
 
@@ -50,11 +80,18 @@ export default function TabLayout() {
         name="more"
         options={{
           title: 'More',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="ellipsis.circle.fill" color={color} />
-          ),
+         tabBarIcon: ({ color }) => (
+  <MaterialCommunityIcons
+    name="cog-outline"
+    size={28}
+    color={color}
+  />
+),
         }}
       />
     </Tabs>
   );
 }
+
+
+

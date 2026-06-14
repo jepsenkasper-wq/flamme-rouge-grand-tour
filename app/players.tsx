@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 
@@ -40,8 +40,14 @@ export default function PlayersScreen() {
 }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Players</Text>
+    <View style={styles.screen}>
+    <Image
+      source={require('@/assets/images/background-blackwhite.png')}
+      style={styles.watermark}
+      resizeMode="cover"
+    />
+    <ScrollView contentContainerStyle={styles.content}>
+     
 
       {playerNames.map((name, index) => (
         <View key={index} style={styles.playerCard}>
@@ -92,6 +98,7 @@ export default function PlayersScreen() {
 </Pressable>
       
     </ScrollView>
+    </View>
   );
 }
 
@@ -102,7 +109,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   title: {
@@ -189,5 +196,16 @@ selectedColorCircle: {
 disabledColorCircle: {
   opacity: 0.25,
 },
+
+
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
+},
+
 
 });

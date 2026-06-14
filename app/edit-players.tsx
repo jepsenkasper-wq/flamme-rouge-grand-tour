@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -15,6 +15,11 @@ useFocusEffect(
 );
     return (
     <View style={styles.screen}>
+      <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
       <Text style={styles.title}>Players</Text>
 
    {createGameDraft.playerNames.map((name, index) => (
@@ -54,7 +59,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 10,
   },
 
   title: {
@@ -105,5 +110,13 @@ addButtonText: {
   color: Colors.white,
   fontSize: 18,
   fontWeight: '900',
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

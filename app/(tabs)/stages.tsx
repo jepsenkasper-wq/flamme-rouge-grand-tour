@@ -1,12 +1,18 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { gameResults } from '@/lib/gameResults';
 
 export default function StagesScreen() {
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <View style={styles.screen}>
+          <Image
+            source={require('@/assets/images/background-blackwhite.png')}
+            style={styles.watermark}
+            resizeMode="cover"
+          />
+    <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Stages</Text>
 
       {gameResults.entries.length === 0 ? (
@@ -39,6 +45,7 @@ export default function StagesScreen() {
         ))
       )}
     </ScrollView>
+    </View>
   );
 }
 
@@ -49,7 +56,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 50,
     paddingBottom: 40,
   },
   title: {
@@ -96,4 +103,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.brown,
   },
+  watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
+},
 });

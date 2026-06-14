@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -15,7 +15,14 @@ export default function ReviewGameScreen() {
   const restDayStages = createGameDraft.restDayStages;
 
   return (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+  <View style={styles.screen}>
+      <Image
+        source={require('@/assets/images/background-blackwhite.png')}
+        style={styles.watermark}
+        resizeMode="cover"
+      />
+    <ScrollView
+      contentContainerStyle={styles.content}>
       <Text style={styles.title}>Review Game</Text>
 
       <Text style={styles.text}>Game name: {createGameDraft.gameName}</Text>
@@ -57,6 +64,7 @@ onPress={async () => {
 </Pressable>
 
     </ScrollView>
+    </View>
   );
 }
 
@@ -98,7 +106,15 @@ buttonText: {
 },
 content: {
   padding: 24,
-  paddingTop: 72,
+  paddingTop: 20,
   paddingBottom: 40,
+},
+watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+  right: -120,
+  bottom: 0,
+  opacity: 0.2,
 },
 });

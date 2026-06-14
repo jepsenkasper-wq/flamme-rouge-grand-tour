@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { getClassificationBonusRules } from '@/lib/classifications';
@@ -13,6 +13,11 @@ export default function CreateGameScreen() {
 
   return (
     <View style={styles.screen}>
+      <Image
+  source={require('@/assets/images/background-blackwhite.png')}
+  style={styles.watermark}
+  resizeMode="cover"
+/>
       <Text style={styles.title}>Create Game</Text>
 
       <Text style={styles.label}>Game Name</Text>
@@ -70,7 +75,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 72,
+    paddingTop: 50,
   },
   title: {
     fontSize: 36,
@@ -106,4 +111,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
+  watermark: {
+  position: 'absolute',
+  width: 500,
+  height: 700,
+
+  right: -120,
+  bottom: 0,
+
+  opacity: 0.2,
+},
 });
