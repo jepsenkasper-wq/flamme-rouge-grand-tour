@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { stageDraft } from '@/lib/stageDraft';
@@ -22,6 +22,7 @@ import {
   calculateTeamClassification,
   secondsToTime,
 } from '@/lib/classifications';
+import { getActiveSavedGame } from '@/lib/storage';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -52,6 +53,17 @@ useFocusEffect(
 
   return riderImages[playerColor];
 }
+const [isFollower, setIsFollower] = useState(false);
+
+useEffect(() => {
+  async function loadRole() {
+    const game = await getActiveSavedGame();
+
+    setIsFollower(game?.role === 'follower');
+  }
+
+  loadRole();
+}, []);
 
 function getRiderImageFromRiderName(riderName?: string) {
   if (!riderName) {
@@ -322,16 +334,19 @@ const buttonTitle =
 </View>
 
 
-      <Pressable
-  style={styles.button}
-  onPress={() => {
-  stageDraft.initialize(createGameDraft.playerNames.length);
-  router.push('/enter-stage');
-}}>
-  <Text style={styles.buttonText}>
-  {buttonTitle}
-</Text>
-</Pressable>
+      {!isFollower && (
+  <Pressable
+    style={styles.button}
+    onPress={() => {
+      stageDraft.initialize(createGameDraft.playerNames.length);
+      router.push('/enter-stage');
+    }}
+  >
+    <Text style={styles.buttonText}>
+      {buttonTitle}
+    </Text>
+  </Pressable>
+)}
     </ScrollView>
   );
 }

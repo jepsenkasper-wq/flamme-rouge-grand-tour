@@ -3,8 +3,31 @@ import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 
 import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame } from '@/lib/storage';
+import { createRemoteGame } from '@/lib/remoteGames';
+
+import { useEffect, useState } from 'react';
+import {
+  openSavedGame,
+  getActiveSavedGame,
+  refreshFollowedGame,
+  updateActiveSavedGameMeta,
+} from '@/lib/storage';
 
 export default function MoreScreen() {
+
+  const [activeGameRole, setActiveGameRole] = useState<
+    string | undefined
+  >();
+
+  useEffect(() => {
+    async function loadRole() {
+      const savedGame = await getActiveSavedGame();
+      setActiveGameRole(savedGame?.role);
+    }
+
+    loadRole();
+  }, []);
+
   return (
     <View style={styles.screen}>
       
@@ -46,10 +69,70 @@ export default function MoreScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sharing</Text>
 
+        {activeGameRole === 'follower' && (
+  <MenuButton
+    title="Refresh Followed Game"
+    onPress={async () => {
+      const savedGame = await getActiveSavedGame();
+
+      if (!savedGame) {
+        Alert.alert('Error', 'No active game found.');
+        return;
+      }
+
+      await refreshFollowedGame(savedGame);
+
+const didOpen = await openSavedGame(savedGame.id);
+
+if (didOpen) {
+  Alert.alert('Updated', 'Followed game has been refreshed.');
+  router.replace('/(tabs)');
+}
+    }}
+  />
+)}
+
         <MenuButton
-          title="Create Follow Code"
-          onPress={() => {}}
-        />
+  title="Create Follow Code"
+  onPress={async () => {
+    try {
+      const savedGame = await getActiveSavedGame();
+
+      if (!savedGame) {
+        Alert.alert('Error', 'No active game found.');
+        return;
+      }
+      if (savedGame.followCode) {
+  Alert.alert(
+    'Follow Code',
+    `Code: ${savedGame.followCode}`
+  );
+  return;
+}
+
+      const result = await createRemoteGame(savedGame);
+
+      await updateActiveSavedGameMeta({
+        role: 'admin',
+        remoteId: result.remoteId,
+        followCode: result.followCode,
+        adminKey: result.adminKey,
+      });
+
+      Alert.alert(
+        'Follow Code Created',
+        `Code: ${result.followCode}`
+      );
+    } catch (error) {
+      console.error(error);
+
+      Alert.alert(
+        'Error',
+        'Failed to create follow code.'
+      );
+    }
+  }}
+/>
       </View>
 
       <View style={styles.section}>

@@ -1,0 +1,71 @@
+import { supabase } from './supabase';
+import type { SavedGame } from './storage';
+
+export function generateFollowCode() {
+  const number = Math.floor(1000 + Math.random() * 9000);
+
+  return `FR-${number}`;
+}
+
+export function generateAdminKey() {
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+export async function createRemoteGame(savedGame: SavedGame) {
+  const followCode = generateFollowCode();
+  const adminKey = generateAdminKey();
+
+  const { data, error } = await supabase
+    .from('games')
+    .insert({
+      follow_code: followCode,
+      admin_key: adminKey,
+      game_data: savedGame,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    remoteId: data.id as string,
+    followCode,
+    adminKey,
+  };
+}
+export async function fetchGameByFollowCode(code: string) {
+  const { data, error } = await supabase
+    .from('games')
+    .select('*')
+    .eq('follow_code', code.trim().toUpperCase())
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+export async function updateRemoteGame(savedGame: SavedGame) {
+  if (!savedGame.remoteId || !savedGame.adminKey) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('games')
+    .update({
+      game_data: savedGame,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', savedGame.remoteId)
+    .eq('admin_key', savedGame.adminKey);
+
+  if (error) {
+    throw error;
+  }
+}

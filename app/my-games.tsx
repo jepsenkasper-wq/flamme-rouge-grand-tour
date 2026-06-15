@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
-import { SavedGame, getSavedGames, openSavedGame } from '@/lib/storage';
+import { SavedGame, getSavedGames, openSavedGame, } from '@/lib/storage';
 
 export default function MyGamesScreen() {
   const [games, setGames] = useState<SavedGame[]>([]);
@@ -43,13 +43,21 @@ export default function MyGamesScreen() {
   key={game.id}
   style={styles.card}
   onPress={async () => {
-    const didOpen = await openSavedGame(game.id);
+  const didOpen = await openSavedGame(game.id);
 
-    if (didOpen) {
-      router.replace('/(tabs)');
-    }
-  }}>
+  if (didOpen) {
+
+    router.replace('/(tabs)');
+  }
+}}>
             <Text style={styles.cardTitle}>{game.name}</Text>
+            <Text style={styles.roleText}>
+  {game.role === 'admin'
+    ? 'Admin'
+    : game.role === 'follower'
+    ? 'Follower'
+    : 'Local'}
+</Text>
 
             <Text style={styles.cardText}>
               Stages completed: {game.gameResults.entries?.length ?? 0}
@@ -112,5 +120,11 @@ const styles = StyleSheet.create({
   right: -120,
   bottom: 0,
   opacity: 0.2,
+},
+roleText: {
+  marginTop: 4,
+  fontSize: 13,
+  color: '#777',
+  fontWeight: '600',
 },
 });

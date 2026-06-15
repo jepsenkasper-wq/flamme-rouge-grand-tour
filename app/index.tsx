@@ -9,6 +9,7 @@ import {
   Users,
 } from 'lucide-react-native';
 
+
 export default function StartScreen() {
   return (
     <ImageBackground
