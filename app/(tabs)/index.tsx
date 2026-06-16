@@ -22,7 +22,12 @@ import {
   calculateTeamClassification,
   secondsToTime,
 } from '@/lib/classifications';
-import { getActiveSavedGame } from '@/lib/storage';
+import {
+  getActiveSavedGame,
+  openSavedGame,
+  refreshFollowedGame,
+} from '@/lib/storage';
+import { subscribeToRemoteGame } from '@/lib/remoteGames';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -63,6 +68,40 @@ useEffect(() => {
   }
 
   loadRole();
+}, []);
+
+useEffect(() => {
+  let channel: any;
+
+  async function setupRealtimeTest() {
+    const game = await getActiveSavedGame();
+
+    if (game?.role !== 'follower' || !game.remoteId) {
+      return;
+    }
+
+    channel = subscribeToRemoteGame(game.remoteId, async () => {
+
+  const latestGame = await getActiveSavedGame();
+
+  if (!latestGame) {
+    return;
+  }
+
+  await refreshFollowedGame(latestGame);
+  await openSavedGame(latestGame.id);
+
+  setRefreshVersion((version) => version + 1);
+});
+  }
+
+  setupRealtimeTest();
+
+  return () => {
+    if (channel) {
+      channel.unsubscribe();
+    }
+  };
 }, []);
 
 function getRiderImageFromRiderName(riderName?: string) {

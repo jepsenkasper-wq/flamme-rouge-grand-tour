@@ -228,7 +228,7 @@ export function calculateOverallClassification() {
   createGameDraft.scoringRules ||
   getClassificationBonusRules(Number(createGameDraft.stages || 21));
 
-console.log('bonusRules used in overall', bonusRules);
+
   const yellowClassification = calculateYellowClassification();
   const mountainClassification = calculateMountainClassification();
   const sprintClassification = calculateSprintClassification();

@@ -69,3 +69,26 @@ export async function updateRemoteGame(savedGame: SavedGame) {
     throw error;
   }
 }
+export function subscribeToRemoteGame(
+  remoteId: string,
+  onChange: () => void
+) {
+  const channel = supabase
+    .channel(`game-${remoteId}-${Date.now()}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'games',
+        filter: `id=eq.${remoteId}`,
+      },
+      () => {
+        onChange();
+      }
+    )
+    .subscribe((status) => {
+});
+
+  return channel;
+}
