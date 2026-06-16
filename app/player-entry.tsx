@@ -329,52 +329,16 @@ const riderLabel =
   style={styles.navButton}
   onPress={() => {
     if (playerIndex === playerCount - 1) {
-      const editedEntry =
-        editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
-
-      const playersToSave = JSON.parse(
-  JSON.stringify(stageDraft.players)
-);
-
-let tieBreakOrder = 0;
-
-playersToSave.forEach((player: any) => {
-  player.sprinteur.tieBreakOrder = tieBreakOrder++;
-  player.rouleur.tieBreakOrder = tieBreakOrder++;
-});
-
-const entryToSave = {
-  entryType: editedEntry?.entryType || gameState.currentEntryType,
-  stageNumber: editedEntry?.stageNumber || gameState.currentStage,
-  players: playersToSave,
-};
-
-      if (editEntryIndex !== null) {
-        gameResults.updateEntry(editEntryIndex, entryToSave);
-      } else {
-        gameResults.addEntry(entryToSave);
-
-        const restDayStages = createGameDraft.restDayStages.map(Number);
-
-        if (
-          gameState.currentEntryType === 'stage' &&
-          restDayStages.includes(gameState.currentStage)
-        ) {
-          gameState.currentEntryType = 'restDay';
-        } else {
-          gameState.currentStage = Number(gameState.currentStage || 1) + 1;
-          gameState.currentEntryType = 'stage';
-        }
-      }
-
-      saveGame();
-      updateActiveSavedGame();
-
-      router.replace('/(tabs)');
-    } else {
-      goToPlayer(playerIndex + 1);
-    }
-  }}>
+  router.push({
+    pathname: '/review-stage-entry',
+    params:
+      editEntryIndex !== null
+        ? { editEntryIndex: String(editEntryIndex) }
+        : {},
+  });
+} else {
+  goToPlayer(playerIndex + 1);
+}  }}>
   <Text style={styles.navButtonText}>
     {playerIndex === playerCount - 1 ? 'Finish Stage' : 'Next Player'}
   </Text>

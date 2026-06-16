@@ -323,3 +323,88 @@ export function getClassificationBonusRules(numberOfStages: number) {
     mountain: [4, 3, 2, 1],
   };
 }
+export function calculateBonusBreakdown() {
+  const bonusRules =
+    createGameDraft.scoringRules ||
+    getClassificationBonusRules(Number(createGameDraft.stages || 21));
+
+  const yellowClassification = calculateYellowClassification();
+  const mountainClassification = calculateMountainClassification();
+  const sprintClassification = calculateSprintClassification();
+  const teamClassification = calculateTeamClassification();
+
+  const players = createGameDraft.playerNames.map((playerName, playerIndex) => ({
+    playerName: playerName || `Player ${playerIndex + 1}`,
+    playerIndex,
+
+    sprinteur: {
+      yellow: 0,
+      mountain: 0,
+      sprint: 0,
+    },
+
+    rouleur: {
+      yellow: 0,
+      mountain: 0,
+      sprint: 0,
+    },
+
+    team: 0,
+  }));
+
+  function addRiderBonus(
+    riderName: string,
+    type: 'yellow' | 'mountain' | 'sprint',
+    bonus: number
+  ) {
+    const [playerName, riderType] = riderName.split(' - ');
+
+    const player = players.find((p) => p.playerName === playerName);
+
+    if (!player || bonus === 0) {
+      return;
+    }
+
+    if (riderType === 'Sprinteur') {
+      player.sprinteur[type] += bonus;
+    }
+
+    if (riderType === 'Rouleur') {
+      player.rouleur[type] += bonus;
+    }
+  }
+
+  yellowClassification.forEach((rider, index) => {
+    addRiderBonus(
+      rider.riderName,
+      'yellow',
+      bonusRules.yellow[index] || 0
+    );
+  });
+
+  mountainClassification.forEach((rider, index) => {
+    addRiderBonus(
+      rider.riderName,
+      'mountain',
+      bonusRules.mountain[index] || 0
+    );
+  });
+
+  sprintClassification.forEach((rider, index) => {
+    addRiderBonus(
+      rider.riderName,
+      'sprint',
+      bonusRules.sprint[index] || 0
+    );
+  });
+
+  teamClassification.forEach((team, index) => {
+    const player = players.find((p) => p.playerName === team.playerName);
+
+    if (player) {
+      player.team += bonusRules.team[index] || 0;
+    }
+  });
+
+  return players;
+}
