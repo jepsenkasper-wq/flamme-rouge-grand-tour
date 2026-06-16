@@ -5,26 +5,12 @@ import { createGameDraft } from './createGameDraft';
 import { gameResults } from './gameResults';
 import { gameState } from './gameState';
 import {
+  createRemoteGame,
   fetchGameByFollowCode,
   updateRemoteGame,
 } from './remoteGames';
 
-import type { GameRole } from './remoteTypes';
-
-export type SavedGame = {
-  id: string;
-  name: string;
-  createdAt: string;
-
-  createGameDraft: any;
-  gameResults: any;
-  gameState: any;
-
-  role?: GameRole;
-  remoteId?: string;
-  followCode?: string;
-  adminKey?: string;
-};
+import type { SavedGame } from './savedGameTypes';
 
 const ACTIVE_GAME_KEY = 'flamme-rouge-active-game';
 const SAVED_GAMES_KEY = 'flamme-rouge-games';
@@ -75,8 +61,13 @@ export async function saveGameToLibrary() {
     createGameDraft: JSON.parse(JSON.stringify(createGameDraft)),
     gameResults: JSON.parse(JSON.stringify(gameResults)),
     gameState: JSON.parse(JSON.stringify(gameState)),
-    role: 'local',
+    role: 'admin',
   };
+  const remoteMeta = await createRemoteGame(newGame);
+
+newGame.remoteId = remoteMeta.remoteId;
+newGame.followCode = remoteMeta.followCode;
+newGame.adminKey = remoteMeta.adminKey;
 
   games.push(newGame);
 

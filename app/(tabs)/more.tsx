@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Alert, Pressable, Share, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame, unfollowActiveGame } from '@/lib/storage';
@@ -20,6 +20,7 @@ export default function MoreScreen() {
     string | undefined
   >();
   const [followCode, setFollowCode] = useState<string | undefined>();
+  const [codeCopied, setCodeCopied] = useState(false);
 
 useEffect(() => {
   async function loadRole() {
@@ -76,17 +77,35 @@ useEffect(() => {
 
         {activeGameRole === 'admin' && followCode && (
   <>
-    <Text style={styles.followCodeText}>
-      Follow Code: {followCode}
-    </Text>
+    <View style={styles.followCodeBox}>
+  <Text style={styles.followCodeLabel}>Follow Code</Text>
+  <Text style={styles.followCodeValue}>{followCode}</Text>
+</View>
 
-    <MenuButton
-      title="Copy Follow Code"
-      onPress={async () => {
-        await Clipboard.setStringAsync(followCode);
-        Alert.alert('Copied', `Follow code ${followCode} copied.`);
-      }}
-    />
+<MenuButton
+  title={codeCopied ? 'Copied ✓' : 'Copy Follow Code'}
+  onPress={async () => {
+   await Clipboard.setStringAsync(followCode);
+
+setCodeCopied(true);
+
+setTimeout(() => {
+  setCodeCopied(false);
+}, 2000);
+  }}
+/>
+<MenuButton
+  title="Share Follow Code"
+  onPress={async () => {
+    if (!followCode) {
+      return;
+    }
+
+    await Share.share({
+      message: `Follow my Flamme Rouge Grand Tour game with this code: ${followCode}`,
+    });
+  }}
+/>
   </>
 )}
 
@@ -119,52 +138,6 @@ useEffect(() => {
   />
 )}
 
-   {activeGameRole !== 'follower' && (
-  <MenuButton
-    title="Create Follow Code"
-    onPress={async () => {
-    try {
-      const savedGame = await getActiveSavedGame();
-
-      if (!savedGame) {
-        Alert.alert('Error', 'No active game found.');
-        return;
-      }
-      if (savedGame.followCode) {
-  Alert.alert(
-    'Follow Code',
-    `Code: ${savedGame.followCode}`
-  );
-  return;
-}
-
-      const result = await createRemoteGame(savedGame);
-
-      await updateActiveSavedGameMeta({
-        role: 'admin',
-        remoteId: result.remoteId,
-        followCode: result.followCode,
-        adminKey: result.adminKey,
-      });
-
-      setActiveGameRole('admin');
-setFollowCode(result.followCode);
-
-      Alert.alert(
-        'Follow Code Created',
-        `Code: ${result.followCode}`
-      );
-    } catch (error) {
-      console.error(error);
-
-      Alert.alert(
-        'Error',
-        'Failed to create follow code.'
-      );
-    }
-  }}
-/>
-   )}
       </View>
 
       <View style={styles.section}>
@@ -299,11 +272,31 @@ content: {
   paddingTop: 50,
   paddingBottom: 40,
 },
-followCodeText: {
-  marginBottom: 10,
-  fontSize: 16,
+
+followCodeBox: {
+  marginBottom: 12,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  borderRadius: 16,
+  borderWidth: 1.5,
+  borderColor: '#7A1D12',
+  backgroundColor: 'rgba(243,231,209,0.82)',
+  alignItems: 'center',
+},
+
+followCodeLabel: {
+  fontSize: 13,
   fontWeight: '800',
+  color: '#7A1D12',
+  letterSpacing: 1,
+  textTransform: 'uppercase',
+  marginBottom: 4,
+},
+
+followCodeValue: {
+  fontSize: 28,
+  fontWeight: '900',
   color: '#1E232A',
-  textAlign: 'center',
+  letterSpacing: 2,
 },
 });
