@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
-import { SavedGame, getSavedGames, openSavedGame, } from '@/lib/storage';
+import { SavedGame, getSavedGames, openSavedGame, refreshFollowedGame } from '@/lib/storage';
 
 export default function MyGamesScreen() {
   const [games, setGames] = useState<SavedGame[]>([]);
@@ -42,11 +42,16 @@ export default function MyGamesScreen() {
           <Pressable
   key={game.id}
   style={styles.card}
-  onPress={async () => {
-  const didOpen = await openSavedGame(game.id);
+ onPress={async () => {
+  let gameToOpen = game;
+
+  if (game.role === 'follower') {
+    gameToOpen = await refreshFollowedGame(game);
+  }
+
+  const didOpen = await openSavedGame(gameToOpen.id);
 
   if (didOpen) {
-
     router.replace('/(tabs)');
   }
 }}>

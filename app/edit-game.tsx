@@ -1,9 +1,37 @@
 import { router } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
+import { useEffect, useState } from 'react';
+import { getActiveSavedGame } from '@/lib/storage';
 
 export default function EditGameScreen() {
+
+const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+useEffect(() => {
+  async function checkRole() {
+    const savedGame = await getActiveSavedGame();
+
+    if (savedGame?.role === 'follower') {
+      Alert.alert(
+        'Read only',
+        'Followers cannot edit the game.'
+      );
+
+      router.replace('/(tabs)');
+      return;
+    }
+
+    setIsCheckingRole(false);
+  }
+
+  checkRole();
+}, []);
+
+if (isCheckingRole) {
+  return null;
+}  
   return (
     <View style={styles.screen}>
       <Image

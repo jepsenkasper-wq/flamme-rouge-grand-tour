@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
-import { deleteActiveSavedGame } from '@/lib/storage';
+import { deleteActiveSavedGame, unfollowActiveGame } from '@/lib/storage';
 import { createRemoteGame } from '@/lib/remoteGames';
 
 import { useEffect, useState } from 'react';
@@ -12,21 +12,24 @@ import {
   refreshFollowedGame,
   updateActiveSavedGameMeta,
 } from '@/lib/storage';
+import * as Clipboard from 'expo-clipboard';
 
 export default function MoreScreen() {
 
   const [activeGameRole, setActiveGameRole] = useState<
     string | undefined
   >();
+  const [followCode, setFollowCode] = useState<string | undefined>();
 
-  useEffect(() => {
-    async function loadRole() {
-      const savedGame = await getActiveSavedGame();
-      setActiveGameRole(savedGame?.role);
-    }
+useEffect(() => {
+  async function loadRole() {
+    const savedGame = await getActiveSavedGame();
+    setActiveGameRole(savedGame?.role);
+    setFollowCode(savedGame?.followCode);
+  }
 
-    loadRole();
-  }, []);
+  loadRole();
+}, []);
 
   return (
     <View style={styles.screen}>
@@ -55,10 +58,12 @@ export default function MoreScreen() {
           onPress={() => router.push('/my-games')}
         />
 
-        <MenuButton
-  title="Edit Game"
-  onPress={() => router.push('/edit-game')}
-/>
+        {activeGameRole !== 'follower' && (
+  <MenuButton
+    title="Edit Game"
+    onPress={() => router.push('/edit-game')}
+  />
+)}
 <MenuButton
   title="Tour Points Overview"
   onPress={() => router.push('/tour-points-overview')}
@@ -69,32 +74,55 @@ export default function MoreScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sharing</Text>
 
+        {activeGameRole === 'admin' && followCode && (
+  <>
+    <Text style={styles.followCodeText}>
+      Follow Code: {followCode}
+    </Text>
+
+    <MenuButton
+      title="Copy Follow Code"
+      onPress={async () => {
+        await Clipboard.setStringAsync(followCode);
+        Alert.alert('Copied', `Follow code ${followCode} copied.`);
+      }}
+    />
+  </>
+)}
+
         {activeGameRole === 'follower' && (
   <MenuButton
-    title="Refresh Followed Game"
-    onPress={async () => {
-      const savedGame = await getActiveSavedGame();
+    title="Unfollow Game"
+    danger
+    onPress={() => {
+      Alert.alert(
+        'Unfollow game?',
+        'This will remove the followed game from this device.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Unfollow',
+            style: 'destructive',
+            onPress: async () => {
+              const remainingGames = await unfollowActiveGame();
 
-      if (!savedGame) {
-        Alert.alert('Error', 'No active game found.');
-        return;
-      }
-
-      await refreshFollowedGame(savedGame);
-
-const didOpen = await openSavedGame(savedGame.id);
-
-if (didOpen) {
-  Alert.alert('Updated', 'Followed game has been refreshed.');
-  router.replace('/(tabs)');
-}
+              if (remainingGames.length > 0) {
+                router.replace('/my-games');
+              } else {
+                router.replace('/');
+              }
+            },
+          },
+        ]
+      );
     }}
   />
 )}
 
-        <MenuButton
-  title="Create Follow Code"
-  onPress={async () => {
+   {activeGameRole !== 'follower' && (
+  <MenuButton
+    title="Create Follow Code"
+    onPress={async () => {
     try {
       const savedGame = await getActiveSavedGame();
 
@@ -119,6 +147,9 @@ if (didOpen) {
         adminKey: result.adminKey,
       });
 
+      setActiveGameRole('admin');
+setFollowCode(result.followCode);
+
       Alert.alert(
         'Follow Code Created',
         `Code: ${result.followCode}`
@@ -133,11 +164,12 @@ if (didOpen) {
     }
   }}
 />
+   )}
       </View>
 
       <View style={styles.section}>
      
-
+{activeGameRole !== 'follower' && (
         <MenuButton
   title="Delete Game"
   danger
@@ -167,6 +199,7 @@ if (didOpen) {
     );
   }}
 />
+)}
       </View>
       </ScrollView>
     </View>
@@ -265,5 +298,12 @@ content: {
   padding: 24,
   paddingTop: 50,
   paddingBottom: 40,
+},
+followCodeText: {
+  marginBottom: 10,
+  fontSize: 16,
+  fontWeight: '800',
+  color: '#1E232A',
+  textAlign: 'center',
 },
 });

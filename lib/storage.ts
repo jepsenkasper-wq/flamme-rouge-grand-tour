@@ -248,4 +248,42 @@ export async function refreshFollowedGame(savedGame: SavedGame) {
 
   return saveFollowedGame(remoteGame);
 }
+export async function unfollowActiveGame() {
+  const games = await getSavedGames();
 
+  const activeId =
+    activeGameId ?? (await AsyncStorage.getItem(ACTIVE_GAME_KEY));
+
+  if (!activeId) {
+    return games;
+  }
+
+  const activeGame = games.find((game) => game.id === activeId);
+
+  const remainingGames = games.filter((game) => {
+    if (game.id === activeId) {
+      return false;
+    }
+
+    if (
+      activeGame?.remoteId &&
+      game.role === 'follower' &&
+      game.remoteId === activeGame.remoteId
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(remainingGames)
+  );
+
+  activeGameId = null;
+
+  await AsyncStorage.removeItem(ACTIVE_GAME_KEY);
+
+  return remainingGames;
+}

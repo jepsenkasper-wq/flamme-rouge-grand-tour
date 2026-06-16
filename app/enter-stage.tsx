@@ -1,13 +1,42 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { gameState } from '@/lib/gameState';
 import { gameResults } from '@/lib/gameResults';
 import { stageDraft } from '@/lib/stageDraft';
+import { useEffect, useState } from 'react';
+import { getActiveSavedGame } from '@/lib/storage';
 
 export default function EnterStageScreen() {
+
+const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+useEffect(() => {
+  async function checkRole() {
+    const savedGame = await getActiveSavedGame();
+
+    if (savedGame?.role === 'follower') {
+      Alert.alert(
+        'Read only',
+        'Followers cannot edit stages.'
+      );
+
+      router.replace('/(tabs)');
+      return;
+    }
+
+    setIsCheckingRole(false);
+  }
+
+  checkRole();
+}, []);
+
+if (isCheckingRole) {
+  return null;
+}
+
   const params = useLocalSearchParams();
 const editEntryIndex =
   params.editEntryIndex !== undefined ? Number(params.editEntryIndex) : null;

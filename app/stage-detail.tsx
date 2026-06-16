@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { gameResults } from '@/lib/gameResults';
 import { createGameDraft } from '@/lib/createGameDraft';
-import { saveGame, updateActiveSavedGame } from '@/lib/storage';
+import {
+  getActiveSavedGame,
+  saveGame,
+  updateActiveSavedGame,
+} from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 
 const riderImages: Record<string, any> = {
@@ -23,6 +27,17 @@ export default function StageDetailScreen() {
 
   const entry = gameResults.entries[entryIndex];
 const [tieVersion, setTieVersion] = useState(0);
+
+const [isFollower, setIsFollower] = useState(false);
+
+useEffect(() => {
+  async function loadRole() {
+    const savedGame = await getActiveSavedGame();
+    setIsFollower(savedGame?.role === 'follower');
+  }
+
+  loadRole();
+}, []);
 
   const hasPrevious = entryIndex > 0;
 const hasNext = entryIndex < gameResults.entries.length - 1;
@@ -233,39 +248,42 @@ function getRiderImage(playerIndex: number) {
   </Text>
 
   <View style={styles.tieColumn}>
-    {hasSameTimeNeighbor(index) && (
-      <View style={styles.tieButtons}>
-        <Pressable
-          style={styles.tiePressable}
-          onPress={() => moveTieBreaker(rider, 'up')}
-        >
-          <Text style={styles.tieButton}>↑</Text>
-        </Pressable>
+  {!isFollower && hasSameTimeNeighbor(index) && (
+    <View style={styles.tieButtons}>
+      <Pressable
+        style={styles.tiePressable}
+        onPress={() => moveTieBreaker(rider, 'up')}
+      >
+        <Text style={styles.tieButton}>↑</Text>
+      </Pressable>
 
-        <Pressable
-          style={styles.tiePressable}
-          onPress={() => moveTieBreaker(rider, 'down')}
-        >
-          <Text style={styles.tieButton}>↓</Text>
-        </Pressable>
-      </View>
-    )}
-  </View>
+      <Pressable
+        style={styles.tiePressable}
+        onPress={() => moveTieBreaker(rider, 'down')}
+      >
+        <Text style={styles.tieButton}>↓</Text>
+      </Pressable>
+    </View>
+  )}
+</View>
 
   <Text style={styles.time}>{rider.time || '-'}</Text>
 </View>
 ))}
 
-<Pressable
-  style={styles.button}
-  onPress={() =>
-    router.push({
-      pathname: '/enter-stage',
-      params: { editEntryIndex: String(entryIndex) },
-    })
-  }>
-  <Text style={styles.buttonText}>Edit Stage</Text>
-</Pressable>
+{!isFollower && (
+  <Pressable
+    style={styles.button}
+    onPress={() =>
+      router.push({
+        pathname: '/enter-stage',
+        params: { editEntryIndex: String(entryIndex) },
+      })
+    }
+  >
+    <Text style={styles.buttonText}>Edit Stage</Text>
+  </Pressable>
+)}
 
     </ScrollView>
   );
