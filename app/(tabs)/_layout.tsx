@@ -6,9 +6,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+
+  const insets = useSafeAreaInsets();
 
   return (
   <Tabs
@@ -20,13 +23,13 @@ export default function TabLayout() {
       tabBarButton: HapticTab,
 
       tabBarStyle: {
-        backgroundColor: '#FAF1DE',
-        borderTopColor: '#C8A96A',
-        borderTopWidth: 1,
-        height: 100,
-        paddingTop: 8,
-        paddingBottom: 8,
-      },
+  backgroundColor: '#FAF1DE',
+  borderTopColor: '#C8A96A',
+  borderTopWidth: 1,
+  height: 70 + insets.bottom,
+  paddingTop: 8,
+  paddingBottom: Math.max(insets.bottom, 12),
+},
 
       tabBarLabelStyle: {
         fontSize: 12,
