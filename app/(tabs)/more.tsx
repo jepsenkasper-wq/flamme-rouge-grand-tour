@@ -116,6 +116,36 @@ Alert.alert(
   }
 }
 
+async function enableSharing() {
+  const savedGame = await getActiveSavedGame();
+
+  if (!savedGame) {
+    Alert.alert('No game found', 'There is no active game to share.');
+    return;
+  }
+
+  try {
+    const remoteMeta = await createRemoteGame(savedGame);
+
+    await updateActiveSavedGameMeta({
+      role: 'admin',
+      remoteId: remoteMeta.remoteId,
+      followCode: remoteMeta.followCode,
+      adminKey: remoteMeta.adminKey,
+    });
+
+    setActiveGameRole('admin');
+    setFollowCode(remoteMeta.followCode);
+
+    Alert.alert(
+      'Sharing enabled',
+      `Follow Code: ${remoteMeta.followCode}`
+    );
+  } catch {
+    Alert.alert('Sharing failed', 'Unable to create a follow code.');
+  }
+}
+
   return (
     <View style={styles.screen}>
       
@@ -154,7 +184,13 @@ Alert.alert(
   onPress={() => router.push('/tour-points-overview')}
 />
 
-<MenuButton
+
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sharing & Backup</Text>
+
+        <MenuButton
   title="Export Game"
   onPress={exportActiveGame}
 />
@@ -163,11 +199,6 @@ Alert.alert(
   title="Import Game"
   onPress={importGame}
 />
-
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sharing</Text>
 
         {activeGameRole === 'admin' && followCode && (
   <>
@@ -201,6 +232,13 @@ setTimeout(() => {
   }}
 />
   </>
+)}
+
+{activeGameRole === 'admin' && !followCode && (
+  <MenuButton
+    title="Enable Sharing"
+    onPress={enableSharing}
+  />
 )}
 
         {activeGameRole === 'follower' && (

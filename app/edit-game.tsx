@@ -58,7 +58,7 @@ if (isCheckingRole) {
       <Pressable
         style={styles.menuButton}
         onPress={() => router.push('/edit-scoring-rules')}>
-        <Text style={styles.menuText}>Scoring Rules</Text>
+        <Text style={styles.menuText}>Bonus Rules</Text>
         <Text style={styles.arrow}>›</Text>
       </Pressable>
     </View>

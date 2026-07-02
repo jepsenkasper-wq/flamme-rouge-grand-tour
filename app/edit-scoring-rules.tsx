@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ScrollView,
   Image,
   Pressable,
   StyleSheet,
@@ -13,6 +14,7 @@ import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { getClassificationBonusRules } from '@/lib/classifications';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EditScoringRulesScreen() {
   const defaultRules = getClassificationBonusRules(
@@ -37,6 +39,8 @@ export default function EditScoringRulesScreen() {
     rules.team.map(String)
   );
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.screen}>
       <Image
@@ -44,13 +48,23 @@ export default function EditScoringRulesScreen() {
             style={styles.watermark}
             resizeMode="cover"
           />
-      <Text style={styles.title}>Scoring Rules</Text>
+          <ScrollView
+  contentContainerStyle={[
+    styles.content,
+    { paddingBottom: 40 + insets.bottom },
+  ]}
+  showsVerticalScrollIndicator={false}
+>
+      <Text style={styles.title}>Bonus Rules</Text>
+<Text style={styles.subtitle}>
+  Bonus Tour Points are awarded after each stage.
+</Text>
 
    <View style={styles.card}>
-  <ScoringInputRow title="Yellow" values={yellow} setValues={setYellow} />
-  <ScoringInputRow title="Sprint" values={sprint} setValues={setSprint} />
-  <ScoringInputRow title="Mountain" values={mountain} setValues={setMountain} />
-  <ScoringInputRow title="Team" values={team} setValues={setTeam} />
+  <ScoringInputRow title="GC Bonus" values={yellow} setValues={setYellow} />
+<ScoringInputRow title="Sprint Bonus" values={sprint} setValues={setSprint} />
+<ScoringInputRow title="Mountain Bonus" values={mountain} setValues={setMountain} />
+<ScoringInputRow title="Team Bonus" values={team} setValues={setTeam} />
 
   <Pressable
   style={styles.button}
@@ -71,6 +85,7 @@ export default function EditScoringRulesScreen() {
 </Pressable>
 
 </View>
+</ScrollView>
     </View>
   );
 }
@@ -84,9 +99,19 @@ function ScoringInputRow({
   values: string[];
   setValues: (values: string[]) => void;
 }) {
+  const places = ['1st', '2nd', '3rd', '4th', '5th'];
+
   return (
     <View style={styles.ruleRow}>
       <Text style={styles.ruleTitle}>{title}</Text>
+
+      <View style={styles.placeRow}>
+        {values.map((_, index) => (
+          <Text key={index} style={styles.placeLabel}>
+            {places[index] || `${index + 1}th`}
+          </Text>
+        ))}
+      </View>
 
       <View style={styles.pointsRow}>
         {values.map((value, index) => (
@@ -111,8 +136,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 20,
   },
 
   title: {
@@ -200,5 +223,30 @@ watermark: {
   right: -120,
   bottom: 0,
   opacity: 0.2,
+},
+subtitle: {
+  fontSize: 15,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginTop: -14,
+  marginBottom: 20,
+},
+
+placeRow: {
+  flexDirection: 'row',
+  gap: 10,
+  marginBottom: 6,
+},
+
+placeLabel: {
+  width: 42,
+  textAlign: 'center',
+  fontSize: 12,
+  fontWeight: '900',
+  color: Colors.red,
+},
+content: {
+  padding: 24,
+  paddingTop: 20,
 },
 });

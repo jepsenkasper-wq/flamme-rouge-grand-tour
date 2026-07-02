@@ -14,6 +14,7 @@ import { gameResults } from '@/lib/gameResults';
 import { gameState } from '@/lib/gameState';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { stageDraft } from '@/lib/stageDraft';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -30,6 +31,11 @@ export default function ReviewStageEntryScreen() {
     params.editEntryIndex !== undefined
       ? Number(params.editEntryIndex)
       : null;
+  
+      const insets = useSafeAreaInsets();
+      const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
 
   function saveStage() {
     const editedEntry =
@@ -54,6 +60,7 @@ export default function ReviewStageEntryScreen() {
       gameResults.updateEntry(editEntryIndex, entryToSave);
     } else {
       gameResults.addEntry(entryToSave);
+
 
       const restDayStages = createGameDraft.restDayStages.map(Number);
 
@@ -82,7 +89,9 @@ return (
           style={styles.watermark}
           resizeMode="cover"
         />
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+  contentContainerStyle={[styles.content, contentStyle]}
+>
       <Text style={styles.title}>Review Stage</Text>
 
       {createGameDraft.playerNames.map((playerName, playerIndex) => {

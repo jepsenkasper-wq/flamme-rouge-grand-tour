@@ -11,6 +11,7 @@ import {
   updateActiveSavedGame,
 } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -29,6 +30,12 @@ export default function StageDetailScreen() {
 const [tieVersion, setTieVersion] = useState(0);
 
 const [isFollower, setIsFollower] = useState(false);
+
+const insets = useSafeAreaInsets();
+
+const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
 
 useEffect(() => {
   async function loadRole() {
@@ -158,7 +165,10 @@ function getRiderImage(playerIndex: number) {
 }
 
   return (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+  <ScrollView
+  style={styles.screen}
+  contentContainerStyle={[styles.content, contentStyle]}
+>
     
 <View style={styles.stageNav}>
   <Pressable

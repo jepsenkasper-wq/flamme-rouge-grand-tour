@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PLAYER_COLORS = [
   { name: 'Blue', value: '#2f5fb3' },
@@ -27,6 +28,12 @@ export default function PlayersScreen() {
   Array.from({ length: playerCount }, (_, index) => PLAYER_COLORS[index].name)
     );
 
+    const insets = useSafeAreaInsets();
+
+const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
+
   function updatePlayerName(index: number, value: string) {
     const nextNames = [...playerNames];
     nextNames[index] = value;
@@ -46,7 +53,9 @@ export default function PlayersScreen() {
       style={styles.watermark}
       resizeMode="cover"
     />
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+  contentContainerStyle={[styles.content, contentStyle]}
+>
      
 
       {playerNames.map((name, index) => (
@@ -89,11 +98,14 @@ export default function PlayersScreen() {
      <Pressable
   style={styles.button}
   onPress={() => {
-    createGameDraft.playerNames = playerNames;
-    createGameDraft.playerColors = playerColors;
+  createGameDraft.playerNames = playerNames.map((name, index) =>
+    name.trim() || `Player ${index + 1}`
+  );
 
-    router.push('/rest-days');
-  }}>
+  createGameDraft.playerColors = playerColors;
+
+  router.push('/rest-days');
+}}>
   <Text style={styles.buttonText}>Next</Text>
 </Pressable>
       
