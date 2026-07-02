@@ -11,8 +11,12 @@ import {
   getActiveSavedGame,
   refreshFollowedGame,
   updateActiveSavedGameMeta,
+  importSavedGame,
 } from '@/lib/storage';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function MoreScreen() {
 
@@ -31,6 +35,86 @@ useEffect(() => {
 
   loadRole();
 }, []);
+
+async function exportActiveGame() {
+  const savedGame = await getActiveSavedGame();
+
+  if (!savedGame) {
+    Alert.alert('No game found', 'There is no active game to export.');
+    return;
+  }
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+const safeName = savedGame.name
+  .trim()
+  .replace(/[<>:"/\\|?*]/g, '')
+  .replace(/\s+/g, '_');
+
+const fileUri =
+  `${FileSystem.documentDirectory}${safeName}_${today}.json`;
+
+   const exportObject = {
+  formatVersion: 1,
+  app: 'Flamme Rouge Companion',
+  exportedAt: new Date().toISOString(),
+  game: savedGame,
+};
+
+await FileSystem.writeAsStringAsync(
+  fileUri,
+  JSON.stringify(exportObject, null, 2)
+);
+
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Export Game',
+    });
+  } catch {
+    Alert.alert('Export failed', 'Unable to export the game.');
+  }
+}
+
+async function importGame() {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/json',
+      copyToCacheDirectory: true,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+const selectedFile = result.assets[0];
+
+const fileContent = await FileSystem.readAsStringAsync(selectedFile.uri);
+
+const parsedData = JSON.parse(fileContent);
+
+if (
+  parsedData.app !== 'Flamme Rouge Companion' ||
+  parsedData.formatVersion !== 1 ||
+  !parsedData.game
+) {
+  Alert.alert(
+    'Invalid file',
+    'This does not look like a Flamme Rouge Companion backup file.'
+  );
+  return;
+}
+
+await importSavedGame(parsedData.game);
+
+Alert.alert(
+  'Game imported',
+  'The game has been imported and added to My Games.'
+);
+  } catch {
+    Alert.alert('Import failed', 'Unable to import the selected file.');
+  }
+}
 
   return (
     <View style={styles.screen}>
@@ -68,6 +152,16 @@ useEffect(() => {
 <MenuButton
   title="Tour Points Overview"
   onPress={() => router.push('/tour-points-overview')}
+/>
+
+<MenuButton
+  title="Export Game"
+  onPress={exportActiveGame}
+/>
+
+<MenuButton
+  title="Import Game"
+  onPress={importGame}
 />
 
       </View>

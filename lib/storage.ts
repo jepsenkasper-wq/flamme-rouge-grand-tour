@@ -278,3 +278,26 @@ export async function unfollowActiveGame() {
 
   return remainingGames;
 }
+export async function importSavedGame(importedGame: SavedGame) {
+  const games = await getSavedGames();
+
+  const importedCopy: SavedGame = {
+    ...importedGame,
+    id: `import-${Date.now()}`,
+    name: `${importedGame.name} (Imported)`,
+    createdAt: new Date().toISOString(),
+    role: 'admin',
+    remoteId: undefined,
+    followCode: undefined,
+    adminKey: undefined,
+  };
+
+  const updatedGames = [...games, importedCopy];
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(updatedGames)
+  );
+
+  return importedCopy;
+}

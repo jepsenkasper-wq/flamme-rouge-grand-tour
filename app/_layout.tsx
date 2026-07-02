@@ -37,6 +37,10 @@ export default function RootLayout() {
         <Stack.Screen name="my-games" options={{ title: 'My Games' }} />
         <Stack.Screen name="follow-game" options={{ title: 'Follow Game' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+  name="tour-points-overview"
+  options={{ title: 'Tour Points' }}
+/>
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
