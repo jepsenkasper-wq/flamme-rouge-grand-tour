@@ -15,6 +15,7 @@ import { gameState } from '@/lib/gameState';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { stageDraft } from '@/lib/stageDraft';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -84,12 +85,8 @@ export default function ReviewStageEntryScreen() {
   
 return (
     <View style={styles.screen}>
-        <Image
-          source={require('@/assets/images/background-blackwhite.png')}
-          style={styles.watermark}
-          resizeMode="cover"
-        />
-    <ScrollView
+        <BackgroundWatermark />
+        <ScrollView
   contentContainerStyle={[styles.content, contentStyle]}
 >
       <Text style={styles.title}>Review Stage</Text>
@@ -282,12 +279,5 @@ playerAvatar: {
   height: 50,
   marginRight: 8,
 },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 });

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import {
@@ -35,6 +35,10 @@ function formatStandingName(name: string) {
     .replace(' - Rouleur', ' - R');
 }
 export default function StandingsScreen() {
+
+  const { width } = useWindowDimensions();
+const isTablet = width >= 700;
+
   const [, setRefreshVersion] = useState(0);
 
   useFocusEffect(
@@ -99,7 +103,10 @@ const activeTitle =
       ? headerImages.yellow
       : headerImages[activeTab]
   }
-  style={styles.headerBackground}
+  style={[
+  styles.headerBackground,
+  isTablet && styles.tabletHeaderBackground,
+]}
   resizeMode="cover"
 />  
 
@@ -359,5 +366,11 @@ listContent: {
   paddingHorizontal: 20,
   paddingBottom: 40,
 },
+tabletHeaderBackground: {
+    width: '100%',
+    height: 200,
+    maxWidth: 650,
+    alignSelf: 'center',
+}
 
 });

@@ -1,4 +1,4 @@
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Link } from 'expo-router';
 
 import { Colors } from '@/constants/colors';
@@ -11,13 +11,20 @@ import {
 
 
 export default function StartScreen() {
+  const { width } = useWindowDimensions();
+
+const isTablet = width >= 700;
   return (
     <ImageBackground
       source={require('@/assets/images/tour-background.png')}
       style={styles.screen}
       resizeMode="cover"
     >
-      <View style={styles.overlay}>
+      <View
+  style={[
+    styles.overlay,
+    isTablet && styles.tabletOverlay,
+  ]}>
         <View style={styles.logoArea}>
           <Text style={styles.title}>FLAMME{'\n'}ROUGE</Text>
           <Text style={styles.subtitle}>GRAND TOUR</Text>
@@ -120,5 +127,11 @@ const styles = StyleSheet.create({
     color: '#1E232A',
     letterSpacing: 1,
   },
+  
+  tabletOverlay: {
+  width: 430,
+  alignSelf: 'center',
+},
+
   
 });

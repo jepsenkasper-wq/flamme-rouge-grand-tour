@@ -156,6 +156,27 @@ export async function deleteActiveSavedGame() {
 
   return remainingGames;
 }
+
+export async function deleteSavedGameById(gameId: string) {
+  const games = await getSavedGames();
+
+  const remainingGames = games.filter(
+    (game) => game.id !== gameId
+  );
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(remainingGames)
+  );
+
+  if (activeGameId === gameId) {
+    activeGameId = null;
+    await AsyncStorage.removeItem(ACTIVE_GAME_KEY);
+  }
+
+  return remainingGames;
+}
+
 export async function updateActiveSavedGameMeta(
   meta: Partial<Pick<SavedGame, 'role' | 'remoteId' | 'followCode' | 'adminKey'>>
 ) {

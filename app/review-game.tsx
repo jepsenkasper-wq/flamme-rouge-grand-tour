@@ -8,6 +8,7 @@ import { gameState } from '@/lib/gameState';
 import { stageDraft } from '@/lib/stageDraft';
 import { saveGame } from '@/lib/storage';
 import { saveGameToLibrary } from '@/lib/storage';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 export default function ReviewGameScreen() {
   const playerNames = createGameDraft.playerNames;
@@ -16,11 +17,7 @@ export default function ReviewGameScreen() {
 
   return (
   <View style={styles.screen}>
-      <Image
-        source={require('@/assets/images/background-blackwhite.png')}
-        style={styles.watermark}
-        resizeMode="cover"
-      />
+      <BackgroundWatermark />
     <ScrollView
       contentContainerStyle={styles.content}>
       <Text style={styles.title}>Review Game</Text>
@@ -109,12 +106,5 @@ content: {
   paddingTop: 20,
   paddingBottom: 40,
 },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 });

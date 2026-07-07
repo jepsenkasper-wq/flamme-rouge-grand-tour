@@ -4,6 +4,7 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { useEffect, useState } from 'react';
 import { getActiveSavedGame } from '@/lib/storage';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 export default function EditGameScreen() {
 
@@ -34,11 +35,7 @@ if (isCheckingRole) {
 }  
   return (
     <View style={styles.screen}>
-      <Image
-            source={require('@/assets/images/background-blackwhite.png')}
-            style={styles.watermark}
-            resizeMode="cover"
-          />
+      <BackgroundWatermark />
       <Text style={styles.title}>Edit Game</Text>
 
       <Pressable
@@ -103,12 +100,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.red,
   },
-  watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+ 
 });

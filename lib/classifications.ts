@@ -252,48 +252,100 @@ export function calculateOverallClassification() {
     });
   });
 
-  yellowClassification.forEach((rider, index) => {
-    const bonus = bonusRules.yellow[index] || 0;
-    const playerName = rider.riderName.split(' - ')[0];
-    const player = players.find((p) => p.playerName === playerName);
+    function hasRiderTime(riderName: string) {
+    const [playerName, riderType] = riderName.split(' - ');
 
-    if (player) {
-      player.bonusPoints += bonus;
-      player.points += bonus;
-    }
-  });
+    const playerIndex = players.findIndex(
+      (player) => player.playerName === playerName
+    );
 
-  mountainClassification.forEach((rider, index) => {
-    const bonus = bonusRules.mountain[index] || 0;
-    const playerName = rider.riderName.split(' - ')[0];
-    const player = players.find((p) => p.playerName === playerName);
+    if (playerIndex === -1) return false;
 
-    if (player) {
-      player.bonusPoints += bonus;
-      player.points += bonus;
-    }
-  });
+    return gameResults.entries.some((entry) => {
+      if (entry.entryType === 'restDay') return false;
 
-  sprintClassification.forEach((rider, index) => {
-    const bonus = bonusRules.sprint[index] || 0;
-    const playerName = rider.riderName.split(' - ')[0];
-    const player = players.find((p) => p.playerName === playerName);
+      const player = entry.players[playerIndex];
+      if (!player) return false;
 
-    if (player) {
-      player.bonusPoints += bonus;
-      player.points += bonus;
-    }
-  });
+      const rider =
+        riderType === 'Sprinteur'
+          ? player.sprinteur
+          : player.rouleur;
 
-  teamClassification.forEach((team, index) => {
-    const bonus = bonusRules.team[index] || 0;
-    const player = players.find((p) => p.playerName === team.playerName);
+      return rider.time !== '';
+    });
+  }
 
-    if (player) {
-      player.bonusPoints += bonus;
-      player.points += bonus;
-    }
-  });
+  function hasTeamTime(playerName: string) {
+    const playerIndex = players.findIndex(
+      (player) => player.playerName === playerName
+    );
+
+    if (playerIndex === -1) return false;
+
+    return gameResults.entries.some((entry) => {
+      if (entry.entryType === 'restDay') return false;
+
+      const player = entry.players[playerIndex];
+      if (!player) return false;
+
+      return (
+        player.sprinteur.time !== '' ||
+        player.rouleur.time !== ''
+      );
+    });
+  }
+
+    yellowClassification
+    .filter((rider) => hasRiderTime(rider.riderName))
+    .forEach((rider, index) => {
+      const bonus = bonusRules.yellow[index] || 0;
+      const playerName = rider.riderName.split(' - ')[0];
+      const player = players.find((p) => p.playerName === playerName);
+
+      if (player) {
+        player.bonusPoints += bonus;
+        player.points += bonus;
+      }
+    });
+
+    mountainClassification
+    .filter((rider) => rider.points > 0)
+    .forEach((rider, index) => {
+      const bonus = bonusRules.mountain[index] || 0;
+      const playerName = rider.riderName.split(' - ')[0];
+      const player = players.find((p) => p.playerName === playerName);
+
+      if (player) {
+        player.bonusPoints += bonus;
+        player.points += bonus;
+      }
+    });
+
+    sprintClassification
+    .filter((rider) => rider.points > 0)
+    .forEach((rider, index) => {
+      const bonus = bonusRules.sprint[index] || 0;
+      const playerName = rider.riderName.split(' - ')[0];
+      const player = players.find((p) => p.playerName === playerName);
+
+      if (player) {
+        player.bonusPoints += bonus;
+        player.points += bonus;
+      }
+    });
+
+    teamClassification
+    .filter((team) => hasTeamTime(team.playerName))
+    .forEach((team, index) => {
+      const bonus = bonusRules.team[index] || 0;
+      const player = players.find((p) => p.playerName === team.playerName);
+
+      if (player) {
+        player.bonusPoints += bonus;
+        player.points += bonus;
+      }
+    });
 
   return players.sort((a, b) => b.points - a.points);
 }
@@ -374,37 +426,86 @@ export function calculateBonusBreakdown() {
     }
   }
 
-  yellowClassification.forEach((rider, index) => {
-    addRiderBonus(
-      rider.riderName,
-      'yellow',
-      bonusRules.yellow[index] || 0
-    );
-  });
+    function hasRiderTime(riderName: string) {
+    const [playerName, riderType] = riderName.split(' - ');
 
-  mountainClassification.forEach((rider, index) => {
-    addRiderBonus(
-      rider.riderName,
-      'mountain',
-      bonusRules.mountain[index] || 0
-    );
-  });
+    const player = players.find((p) => p.playerName === playerName);
 
-  sprintClassification.forEach((rider, index) => {
-    addRiderBonus(
-      rider.riderName,
-      'sprint',
-      bonusRules.sprint[index] || 0
-    );
-  });
+    if (!player) return false;
 
-  teamClassification.forEach((team, index) => {
-    const player = players.find((p) => p.playerName === team.playerName);
+    return gameResults.entries.some((entry) => {
+      if (entry.entryType === 'restDay') return false;
 
-    if (player) {
-      player.team += bonusRules.team[index] || 0;
-    }
-  });
+      const entryPlayer = entry.players[player.playerIndex];
+      if (!entryPlayer) return false;
+
+      const rider =
+        riderType === 'Sprinteur'
+          ? entryPlayer.sprinteur
+          : entryPlayer.rouleur;
+
+      return rider.time !== '';
+    });
+  }
+
+  function hasTeamTime(playerIndex: number) {
+    return gameResults.entries.some((entry) => {
+      if (entry.entryType === 'restDay') return false;
+
+      const entryPlayer = entry.players[playerIndex];
+      if (!entryPlayer) return false;
+
+      return (
+        entryPlayer.sprinteur.time !== '' ||
+        entryPlayer.rouleur.time !== ''
+      );
+    });
+  }
+
+    yellowClassification
+    .filter((rider) => hasRiderTime(rider.riderName))
+    .forEach((rider, index) => {
+      addRiderBonus(
+        rider.riderName,
+        'yellow',
+        bonusRules.yellow[index] || 0
+      );
+    });
+
+    mountainClassification
+    .filter((rider) => rider.points > 0)
+    .forEach((rider, index) => {
+      addRiderBonus(
+        rider.riderName,
+        'mountain',
+        bonusRules.mountain[index] || 0
+      );
+    });
+
+    sprintClassification
+    .filter((rider) => rider.points > 0)
+    .forEach((rider, index) => {
+      addRiderBonus(
+        rider.riderName,
+        'sprint',
+        bonusRules.sprint[index] || 0
+      );
+    });
+
+    teamClassification
+    .filter((team) => {
+      const player = players.find((p) => p.playerName === team.playerName);
+      return player ? hasTeamTime(player.playerIndex) : false;
+    })
+    .forEach((team, index) => {
+      const player = players.find((p) => p.playerName === team.playerName);
+
+      if (player) {
+        player.team += bonusRules.team[index] || 0;
+      }
+    });
 
   return players;
 }
+
+

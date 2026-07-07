@@ -3,15 +3,12 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { Colors } from '@/constants/colors';
 import { gameResults } from '@/lib/gameResults';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 export default function StagesScreen() {
   return (
     <View style={styles.screen}>
-          <Image
-            source={require('@/assets/images/background-blackwhite.png')}
-            style={styles.watermark}
-            resizeMode="cover"
-          />
+          <BackgroundWatermark />
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Stages</Text>
 
@@ -103,12 +100,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.brown,
   },
-  watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+ 
 });

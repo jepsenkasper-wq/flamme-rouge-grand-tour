@@ -4,6 +4,7 @@ import { Image, Alert, Pressable, Share, ScrollView, StyleSheet, Text, View } fr
 import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame, unfollowActiveGame } from '@/lib/storage';
 import { createRemoteGame } from '@/lib/remoteGames';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 import { useEffect, useState } from 'react';
 import {
@@ -149,11 +150,8 @@ async function enableSharing() {
   return (
     <View style={styles.screen}>
       
-      <Image
-  source={require('@/assets/images/background-blackwhite.png')}
-  style={styles.watermark}
-  resizeMode="cover"
-/>
+      <BackgroundWatermark />
+
 <ScrollView
   contentContainerStyle={styles.content}
   showsVerticalScrollIndicator={false}
@@ -172,6 +170,10 @@ async function enableSharing() {
           title="My Games"
           onPress={() => router.push('/my-games')}
         />
+        <MenuButton
+  title="Solo Test"
+  onPress={() => router.push('/dev/solo-test')}
+/>
 
         {activeGameRole !== 'follower' && (
   <MenuButton
@@ -389,16 +391,7 @@ const styles = StyleSheet.create({
   dangerText: {
     color: Colors.red,
   },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
 
-  right: -120,
-  bottom: 0,
-
-  opacity: 0.2,
-},
 content: {
   padding: 24,
   paddingTop: 50,

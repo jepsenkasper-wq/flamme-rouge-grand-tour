@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { useCallback, useState } from 'react';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 export default function EditPlayersScreen() {
  const [, setRefreshVersion] = useState(0);
@@ -15,11 +16,7 @@ useFocusEffect(
 );
     return (
     <View style={styles.screen}>
-      <Image
-            source={require('@/assets/images/background-blackwhite.png')}
-            style={styles.watermark}
-            resizeMode="cover"
-          />
+      <BackgroundWatermark />
       <Text style={styles.title}>Players</Text>
 
    {createGameDraft.playerNames.map((name, index) => (
@@ -111,12 +108,5 @@ addButtonText: {
   fontSize: 18,
   fontWeight: '900',
 },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 });

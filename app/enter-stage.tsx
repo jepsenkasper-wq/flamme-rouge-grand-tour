@@ -8,7 +8,7 @@ import { gameResults } from '@/lib/gameResults';
 import { stageDraft } from '@/lib/stageDraft';
 import { useEffect, useState } from 'react';
 import { getActiveSavedGame } from '@/lib/storage';
-
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 export default function EnterStageScreen() {
 
 const [isCheckingRole, setIsCheckingRole] = useState(true);
@@ -59,11 +59,7 @@ const entryTitle =
 
   return (
     <View style={styles.screen}>
-      <Image
-              source={require('@/assets/images/background-blackwhite.png')}
-              style={styles.watermark}
-              resizeMode="cover"
-            />
+      <BackgroundWatermark />
       <Text style={styles.title}>{entryTitle}</Text>
 
       <View style={styles.playerList}>
@@ -179,13 +175,6 @@ const styles = StyleSheet.create({
     color: Colors.red,
     fontWeight: '900',
   },
-  watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+ 
 
 });

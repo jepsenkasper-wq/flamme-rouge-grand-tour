@@ -15,6 +15,7 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { gameResults } from '@/lib/gameResults';
 import { getClassificationBonusRules } from '@/lib/classifications';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 function getStageCategory(numberOfStages: number) {
   if (numberOfStages <= 7) return 'short';
@@ -46,11 +47,7 @@ const [, setRefreshVersion] = useState(0);
 
   return (
     <View style={styles.screen}>
-      <Image
-            source={require('@/assets/images/background-blackwhite.png')}
-            style={styles.watermark}
-            resizeMode="cover"
-          />
+      <BackgroundWatermark />
       <Text style={styles.title}>Game Settings</Text>
 
       <View style={styles.card}>
@@ -320,12 +317,5 @@ restDayText: {
   color: Colors.brown,
   marginBottom: 6,
 },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 });

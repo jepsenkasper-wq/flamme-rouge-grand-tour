@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
+
 
 export default function RestDaysScreen() {
   const params = useLocalSearchParams();
@@ -23,11 +25,7 @@ const restDayCount = Number(createGameDraft.restDays || 0);
 
  return (
    <View style={styles.screen}>
-    <Image
-      source={require('@/assets/images/background-blackwhite.png')}
-      style={styles.watermark}
-      resizeMode="cover"
-    />
+    <BackgroundWatermark />
   <ScrollView
     contentContainerStyle={styles.content}>
       <Text style={styles.title}>Rest Days</Text>
@@ -54,6 +52,47 @@ const restDayCount = Number(createGameDraft.restDays || 0);
       <Pressable
   style={styles.button}
   onPress={() => {
+  const numericRestDays = restDayStages.map((stage) => Number(stage));
+
+  if (numericRestDays.some((stage) => !stage)) {
+    Alert.alert(
+      'Invalid rest days',
+      'All rest days must have a stage number.'
+    );
+    return;
+  }
+
+  if (numericRestDays.some((stage) => stage < 1 || stage >= stageCount)) {
+    Alert.alert(
+      'Invalid rest days',
+      'Rest days must be placed after a stage before the final stage.'
+    );
+    return;
+  }
+
+  const uniqueRestDays = new Set(numericRestDays);
+
+  if (uniqueRestDays.size !== numericRestDays.length) {
+    Alert.alert(
+      'Invalid rest days',
+      'You cannot place more than one rest day after the same stage.'
+    );
+    return;
+  }
+
+  const isSorted = numericRestDays.every((stage, index) => {
+    if (index === 0) return true;
+    return stage > numericRestDays[index - 1];
+  });
+
+  if (!isSorted) {
+    Alert.alert(
+      'Invalid rest days',
+      'Rest days must be entered in chronological order.'
+    );
+    return;
+  }
+
   createGameDraft.restDayStages = restDayStages;
 
   router.push('/review-game');

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -11,18 +11,52 @@ import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-function formatTimeInput(value: string) {
-  const digits = value.replace(/\D/g, '');
+function formatTime(value: string, finalize = false) {
+  const cleaned = value.replace(/[^\d:]/g, '');
 
-  if (digits.length <= 2) {
-    return digits;
+  if (!cleaned) {
+    return finalize ? '0:00' : '';
   }
 
-  const minutes = digits.slice(0, -2);
-  const seconds = digits.slice(-2);
+  if (cleaned.includes(':')) {
+    const [minutes = '', seconds = ''] = cleaned.split(':');
 
-  return `${minutes}:${seconds}`;
+    const minuteNumber = Number(minutes || 0);
+
+    if (!finalize) {
+      return `${minuteNumber}:${seconds}`;
+    }
+
+    if (seconds === '') {
+      return `${minuteNumber}:00`;
+    }
+
+    if (seconds.length === 1) {
+      return `${minuteNumber}:${seconds}0`;
+    }
+
+    return `${minuteNumber}:${seconds.slice(0, 2)}`;
+  }
+
+  const digits = cleaned.replace(/\D/g, '');
+
+  if (!finalize) {
+    if (digits.length <= 2) {
+      return digits;
+    }
+
+    return `${digits.slice(0, -2)}:${digits.slice(-2)}`;
+  }
+
+  if (digits.length <= 2) {
+    return `${Number(digits)}:00`;
+  }
+
+  return `${Number(digits.slice(0, -2))}:${digits
+    .slice(-2)
+    .padStart(2, '0')}`;
 }
+
 function getPlayerColor(colorName: string) {
   switch (colorName) {
     case 'Blue':
@@ -71,7 +105,7 @@ const entryTitle = editedEntry
     : `Stage ${gameState.currentStage}`;
 
 const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
-  'sprinteur'
+  'rouleur'
 );
 
 const currentPlayerEntry = stageDraft.players[playerIndex];
@@ -151,38 +185,38 @@ const riderLabel =
 
   <View style={styles.riderToggle}>
     <Pressable
-      style={[
-        styles.riderButton,
-        selectedRider === 'sprinteur' && styles.activeButton,
-      ]}
-      onPress={() => setSelectedRider('sprinteur')}
-    >
-      <Text
-        style={[
-          styles.riderButtonText,
-          selectedRider === 'sprinteur' && styles.activeButtonText,
-        ]}
-      >
-        Sprinteur
-      </Text>
-    </Pressable>
+  style={[
+    styles.riderButton,
+    selectedRider === 'rouleur' && styles.activeButton,
+  ]}
+  onPress={() => setSelectedRider('rouleur')}
+>
+  <Text
+    style={[
+      styles.riderButtonText,
+      selectedRider === 'rouleur' && styles.activeButtonText,
+    ]}
+  >
+    Rouleur
+  </Text>
+</Pressable>
 
     <Pressable
-      style={[
-        styles.riderButton,
-        selectedRider === 'rouleur' && styles.activeButton,
-      ]}
-      onPress={() => setSelectedRider('rouleur')}
-    >
-      <Text
-        style={[
-          styles.riderButtonText,
-          selectedRider === 'rouleur' && styles.activeButtonText,
-        ]}
-      >
-        Rouleur
-      </Text>
-    </Pressable>
+  style={[
+    styles.riderButton,
+    selectedRider === 'sprinteur' && styles.activeButton,
+  ]}
+  onPress={() => setSelectedRider('sprinteur')}
+>
+  <Text
+    style={[
+      styles.riderButtonText,
+      selectedRider === 'sprinteur' && styles.activeButtonText,
+    ]}
+  >
+    Sprinteur
+  </Text>
+</Pressable>
   </View>
 </View>
 
@@ -215,8 +249,11 @@ const riderLabel =
                 style={styles.gridInput}
                 value={currentEntry.time}
                 onChangeText={(value) =>
-                  updateEntry('time', formatTimeInput(value))
-                }
+  updateEntry('time', formatTime(value))
+}
+onEndEditing={() =>
+  updateEntry('time', formatTime(currentEntry.time, true))
+}
                 keyboardType="number-pad"
                 placeholder="0:00"
               />
@@ -300,7 +337,24 @@ const riderLabel =
     />
 
     <View style={styles.inputColumn}>
-      <Text style={styles.gridLabel}>Fatigue Cards</Text>
+      <View style={styles.labelRow}>
+  <Text style={styles.gridLabel}>Fatigue Cards</Text>
+
+  <Pressable
+    onPress={() =>
+      Alert.alert(
+        'Fatigue Cards',
+        "Enter the number of fatigue cards currently in this rider's deck if you want to save the game and resume it later."
+      )
+    }
+  >
+    <Ionicons
+      name="help-circle-outline"
+      size={18}
+      color={Colors.brown}
+    />
+  </Pressable>
+</View>
 
       <TextInput
         style={styles.fatigueInput}
@@ -495,6 +549,13 @@ playerTitleRow: {
 playerStar: {
   fontSize: 22,
   marginTop: -6,
+
+  textShadowColor: 'rgba(42,36,28,0.7)',
+  textShadowOffset: {
+    width: 0,
+    height: 0,
+  },
+  textShadowRadius: 2,
 },
 grid: {
   gap: 12,
@@ -518,7 +579,12 @@ gridLabel: {
   textAlign: 'center',
 },
 
-
+labelRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 6,
+},
 
 fatigueRow: {
   marginTop: 6,

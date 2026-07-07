@@ -173,11 +173,11 @@ const buttonTitle =
         />
       )}
       <Text style={styles.podiumName}>
-  {podium[1].playerName}
+  {podium[1]?.playerName || ''}
 </Text>
 
 <Text style={styles.podiumPoints}>
-  {podium[1].points} pts
+  {podium[1] ? `${podium[1].points} pts` : ''}
 </Text>
 
       <View style={[styles.podiumBlock, styles.secondBlock]}>
@@ -194,11 +194,11 @@ const buttonTitle =
       )}
 
 <Text style={styles.podiumName}>
-  {podium[0].playerName}
+  {podium[0]?.playerName || ''}
 </Text>
 
 <Text style={styles.podiumPoints}>
-  {podium[0].points} pts
+  {podium[0] ? `${podium[0].points} pts` : ''}
 </Text>
 
       <View style={[styles.podiumBlock, styles.firstBlock]}>
@@ -215,11 +215,11 @@ const buttonTitle =
       )}
 
       <Text style={styles.podiumName}>
-  {podium[2].playerName}
+  {podium[2]?.playerName || ''}
 </Text>
 
-      <Text style={styles.podiumPoints}>
-  {podium[2].points} pts
+<Text style={styles.podiumPoints}>
+  {podium[2] ? `${podium[2].points} pts` : ''}
 </Text>
 
       <View style={[styles.podiumBlock, styles.thirdBlock]}>

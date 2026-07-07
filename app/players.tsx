@@ -4,6 +4,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 const PLAYER_COLORS = [
   { name: 'Blue', value: '#2f5fb3' },
@@ -48,12 +49,8 @@ const contentStyle = {
 
   return (
     <View style={styles.screen}>
-    <Image
-      source={require('@/assets/images/background-blackwhite.png')}
-      style={styles.watermark}
-      resizeMode="cover"
-    />
-    <ScrollView
+      <BackgroundWatermark />
+      <ScrollView
   contentContainerStyle={[styles.content, contentStyle]}
 >
      
@@ -210,14 +207,7 @@ disabledColorCircle: {
 },
 
 
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 
 
 });

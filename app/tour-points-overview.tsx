@@ -4,6 +4,7 @@ import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { gameResults } from '@/lib/gameResults';
 import { calculateBonusBreakdown } from '@/lib/classifications';
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 export default function TourPointsOverviewScreen() {
 const bonusBreakdown = calculateBonusBreakdown();
@@ -57,11 +58,7 @@ const teamBonus = bonus?.team || 0;
 
   return (
     <View style={styles.screen}>
-        <Image
-          source={require('@/assets/images/background-blackwhite.png')}
-          style={styles.watermark}
-          resizeMode="cover"
-        />
+        <BackgroundWatermark />
 
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title}>Tour Points Overview</Text>
@@ -170,14 +167,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.red,
   },
-  watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+  
 bonusBox: {
   borderTopWidth: 1,
   borderTopColor: Colors.border,

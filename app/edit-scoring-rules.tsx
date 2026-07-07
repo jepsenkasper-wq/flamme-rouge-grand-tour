@@ -15,7 +15,7 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { getClassificationBonusRules } from '@/lib/classifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import BackgroundWatermark from '@/components/BackgroundWatermark';
 export default function EditScoringRulesScreen() {
   const defaultRules = getClassificationBonusRules(
     Number(createGameDraft.stages || 21)
@@ -43,12 +43,8 @@ export default function EditScoringRulesScreen() {
 
   return (
     <View style={styles.screen}>
-      <Image
-            source={require('@/assets/images/background-blackwhite.png')}
-            style={styles.watermark}
-            resizeMode="cover"
-          />
-          <ScrollView
+      <BackgroundWatermark />
+      <ScrollView
   contentContainerStyle={[
     styles.content,
     { paddingBottom: 40 + insets.bottom },
@@ -216,14 +212,7 @@ buttonText: {
   fontSize: 18,
   fontWeight: '900',
 },
-watermark: {
-  position: 'absolute',
-  width: 500,
-  height: 700,
-  right: -120,
-  bottom: 0,
-  opacity: 0.2,
-},
+
 subtitle: {
   fontSize: 15,
   fontWeight: '700',
