@@ -15,6 +15,9 @@ export default function ReviewGameScreen() {
   const playerColors = createGameDraft.playerColors;
   const restDayStages = createGameDraft.restDayStages;
 
+  const isDummyGame = createGameDraft.companionMode === 'dummy';
+const dummyTeams = createGameDraft.dummyTeams;
+
   return (
   <View style={styles.screen}>
       <BackgroundWatermark />
@@ -26,13 +29,46 @@ export default function ReviewGameScreen() {
       <Text style={styles.text}>Stages: {createGameDraft.stages}</Text>
       <Text style={styles.text}>Rest days: {createGameDraft.restDays}</Text>
 
-      <Text style={styles.sectionTitle}>Players</Text>
+      <Text style={styles.sectionTitle}>
+  {isDummyGame ? 'Teams' : 'Players'}
+</Text>
 
-      {playerNames.map((name: string, index: number) => (
-        <Text key={index} style={styles.text}>
-          {index + 1}. {name || `Player ${index + 1}`} ({playerColors[index]})
+{isDummyGame
+  ? dummyTeams.map((team, index) => (
+      <View key={team.id} style={styles.reviewCard}>
+        <Text style={styles.reviewTitle}>
+          {index + 1}. {team.name || `Team ${index + 1}`}
         </Text>
-      ))}
+
+        <Text style={styles.text}>Colour: {team.color}</Text>
+        <Text style={styles.text}>Type: {team.teamType}</Text>
+
+        {team.teamType === 'human' && (
+          <Text style={styles.text}>
+            Draw mode: {team.drawMode}
+          </Text>
+        )}
+
+        {(team.teamType === 'normal-ai' ||
+          (team.teamType === 'human' &&
+            team.drawMode === 'app-draw')) && (
+          <>
+            <Text style={styles.text}>
+              Sprinteur deck: {team.sprinteurSpecialRiderId ?? 'Normal'}
+            </Text>
+
+            <Text style={styles.text}>
+              Rouleur deck: {team.rouleurSpecialRiderId ?? 'Normal'}
+            </Text>
+          </>
+        )}
+      </View>
+    ))
+  : playerNames.map((name: string, index: number) => (
+      <Text key={index} style={styles.text}>
+        {index + 1}. {name || `Player ${index + 1}`} ({playerColors[index]})
+      </Text>
+    ))}
 
       <Text style={styles.sectionTitle}>Rest Days</Text>
 
@@ -105,6 +141,22 @@ content: {
   padding: 24,
   paddingTop: 20,
   paddingBottom: 40,
+},
+
+reviewCard: {
+  backgroundColor: Colors.card,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 14,
+},
+
+reviewTitle: {
+  fontSize: 18,
+  fontWeight: '900',
+  color: Colors.brown,
+  marginBottom: 8,
 },
 
 });

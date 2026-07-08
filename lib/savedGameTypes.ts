@@ -1,4 +1,5 @@
 import type { GameRole } from './remoteTypes';
+import type { SoloStageState } from './solo/soloGameTypes';
 
 export type SavedGame = {
   id: string;
@@ -13,4 +14,6 @@ export type SavedGame = {
   remoteId?: string;
   followCode?: string;
   adminKey?: string;
+  soloStageState?: SoloStageState | null;
+  
 };

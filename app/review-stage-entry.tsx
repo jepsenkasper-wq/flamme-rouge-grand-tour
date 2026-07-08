@@ -16,6 +16,10 @@ import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { stageDraft } from '@/lib/stageDraft';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+import {
+  applyStageDraftFatigueToSoloStage,
+  prepareActiveSoloStageForNextStage,
+} from '@/lib/solo/activeSoloStage';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -60,7 +64,15 @@ export default function ReviewStageEntryScreen() {
     if (editEntryIndex !== null) {
       gameResults.updateEntry(editEntryIndex, entryToSave);
     } else {
-      gameResults.addEntry(entryToSave);
+    gameResults.addEntry(entryToSave);
+
+if (
+  createGameDraft.companionMode === 'dummy' &&
+  editEntryIndex === null
+) {
+  applyStageDraftFatigueToSoloStage(playersToSave);
+  prepareActiveSoloStageForNextStage();
+}
 
 
       const restDayStages = createGameDraft.restDayStages.map(Number);

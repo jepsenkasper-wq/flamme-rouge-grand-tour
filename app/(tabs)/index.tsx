@@ -130,11 +130,20 @@ const entryTitle =
     ? `Rest Day after Stage ${gameState.currentStage}`
     : `Stage ${gameState.currentStage} of ${createGameDraft.stages || '21'}`;
 
+const isDummyGame =
+  createGameDraft.companionMode === 'dummy';
+
 const buttonTitle =
   gameState.currentEntryType === 'restDay'
     ? 'Enter Rest Day'
+    : isDummyGame
+    ? gameState.stageState === 'waiting-for-play'
+      ? `Play Stage ${gameState.currentStage}`
+      : gameState.stageState === 'playing'
+      ? `Continue Stage ${gameState.currentStage}`
+      : `Enter Stage ${gameState.currentStage}`
     : `Enter Stage ${gameState.currentStage}`;
-
+  
   return (
   <ScrollView
     style={styles.screen}
@@ -377,9 +386,14 @@ const buttonTitle =
   <Pressable
     style={styles.button}
     onPress={() => {
-      stageDraft.initialize(createGameDraft.playerNames.length);
-      router.push('/enter-stage');
-    }}
+  if (isDummyGame) {
+    router.push('/play-stage');
+    return;
+  }
+
+  stageDraft.initialize(createGameDraft.playerNames.length);
+  router.push('/enter-stage');
+}}
   >
     <Text style={styles.buttonText}>
       {buttonTitle}

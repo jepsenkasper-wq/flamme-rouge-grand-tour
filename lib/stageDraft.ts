@@ -30,10 +30,24 @@ export const stageDraft = {
 
   players: [] as PlayerStageEntry[],
 
-  initialize(playerCount: number) {
-    this.players = Array.from({ length: playerCount }, () => ({
-      sprinteur: createEmptyRiderEntry(),
-      rouleur: createEmptyRiderEntry(),
-    }));
-  },
+  initialize(
+  playerCount: number,
+  fatigueTransfers?: {
+    sprinteurFatigueCards: number;
+    rouleurFatigueCards: number;
+  }[]
+) {
+  this.players = Array.from({ length: playerCount }, (_, index) => ({
+    sprinteur: {
+      ...createEmptyRiderEntry(),
+      fatigueCards:
+        fatigueTransfers?.[index]?.sprinteurFatigueCards?.toString() ?? '',
+    },
+    rouleur: {
+      ...createEmptyRiderEntry(),
+      fatigueCards:
+        fatigueTransfers?.[index]?.rouleurFatigueCards?.toString() ?? '',
+    },
+  }));
+},
 };

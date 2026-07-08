@@ -1,8 +1,22 @@
-export type DummyScenario = 'normal' | 'climb' | 'descent' | 'sprint';
+import {
+  specialRiders,
+  type SpecialRiderId,
+} from './specialRiders';
+
+import { chooseSpecialRiderCard } from './specialRiderAI';
+
+export type DummyScenario =
+  | 'normal'
+  | 'climb'
+  | 'descent'
+  | 'supply-zone'
+  | 'sprint';
 
 export type DummyCard = {
   id: string;
   value: number;
+  displayValue?: string;
+  isSpecial?: boolean;
   type: 'movement' | 'fatigue';
 };
 
@@ -10,6 +24,9 @@ export type DummyRiderState = {
   deck: DummyCard[];
   setAside: DummyCard[];
   discard: DummyCard[];
+  specialRiderId?: SpecialRiderId;
+  round: number;
+  lastPlayedValue?: number;
 };
 
 export type DummyRoundResult = {
@@ -65,29 +82,129 @@ function createFatigueCard(): DummyCard {
 
 export type RiderType = 'sprinteur' | 'rouleur';
 
-export function createDummyRider(riderType: RiderType): DummyRiderState {
+export type SoloTeamType = 'normal-ai' | 'peloton' | 'muscle';
+
+export function createDummyRider(
+  riderType: RiderType,
+  specialRiderId?: SpecialRiderId
+): DummyRiderState {
+  const specialRider = specialRiderId
+    ? specialRiders[specialRiderId]
+    : undefined;
+
+    if (specialRider && specialRider.riderType !== riderType) {
+  throw new Error(
+    `${specialRider.name} cannot be used as ${riderType}`
+  );
+}
+
   const cardValues =
     riderType === 'sprinteur' ? SPRINTEUR_CARDS : ROULEUR_CARDS;
 
+  const deckCards: DummyCard[] = specialRider
+    ? specialRider.deck.map((card, index) => ({
+        id: `${specialRider.id}-card-${index + 1}`,
+        value: card.value,
+        isSpecial: card.isSpecial,
+        type: 'movement' as const,
+      }))
+    : createDummyDeck(cardValues);
+
   return {
-    deck: createDummyDeck(cardValues),
-    setAside: [],
-    discard: [],
-  };
+  deck: shuffle(deckCards),
+  setAside: [],
+  discard: [],
+  specialRiderId,
+  round: 0,
+  lastPlayedValue: undefined,
+};
 }
 
 export function addFatigueCardToSetAside(rider: DummyRiderState): void {
   rider.setAside.unshift(createFatigueCard());
 }
 
+export function removeFatigueCardFromSetAside(rider: DummyRiderState): void {
+  let fatigueIndex = rider.setAside.findIndex(
+    (card) => card.type === 'fatigue'
+  );
+
+  if (fatigueIndex !== -1) {
+    rider.setAside.splice(fatigueIndex, 1);
+    return;
+  }
+
+  fatigueIndex = rider.deck.findIndex(
+    (card) => card.type === 'fatigue'
+  );
+
+  if (fatigueIndex !== -1) {
+    rider.deck.splice(fatigueIndex, 1);
+  }
+}
+
 function getRandomCard(cards: DummyCard[]): DummyCard {
   return cards[Math.floor(Math.random() * cards.length)];
 }
 
-function chooseCard(cards: DummyCard[], scenario: DummyScenario): DummyCard {
-  if (scenario === 'normal') {
-    return getRandomCard(cards);
+function getRandomPreferredCard(cards: DummyCard[]): DummyCard {
+  const fatigueCards = cards.filter((card) => card.type === 'fatigue');
+
+  if (fatigueCards.length > 0) {
+    return getRandomCard(fatigueCards);
   }
+
+  return getRandomCard(cards);
+}
+
+function chooseCard(
+  cards: DummyCard[],
+  scenario: DummyScenario,
+  specialRiderId?: SpecialRiderId,
+  round = 0,
+  lastPlayedValue?: number
+): DummyCard {
+  if (scenario === 'normal') {
+  const shouldSaveSpecialCards =
+    round < 10 &&
+    (
+      specialRiderId === 'grimpeur' ||
+      specialRiderId === 'descender' ||
+      specialRiderId === 'mountaineer'
+    );
+
+  let playableCards = cards;
+
+  const withoutTwos = playableCards.filter(
+    (card) => card.value !== 2
+  );
+
+  if (withoutTwos.length > 0) {
+    playableCards = withoutTwos;
+  }
+
+  if (shouldSaveSpecialCards) {
+    const withoutSpecialCards = playableCards.filter(
+      (card) => !card.isSpecial
+    );
+
+    if (withoutSpecialCards.length > 0) {
+      playableCards = withoutSpecialCards;
+    }
+  }
+
+  if (lastPlayedValue !== undefined) {
+    const withoutSameValue = playableCards.filter(
+      (card) => card.value !== lastPlayedValue
+    );
+
+    if (withoutSameValue.length > 0) {
+      playableCards = withoutSameValue;
+    }
+  }
+
+  return getRandomCard(playableCards);
+}
 
   if (scenario === 'climb') {
     const bestDistance = Math.min(
@@ -100,12 +217,12 @@ function chooseCard(cards: DummyCard[], scenario: DummyScenario): DummyCard {
 
     const lowestValue = Math.min(...closestCards.map((card) => card.value));
 
-    return getRandomCard(
+    return getRandomPreferredCard(
       closestCards.filter((card) => card.value === lowestValue)
     );
   }
 
-  if (scenario === 'descent') {
+  if (scenario === 'descent' || scenario === 'supply-zone') {
     const bestDistance = Math.min(
       ...cards.map((card) => Math.abs(card.value - 2))
     );
@@ -116,14 +233,16 @@ function chooseCard(cards: DummyCard[], scenario: DummyScenario): DummyCard {
 
     const lowestValue = Math.min(...closestCards.map((card) => card.value));
 
-    return getRandomCard(
+    return getRandomPreferredCard(
       closestCards.filter((card) => card.value === lowestValue)
     );
   }
 
   const highestValue = Math.max(...cards.map((card) => card.value));
 
-  return getRandomCard(cards.filter((card) => card.value === highestValue));
+  return getRandomPreferredCard(
+    cards.filter((card) => card.value === highestValue)
+  );
 }
 
 function finishRound(
@@ -137,6 +256,7 @@ function finishRound(
 
   rider.discard.push(selectedCard);
   rider.setAside.push(...unselectedCards);
+  rider.lastPlayedValue = selectedCard.value;
 }
 
 export function getFatigueCardsForStageResult(rider: DummyRiderState): number {
@@ -181,15 +301,174 @@ return {
 
 export function playDummyRound(
   rider: DummyRiderState,
-  scenario: DummyScenario = 'normal'
+  scenario: DummyScenario = 'normal',
+  round = 0
 ): DummyRoundResult {
   const drawResult = drawHand(rider);
-  const selectedCard = chooseCard(drawResult.cards, scenario);
 
-  finishRound(rider, drawResult, selectedCard);
+const specialCard =
+  scenario === 'supply-zone'
+    ? undefined
+    : chooseSpecialRiderCard(
+        drawResult.cards,
+        scenario,
+        rider.specialRiderId
+      );
 
+console.log('SOLO DEBUG', {
+  scenario,
+  specialRiderId: rider.specialRiderId,
+  cards: drawResult.cards.map((card) => ({
+    id: card.id,
+    value: card.value,
+    type: card.type,
+    isSpecial: card.isSpecial,
+  })),
+  specialCard,
+});
+
+const selectedCard =
+  specialCard ?? chooseCard(
+  drawResult.cards,
+  scenario,
+  rider.specialRiderId,
+  round,
+  rider.lastPlayedValue
+);
+
+finishRound(rider, drawResult, selectedCard);
+
+return {
+  drawnCards: drawResult.cards,
+  selectedCard,
+};
+}
+
+export function drawHumanAppHand(
+  rider: DummyRiderState
+): DummyCard[] {
+  const drawResult = drawHand(rider);
+
+  return drawResult.cards;
+}
+
+export function finishHumanAppDraw(
+  rider: DummyRiderState,
+  drawnCards: DummyCard[],
+  selectedCardId: string
+): DummyCard | undefined {
+  const selectedCard = drawnCards.find(
+    (card) => card.id === selectedCardId
+  );
+
+  if (!selectedCard) {
+    return undefined;
+  }
+
+  finishRound(rider, { cards: drawnCards }, selectedCard);
+
+  return selectedCard;
+}
+export function refreshFromDiscard(
+  rider: DummyRiderState,
+  limit: 24 | 25
+): DummyCard[] {
+  const selectedCards: DummyCard[] = [];
+
+  const sortedDiscard = [...rider.discard].sort(
+    (a, b) => b.value - a.value
+  );
+
+  let totalValue = 0;
+
+  for (const card of sortedDiscard) {
+    if (totalValue + card.value <= limit) {
+      selectedCards.push(card);
+      totalValue += card.value;
+    }
+  }
+
+  rider.discard = rider.discard.filter(
+    (card) => !selectedCards.some((selected) => selected.id === card.id)
+  );
+
+  rider.deck.push(...selectedCards);
+
+  return selectedCards;
+}
+
+export function cloneDummyRiderState(
+  rider: DummyRiderState
+): DummyRiderState {
   return {
-    drawnCards: drawResult.cards,
-    selectedCard,
+    deck: [...rider.deck],
+    setAside: [...rider.setAside],
+    discard: [...rider.discard],
+    specialRiderId: rider.specialRiderId,
+    round: rider.round,
+    lastPlayedValue: rider.lastPlayedValue,
   };
+}
+
+export function restoreDummyRiderState(
+  rider: DummyRiderState,
+  snapshot: DummyRiderState
+): void {
+  rider.deck = [...snapshot.deck];
+  rider.setAside = [...snapshot.setAside];
+  rider.discard = [...snapshot.discard];
+  rider.specialRiderId = snapshot.specialRiderId;
+  rider.round = snapshot.round;
+  rider.lastPlayedValue = snapshot.lastPlayedValue;
+}
+export function prepareRiderForNextStage(
+  rider: DummyRiderState
+): void {
+  rider.deck = shuffle([
+    ...rider.deck,
+    ...rider.discard,
+    ...rider.setAside,
+  ]);
+
+  rider.discard = [];
+  rider.setAside = [];
+}
+
+export function setFatigueCardsForStageResult(
+  rider: DummyRiderState,
+  targetFatigueCards: number
+): void {
+  const currentFatigueCards = getFatigueCardsForStageResult(rider);
+
+  if (targetFatigueCards > currentFatigueCards) {
+    const cardsToAdd = targetFatigueCards - currentFatigueCards;
+
+    for (let i = 0; i < cardsToAdd; i++) {
+      rider.setAside.push(createFatigueCard());
+    }
+
+    return;
+  }
+
+  if (targetFatigueCards < currentFatigueCards) {
+    let cardsToRemove = currentFatigueCards - targetFatigueCards;
+
+    rider.setAside = rider.setAside.filter((card) => {
+      if (cardsToRemove > 0 && card.type === 'fatigue') {
+        cardsToRemove--;
+        return false;
+      }
+
+      return true;
+    });
+
+    rider.deck = rider.deck.filter((card) => {
+      if (cardsToRemove > 0 && card.type === 'fatigue') {
+        cardsToRemove--;
+        return false;
+      }
+
+      return true;
+    });
+  }
 }

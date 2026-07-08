@@ -11,6 +11,10 @@ import {
 } from './remoteGames';
 
 import type { SavedGame } from './savedGameTypes';
+import {
+  getRawActiveSoloStageState,
+  restoreActiveSoloStageState,
+} from './solo/activeSoloStage';
 
 const ACTIVE_GAME_KEY = 'flamme-rouge-active-game';
 const SAVED_GAMES_KEY = 'flamme-rouge-games';
@@ -20,6 +24,7 @@ export async function saveGame() {
     createGameDraft,
     gameResults,
     gameState,
+    soloStageState: getRawActiveSoloStageState(),
   };
 
   await AsyncStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(data));
@@ -61,6 +66,7 @@ export async function saveGameToLibrary() {
     createGameDraft: JSON.parse(JSON.stringify(createGameDraft)),
     gameResults: JSON.parse(JSON.stringify(gameResults)),
     gameState: JSON.parse(JSON.stringify(gameState)),
+    soloStageState: JSON.parse(JSON.stringify(getRawActiveSoloStageState())),
     role: 'admin',
   };
   const remoteMeta = await createRemoteGame(newGame);
@@ -93,6 +99,7 @@ export async function openSavedGame(gameId: string) {
   Object.assign(createGameDraft, game.createGameDraft);
   Object.assign(gameResults, game.gameResults);
   Object.assign(gameState, game.gameState);
+  restoreActiveSoloStageState(game.soloStageState ?? null);
 
 activeGameId = game.id;
 
@@ -118,6 +125,7 @@ export async function updateActiveSavedGame() {
           createGameDraft: JSON.parse(JSON.stringify(createGameDraft)),
           gameResults: JSON.parse(JSON.stringify(gameResults)),
           gameState: JSON.parse(JSON.stringify(gameState)),
+          soloStageState: JSON.parse(JSON.stringify(getRawActiveSoloStageState())),
         }
       : game
   );

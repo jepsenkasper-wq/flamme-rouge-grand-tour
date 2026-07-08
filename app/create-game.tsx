@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { Image, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { createGameDraft } from '@/lib/createGameDraft';
+import { createGameDraft, resetCreateGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { getClassificationBonusRules } from '@/lib/classifications';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+
 
 export default function CreateGameScreen() {
   const [gameName, setGameName] = useState('');
   const [players, setPlayers] = useState('4');
   const [stages, setStages] = useState('21');
   const [restDays, setRestDays] = useState('2');
+
+  useEffect(() => {
+  resetCreateGameDraft();
+}, []);
 
   return (
     <View style={styles.screen}>
@@ -80,7 +85,7 @@ export default function CreateGameScreen() {
   createGameDraft.scoringRules =
     getClassificationBonusRules(stageCount);
 
-  router.push('/players');
+  router.push('/companion-mode');
 }}>
   <Text style={styles.buttonText}>Next</Text>
 </Pressable>

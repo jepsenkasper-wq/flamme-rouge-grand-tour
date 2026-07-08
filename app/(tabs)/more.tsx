@@ -174,6 +174,10 @@ async function enableSharing() {
   title="Solo Test"
   onPress={() => router.push('/dev/solo-test')}
 />
+<MenuButton
+  title="Special Rider Test"
+  onPress={() => router.push('/dev/special-rider-test')}
+/>
 
         {activeGameRole !== 'follower' && (
   <MenuButton

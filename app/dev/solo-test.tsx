@@ -6,11 +6,15 @@ import {
   createDummyRider,
   getFatigueCardsForStageResult,
   playDummyRound,
+  removeFatigueCardFromSetAside,
   type DummyCard,
   type DummyRiderState,
   type DummyScenario,
   type RiderType,
 } from '@/lib/solo/dummyDeckEngine';
+
+import { useLocalSearchParams } from 'expo-router';
+import { type SpecialRiderId } from '@/lib/solo/specialRiders';
 
 function formatCards(cards: DummyCard[]): string {
   if (cards.length === 0) {
@@ -18,16 +22,36 @@ function formatCards(cards: DummyCard[]): string {
   }
 
   return cards
-    .map((card) => (card.type === 'fatigue' ? `F${card.value}` : card.value))
+    .map((card) => {
+      const value = card.displayValue ?? card.value;
+      const specialMark = card.isSpecial ? '*' : '';
+
+      return card.type === 'fatigue'
+        ? `F${value}${specialMark}`
+        : `${value}${specialMark}`;
+    })
     .join(' ');
 }
 
 export default function SoloTestScreen() {
-  const [riderType, setRiderType] = useState<RiderType>('sprinteur');
-  const [scenario, setScenario] = useState<DummyScenario>('normal');
-  const [rider, setRider] = useState<DummyRiderState>(() =>
-    createDummyRider('sprinteur')
-  );
+  const params = useLocalSearchParams<{
+  rouleur?: SpecialRiderId;
+  sprinteur?: SpecialRiderId;
+}>();
+
+const sprinteurSpecialRiderId = params.sprinteur;
+const rouleurSpecialRiderId = params.rouleur;
+
+const [riderType, setRiderType] = useState<RiderType>('sprinteur');
+const [scenario, setScenario] = useState<DummyScenario>('normal');
+
+const [riders, setRiders] = useState<Record<RiderType, DummyRiderState>>(() => ({
+  sprinteur: createDummyRider('sprinteur', sprinteurSpecialRiderId),
+  rouleur: createDummyRider('rouleur', rouleurSpecialRiderId),
+}));
+
+const rider = riders[riderType];
+
   const [lastCard, setLastCard] = useState<DummyCard | null>(null);
 
   const [lastDraw, setLastDraw] = useState<DummyCard[]>([]);
@@ -35,38 +59,73 @@ export default function SoloTestScreen() {
   const [round, setRound] = useState(0);
 
   function resetRider(nextRiderType: RiderType = riderType) {
-    setRiderType(nextRiderType);
-    setRider(createDummyRider(nextRiderType));
-    setLastCard(null);
-    setLastDraw([]);
-    setRound(0);
-  }
+  setRiders((current) => ({
+    ...current,
+    [nextRiderType]: createDummyRider(nextRiderType),
+  }));
 
-  function drawCard() {
-    const nextRider = {
-      deck: [...rider.deck],
-      setAside: [...rider.setAside],
-      discard: [...rider.discard],
-    };
+  setRiderType(nextRiderType);
+  setLastCard(null);
+  setLastDraw([]);
+  setRound(0);
+}
 
-    const roundResult = playDummyRound(nextRider, scenario);
-    setLastDraw(roundResult.drawnCards);
-    setRound((current) => current + 1);
+ function drawCard() {
+  console.log('RIDER BEFORE DRAW', {
+  riderType,
+  riderSpecialRiderId: rider.specialRiderId,
+  deckTop: rider.deck[0],
+  deckIds: rider.deck.slice(0, 3).map((card) => card.id),
+});
+  const nextRider = {
+  deck: [...rider.deck],
+  setAside: [...rider.setAside],
+  discard: [...rider.discard],
+  specialRiderId: rider.specialRiderId,
+};
 
-setRider(nextRider);
-setLastCard(roundResult.selectedCard);
-  }
+  const roundResult = playDummyRound(nextRider, scenario, round);
+
+  setLastDraw(roundResult.drawnCards);
+  setRound((current) => current + 1);
+  setLastCard(roundResult.selectedCard);
+
+  setRiders((current) => ({
+    ...current,
+    [riderType]: nextRider,
+  }));
+}
 
 function addFatigue() {
   const nextRider = {
     deck: [...rider.deck],
     setAside: [...rider.setAside],
     discard: [...rider.discard],
+    specialRiderId: rider.specialRiderId,
   };
 
   addFatigueCardToSetAside(nextRider);
 
-  setRider(nextRider);
+  setRiders((current) => ({
+    ...current,
+    [riderType]: nextRider,
+  }));
+}
+
+function removeFatigue() {
+  const nextRider = {
+    deck: [...rider.deck],
+    setAside: [...rider.setAside],
+    discard: [...rider.discard],
+    specialRiderId: rider.specialRiderId,
+  };
+
+  removeFatigueCardFromSetAside(nextRider);
+
+  setRiders((current) => ({
+    ...current,
+    [riderType]: nextRider,
+  }));
 }
 
   return (
@@ -83,44 +142,48 @@ function addFatigue() {
 
       <View style={styles.row}>
         <Pressable
-          style={[
-            styles.optionButton,
-            riderType === 'sprinteur' && styles.activeButton,
-          ]}
-          onPress={() => resetRider('sprinteur')}
-        >
-          <Text style={styles.buttonText}>Sprinteur</Text>
-        </Pressable>
+  style={[
+    styles.optionButton,
+    riderType === 'sprinteur' && styles.activeButton,
+  ]}
+  onPress={() => setRiderType('sprinteur')}
+>
+  <Text style={styles.buttonText}>Sprinteur</Text>
+</Pressable>
 
-        <Pressable
-          style={[
-            styles.optionButton,
-            riderType === 'rouleur' && styles.activeButton,
-          ]}
-          onPress={() => resetRider('rouleur')}
-        >
-          <Text style={styles.buttonText}>Rouleur</Text>
-        </Pressable>
+<Pressable
+  style={[
+    styles.optionButton,
+    riderType === 'rouleur' && styles.activeButton,
+  ]}
+  onPress={() => setRiderType('rouleur')}
+>
+  <Text style={styles.buttonText}>Rouleur</Text>
+</Pressable>
       </View>
 
-      <Text style={styles.label}>Scenario</Text>
+      <Text style={styles.label}>Rider Square Placement</Text>
 
-      <View style={styles.row}>
-        {(['normal', 'climb', 'descent', 'sprint'] as DummyScenario[]).map(
-          (item) => (
-            <Pressable
-              key={item}
-              style={[
-                styles.optionButton,
-                scenario === item && styles.activeButton,
-              ]}
-              onPress={() => setScenario(item)}
-            >
-              <Text style={styles.buttonText}>{item}</Text>
-            </Pressable>
-          )
-        )}
-      </View>
+     <View style={styles.row}>
+  {[
+  { label: 'Normal', value: 'normal' },
+  { label: 'Ascent / Close to ascent', value: 'climb' },
+  { label: 'Descent', value: 'descent' },
+  { label: 'Supply Zone', value: 'supply-zone' },
+  { label: 'Final 20 Fields', value: 'sprint' },
+].map((item) => (
+    <Pressable
+      key={item.value}
+      style={[
+        styles.optionButton,
+        scenario === item.value && styles.activeButton,
+      ]}
+      onPress={() => setScenario(item.value as DummyScenario)}
+    >
+      <Text style={styles.buttonText}>{item.label}</Text>
+    </Pressable>
+  ))}
+</View>
 
       <View style={styles.cardBox}>
   <Text style={styles.label}>Last draw</Text>
@@ -136,9 +199,10 @@ function addFatigue() {
           ]}
         >
           <Text style={styles.drawnCardText}>
-            {card.value}
-            {card.type === 'fatigue' ? 'F' : ''}
-          </Text>
+  {card.type === 'fatigue'
+    ? `F${card.displayValue ?? card.value}${card.isSpecial ? '*' : ''}`
+    : `${card.displayValue ?? card.value}${card.isSpecial ? '*' : ''}`}
+</Text>
         </View>
       ))
     ) : (
@@ -150,7 +214,9 @@ function addFatigue() {
       <View style={styles.cardBox}>
         <Text style={styles.label}>Last card</Text>
         <Text style={styles.lastCard}>
-          {lastCard ? `${lastCard.value} (${lastCard.type})` : '-'}
+          {lastCard
+  ? `${lastCard.displayValue ?? lastCard.value}${lastCard.isSpecial ? '*' : ''} (${lastCard.type})`
+  : '-'}
         </Text>
       </View>
 
@@ -175,6 +241,10 @@ function addFatigue() {
 
       <Pressable style={styles.resetButton} onPress={addFatigue}>
   <Text style={styles.buttonText}>Add Fatigue Card</Text>
+</Pressable>
+
+<Pressable style={styles.resetButton} onPress={removeFatigue}>
+  <Text style={styles.buttonText}>Remove Fatigue From Set Aside</Text>
 </Pressable>
 
       <Pressable style={styles.resetButton} onPress={() => resetRider()}>
