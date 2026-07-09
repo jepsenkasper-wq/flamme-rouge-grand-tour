@@ -49,3 +49,45 @@ export function drawPelotonCard(team: PelotonTeamState): DummyCard {
 
   return card;
 }
+export function createPelotonTeam(): PelotonTeamState {
+  return {
+    deck: createPelotonDeck(),
+    discard: [],
+  };
+}
+export function refreshPelotonTeam(
+  team: PelotonTeamState,
+  limit: 24 | 25
+): void {
+  const selectedCards: DummyCard[] = [];
+
+  const sortedDiscard = [...team.discard].sort(
+    (a, b) => b.value - a.value
+  );
+
+  let totalValue = 0;
+
+  for (const card of sortedDiscard) {
+    if (totalValue + card.value <= limit) {
+      selectedCards.push(card);
+      totalValue += card.value;
+    }
+  }
+
+  team.discard = team.discard.filter(
+    (card) =>
+      !selectedCards.some((selected) => selected.id === card.id)
+  );
+
+  team.deck.push(...selectedCards);
+}
+export function preparePelotonTeamForNextStage(
+  team: PelotonTeamState
+): void {
+  team.deck = shuffle([
+    ...team.deck,
+    ...team.discard,
+  ]);
+
+  team.discard = [];
+}

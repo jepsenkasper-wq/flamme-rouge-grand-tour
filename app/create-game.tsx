@@ -5,7 +5,7 @@ import { createGameDraft, resetCreateGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { getClassificationBonusRules } from '@/lib/classifications';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
-
+import { resetActiveSoloStageState } from '@/lib/solo/activeSoloStage';
 
 export default function CreateGameScreen() {
   const [gameName, setGameName] = useState('');
@@ -15,6 +15,7 @@ export default function CreateGameScreen() {
 
   useEffect(() => {
   resetCreateGameDraft();
+  resetActiveSoloStageState();
 }, []);
 
   return (

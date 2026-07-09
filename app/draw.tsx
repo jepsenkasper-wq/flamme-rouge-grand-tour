@@ -14,6 +14,16 @@ import {
   updateSoloFatigueTransfer,
 } from '@/lib/solo/soloStageEngine';
 import {
+  drawMuscleCard,
+  refreshMuscleTeam,
+} from '@/lib/solo/muscleDeckEngine';
+
+import {
+  drawPelotonCard,
+  refreshPelotonTeam,
+} from '@/lib/solo/peletonDeckEngine';
+
+import {
   addFatigueCardToSetAside,
   cloneDummyRiderState,
   drawHumanAppHand,
@@ -88,7 +98,9 @@ export default function DrawScreen() {
   const [selectedCard, setSelectedCard] = useState<DummyCard | null>(null);
   const [undoSnapshot, setUndoSnapshot] =
     useState<DummyRiderState | null>(null);
+  const [teamUndoSnapshot, setTeamUndoSnapshot] = useState<any>(null);
   const [, forceUpdate] = useState(0);
+  
 
   const team = createGameDraft.dummyTeams.find(
     (team) => team.id === params.teamId
@@ -111,6 +123,9 @@ export default function DrawScreen() {
       ? teamState?.rouleur
       : undefined;
 
+const muscleTeamState = teamState?.muscleTeam;
+const pelotonTeamState = teamState?.pelotonTeam;
+
       const riderImage =
   params.riderKey === 'sprinteur'
     ? require('@/assets/images/riders/rider-sprinteur.png')
@@ -123,6 +138,7 @@ const riderShortLabel =
     ? 'R'
     : '';
 
+
   if (!team || !drawMode || !teamState) {
     return (
       <View style={styles.screen}>
@@ -131,6 +147,14 @@ const riderShortLabel =
       </View>
     );
   }
+
+  // DEBUG
+console.log('DRAW DEBUG', {
+  drawMode,
+  teamType: teamState.teamType,
+  hasMuscleTeam: !!muscleTeamState,
+  hasPelotonTeam: !!pelotonTeamState,
+});
 
   function persistDrawState() {
   saveGame();
@@ -166,6 +190,93 @@ setDrawnCards([]);
 updateFatigueTransfer();
 updateScreen();
 persistDrawState();
+}
+
+function drawMuscleTeamCard() {
+  if (!muscleTeamState || !params.riderKey) return;
+
+  setTeamUndoSnapshot(JSON.parse(JSON.stringify(muscleTeamState)));
+console.log('MUSCLE BEFORE DRAW', {
+  riderKey: params.riderKey,
+  sprinteurDeck: muscleTeamState.sprinteur.deck.length,
+  sprinteurDiscard: muscleTeamState.sprinteur.discard.length,
+  rouleurDeck: muscleTeamState.rouleur.deck.length,
+  rouleurDiscard: muscleTeamState.rouleur.discard.length,
+});
+  const card = drawMuscleCard(
+    muscleTeamState,
+    params.riderKey
+  );
+console.log('MUSCLE DRAWN CARD', card);
+
+  setSelectedCard(card);
+  updateScreen();
+  persistDrawState();
+}
+
+function refreshMuscle(limit: 24 | 25) {
+  if (!muscleTeamState || !params.riderKey) return;
+
+  const riderKey = params.riderKey;
+
+  setTeamUndoSnapshot(JSON.parse(JSON.stringify(muscleTeamState)));
+
+  refreshMuscleTeam(
+    muscleTeamState,
+    riderKey,
+    limit
+  );
+
+  setSelectedCard(null);
+  updateScreen();
+  persistDrawState();
+}
+
+function drawPelotonTeamCard() {
+  if (!pelotonTeamState) return;
+
+  setTeamUndoSnapshot(JSON.parse(JSON.stringify(pelotonTeamState)));
+
+  const card = drawPelotonCard(pelotonTeamState);
+
+  setSelectedCard(card);
+  updateScreen();
+  persistDrawState();
+}
+
+function refreshPeloton(limit: 24 | 25) {
+  if (!pelotonTeamState) return;
+
+  setTeamUndoSnapshot(JSON.parse(JSON.stringify(pelotonTeamState)));
+
+  refreshPelotonTeam(pelotonTeamState, limit);
+
+  setSelectedCard(null);
+  updateScreen();
+  persistDrawState();
+}
+
+function undoTeamDraw() {
+  if (!teamUndoSnapshot || !teamState) return;
+
+  if (drawMode === 'muscle' && teamState.muscleTeam) {
+    Object.assign(
+      teamState.muscleTeam,
+      JSON.parse(JSON.stringify(teamUndoSnapshot))
+    );
+  }
+
+  if (drawMode === 'peloton' && teamState.pelotonTeam) {
+    Object.assign(
+      teamState.pelotonTeam,
+      JSON.parse(JSON.stringify(teamUndoSnapshot))
+    );
+  }
+
+  setTeamUndoSnapshot(null);
+  setSelectedCard(null);
+  updateScreen();
+  persistDrawState();
 }
 
   function updateScreen() {
@@ -244,6 +355,37 @@ function undo() {
   updateScreen();
   persistDrawState();
 }
+function getDrawModeLabel(drawMode: DrawMode): string {
+  switch (drawMode) {
+    case 'human-app':
+      return 'Human App-assisted';
+    case 'normal-ai':
+      return 'Normal AI';
+    case 'muscle':
+      return 'Muscle Team';
+    case 'peloton':
+      return 'Peloton Team';
+    default:
+      return '';
+  }
+}
+
+function getSpecialRiderLabel(
+  specialRiderId?: string
+): string | null {
+  if (!specialRiderId) return null;
+
+  switch (specialRiderId) {
+    case 'grimpeur':
+      return 'Grimpeur';
+    case 'descender':
+      return 'Descender';
+    case 'mountaineer':
+      return 'Mountaineer';
+    default:
+      return specialRiderId;
+  }
+}
 
   return (
     <ScrollView
@@ -285,46 +427,25 @@ function undo() {
     resizeMode="stretch"
   />
 
-</View>
+  <Text style={styles.deckInfo}>
+  Draw Mode: {getDrawModeLabel(drawMode)}
+</Text>
 
 {(drawMode === 'human-app' || drawMode === 'normal-ai') && (
-  <Text style={styles.specialInfo}>
-    * = Special Rider card
-  </Text>
-)}
-
-        <Text style={styles.text}>
-          Mode: {getDrawModeLabel(drawMode)}
-        </Text>
-
-        <Text style={styles.text}>
-          Rider: {getRiderLabel(params.riderKey)}
-        </Text>
-
-        {riderState && (
   <>
-  <Text style={styles.text}>
-  Special rider: {riderState.specialRiderId ?? 'Normal deck'}
-</Text>
-
-<Text style={styles.text}>
-  Special cards: {
-    riderState.deck.filter((card) => card.isSpecial).length
-  }
-</Text>
-    <Text style={styles.text}>
-      Deck: {riderState.deck.length} cards
+    <Text style={styles.deckInfo}>
+      {riderState?.specialRiderId
+        ? `Special Rider: ${getSpecialRiderLabel(riderState.specialRiderId)}`
+        : 'Normal deck'}
     </Text>
 
-    <Text style={styles.text}>
-      Discard: {riderState.discard.length}
-    </Text>
-
-    <Text style={styles.text}>
-      Set Aside: {riderState.setAside.length}
+    <Text style={styles.deckInfoSmall}>
+      * = Special Rider card
     </Text>
   </>
 )}
+
+</View>
 
 {drawMode === 'human-app' && riderState && (
   <View style={styles.drawArea}>
@@ -477,6 +598,105 @@ function undo() {
 
     <Pressable style={styles.undoButton} onPress={undo}>
       <Text style={styles.secondaryButtonText}>Undo</Text>
+    </Pressable>
+  </View>
+)}
+
+{drawMode === 'muscle' && muscleTeamState && (
+  <View style={styles.drawArea}>
+    <Pressable
+      style={styles.primaryButton}
+      onPress={drawMuscleTeamCard}>
+      <Text style={styles.primaryButtonText}>
+        Draw Card
+      </Text>
+    </Pressable>
+
+    {selectedCard && (
+      <View style={styles.selectedCardBox}>
+        <Text style={styles.sectionTitle}>
+          Drawn Card
+        </Text>
+
+        <Text style={styles.playedCardText}>
+          {formatCard(selectedCard)}
+        </Text>
+      </View>
+    )}
+
+    <View style={styles.actionRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={() => refreshMuscle(24)}>
+    <Text style={styles.secondaryButtonText}>
+      Refresh 24
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={() => refreshMuscle(25)}>
+    <Text style={styles.secondaryButtonText}>
+      Refresh 25
+    </Text>
+  </Pressable>
+</View> 
+
+    <Pressable
+      style={styles.undoButton}
+      onPress={undoTeamDraw}>
+      <Text style={styles.secondaryButtonText}>
+        Undo
+      </Text>
+    </Pressable>
+  </View>
+)}
+{drawMode === 'peloton' && pelotonTeamState && (
+  <View style={styles.drawArea}>
+    <Pressable
+      style={styles.primaryButton}
+      onPress={drawPelotonTeamCard}>
+      <Text style={styles.primaryButtonText}>
+        Draw Card
+      </Text>
+    </Pressable>
+
+    {selectedCard && (
+      <View style={styles.selectedCardBox}>
+        <Text style={styles.sectionTitle}>
+          Drawn Card
+        </Text>
+
+        <Text style={styles.playedCardText}>
+          {formatCard(selectedCard)}
+        </Text>
+      </View>
+    )}
+
+    <View style={styles.actionRow}>
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => refreshPeloton(24)}>
+        <Text style={styles.secondaryButtonText}>
+          Refresh 24
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => refreshPeloton(25)}>
+        <Text style={styles.secondaryButtonText}>
+          Refresh 25
+        </Text>
+      </Pressable>
+    </View>
+
+    <Pressable
+      style={styles.undoButton}
+      onPress={undoTeamDraw}>
+      <Text style={styles.secondaryButtonText}>
+        Undo
+      </Text>
     </Pressable>
   </View>
 )}
@@ -714,5 +934,13 @@ specialInfo: {
   color: Colors.brown,
   opacity: 0.65,
   textAlign: 'center',
+},
+deckInfoSmall: {
+  fontSize: 12,
+  color: Colors.brown,
+  opacity: 0.65,
+  textAlign: 'center',
+  marginTop: 2,
+  marginBottom: -30,
 },
 });

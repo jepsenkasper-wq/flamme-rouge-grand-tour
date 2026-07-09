@@ -74,3 +74,47 @@ export function drawMuscleCard(
 
   return card;
 }
+export function refreshMuscleTeam(
+  team: MuscleTeamState,
+  riderType: RiderType,
+  limit: 24 | 25
+): void {
+  const rider = team[riderType];
+
+  const selectedCards: DummyCard[] = [];
+
+  const sortedDiscard = [...rider.discard].sort(
+    (a, b) => b.value - a.value
+  );
+
+  let totalValue = 0;
+
+  for (const card of sortedDiscard) {
+    if (totalValue + card.value <= limit) {
+      selectedCards.push(card);
+      totalValue += card.value;
+    }
+  }
+
+  rider.discard = rider.discard.filter(
+    (card) =>
+      !selectedCards.some((selected) => selected.id === card.id)
+  );
+
+  rider.deck.push(...selectedCards);
+}
+export function prepareMuscleTeamForNextStage(
+  team: MuscleTeamState
+): void {
+  team.sprinteur.deck = shuffle([
+    ...team.sprinteur.deck,
+    ...team.sprinteur.discard,
+  ]);
+  team.sprinteur.discard = [];
+
+  team.rouleur.deck = shuffle([
+    ...team.rouleur.deck,
+    ...team.rouleur.discard,
+  ]);
+  team.rouleur.discard = [];
+}

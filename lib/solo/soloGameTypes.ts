@@ -2,6 +2,9 @@ import type { SpecialRiderId } from './specialRiders';
 
 import type { DummyRiderState } from './dummyDeckEngine';
 
+import type { MuscleTeamState } from './muscleDeckEngine';
+import type { PelotonTeamState } from './peletonDeckEngine';
+
 export type CompanionMode = 'normal' | 'dummy';
 
 export type DummyTeamType =
@@ -43,6 +46,8 @@ export type SoloTeamStageState = {
 
   sprinteur?: DummyRiderState;
   rouleur?: DummyRiderState;
+  muscleTeam?: MuscleTeamState;
+  pelotonTeam?: PelotonTeamState;
 };
 
 export type SoloStageState = {

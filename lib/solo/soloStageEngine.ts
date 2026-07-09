@@ -13,6 +13,9 @@ import type {
   SoloTeamStageState,
 } from './soloGameTypes';
 
+import { createMuscleTeam } from './muscleDeckEngine';
+import { createPelotonTeam } from './peletonDeckEngine';
+
 function teamUsesAppDraw(team: DummyTeamSetup): boolean {
   if (team.teamType === 'human') {
     return team.drawMode === 'app-draw';
@@ -28,7 +31,25 @@ export function createSoloStageState(
   const teams: SoloTeamStageState[] = setup.teams.map((team) => {
     const usesAppDraw = teamUsesAppDraw(team);
 
-    if (!usesAppDraw) {
+if (team.teamType === 'muscle') {
+  return {
+    teamId: team.id,
+    teamType: team.teamType,
+    usesAppDraw: false,
+    muscleTeam: createMuscleTeam(),
+  };
+}
+
+if (team.teamType === 'peloton') {
+  return {
+    teamId: team.id,
+    teamType: team.teamType,
+    usesAppDraw: false,
+    pelotonTeam: createPelotonTeam(),
+  };
+}
+
+if (!usesAppDraw) {
   return {
     teamId: team.id,
     teamType: team.teamType,

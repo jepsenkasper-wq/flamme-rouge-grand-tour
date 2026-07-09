@@ -8,6 +8,8 @@ import {
   setFatigueCardsForStageResult,
   getFatigueCardsForStageResult,
 } from './dummyDeckEngine';
+import { prepareMuscleTeamForNextStage } from './muscleDeckEngine';
+import { preparePelotonTeamForNextStage } from './peletonDeckEngine';
 
 let activeSoloStageState: SoloStageState | null = null;
 
@@ -49,6 +51,12 @@ export function prepareActiveSoloStageForNextStage(): void {
     if (team.rouleur) {
       prepareRiderForNextStage(team.rouleur);
     }
+    if (team.muscleTeam) {
+  prepareMuscleTeamForNextStage(team.muscleTeam);
+}
+    if (team.pelotonTeam) {
+  preparePelotonTeamForNextStage(team.pelotonTeam);
+}
   });
 
   activeSoloStageState.stageNumber += 1;
