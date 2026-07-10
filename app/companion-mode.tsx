@@ -21,9 +21,7 @@ export default function CompanionModeScreen() {
         <Text style={styles.cardTitle}>Normal Companion</Text>
 
         <Text style={styles.cardText}>
-          The classic Companion experience.
-          {"\n"}
-          All players draw their own cards.
+          Track stage results, times, points and classifications throughout your Grand Tour while every player draws and plays their own cards, just like in the board game.
         </Text>
       </Pressable>
 
@@ -36,8 +34,7 @@ export default function CompanionModeScreen() {
         <Text style={styles.cardTitle}>Dummy Companion</Text>
 
         <Text style={styles.cardText}>
-          Supports dummy teams and
-          app-assisted card drawing.
+          Everything included in Normal Companion, with support for Dummy Teams, AI Teams and App-assisted card drawing for solo play and automated opponents.
         </Text>
       </Pressable>
     </View>

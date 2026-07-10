@@ -10,6 +10,53 @@ import { saveGame } from '@/lib/storage';
 import { saveGameToLibrary } from '@/lib/storage';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 
+function formatSpecialRiderName(
+  specialRiderId?: string
+): string {
+  if (!specialRiderId) {
+    return 'Normal';
+  }
+
+  return specialRiderId
+    .split('-')
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join(' ');
+}
+
+function formatTeamType(teamType: string): string {
+  switch (teamType) {
+    case 'human':
+      return 'Human';
+
+    case 'normal-ai':
+      return 'Normal AI';
+
+    case 'muscle':
+      return 'Muscle Team';
+
+    case 'peloton':
+      return 'Peloton Team';
+
+    default:
+      return teamType;
+  }
+}
+function formatDrawMode(drawMode?: string): string {
+  switch (drawMode) {
+    case 'app-draw':
+      return 'App-assisted';
+
+    case 'card-draw':
+      return 'Card Draw';
+
+    default:
+      return '-';
+  }
+}
+
 export default function ReviewGameScreen() {
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
@@ -41,11 +88,11 @@ const dummyTeams = createGameDraft.dummyTeams;
         </Text>
 
         <Text style={styles.text}>Colour: {team.color}</Text>
-        <Text style={styles.text}>Type: {team.teamType}</Text>
+        <Text style={styles.text}>Type: {formatTeamType(team.teamType)}</Text>
 
         {team.teamType === 'human' && (
           <Text style={styles.text}>
-            Draw mode: {team.drawMode}
+            Draw mode: {formatDrawMode(team.drawMode)}
           </Text>
         )}
 
@@ -54,11 +101,11 @@ const dummyTeams = createGameDraft.dummyTeams;
             team.drawMode === 'app-draw')) && (
           <>
             <Text style={styles.text}>
-              Sprinteur deck: {team.sprinteurSpecialRiderId ?? 'Normal'}
+              Sprinteur deck: {formatSpecialRiderName(team.sprinteurSpecialRiderId)}
             </Text>
 
             <Text style={styles.text}>
-              Rouleur deck: {team.rouleurSpecialRiderId ?? 'Normal'}
+              Rouleur deck: {formatSpecialRiderName(team.rouleurSpecialRiderId)}
             </Text>
           </>
         )}

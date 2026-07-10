@@ -170,14 +170,17 @@ async function enableSharing() {
           title="My Games"
           onPress={() => router.push('/my-games')}
         />
-        <MenuButton
+       {/* 
+<MoreButton
   title="Solo Test"
-  onPress={() => router.push('/dev/solo-test')}
+  onPress={() => router.push('/solo-test')}
 />
-<MenuButton
+
+<MoreButton
   title="Special Rider Test"
-  onPress={() => router.push('/dev/special-rider-test')}
+  onPress={() => router.push('/special-rider-test')}
 />
+*/}
 
         {activeGameRole !== 'follower' && (
   <MenuButton

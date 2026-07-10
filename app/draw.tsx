@@ -23,6 +23,8 @@ import {
   refreshPelotonTeam,
 } from '@/lib/solo/peletonDeckEngine';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
   addFatigueCardToSetAside,
   cloneDummyRiderState,
@@ -86,6 +88,21 @@ function getPlayerColor(colorName: string) {
       return Colors.border;
   }
 }
+function formatSpecialRiderName(
+  specialRiderId?: string
+): string {
+  if (!specialRiderId) {
+    return 'Normal';
+  }
+
+  return specialRiderId
+    .split('-')
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join(' ');
+}
 
 export default function DrawScreen() {
   const params = useLocalSearchParams<{
@@ -100,7 +117,6 @@ export default function DrawScreen() {
     useState<DummyRiderState | null>(null);
   const [teamUndoSnapshot, setTeamUndoSnapshot] = useState<any>(null);
   const [, forceUpdate] = useState(0);
-  
 
   const team = createGameDraft.dummyTeams.find(
     (team) => team.id === params.teamId
@@ -155,6 +171,12 @@ console.log('DRAW DEBUG', {
   hasMuscleTeam: !!muscleTeamState,
   hasPelotonTeam: !!pelotonTeamState,
 });
+
+const insets = useSafeAreaInsets();
+
+const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
 
   function persistDrawState() {
   saveGame();
@@ -390,7 +412,7 @@ function getSpecialRiderLabel(
   return (
     <ScrollView
     style={styles.screen}
-    contentContainerStyle={styles.content}>
+    contentContainerStyle={[styles.content, contentStyle]}>
 
 
       <Text style={styles.title}>Draw</Text>
@@ -435,7 +457,7 @@ function getSpecialRiderLabel(
   <>
     <Text style={styles.deckInfo}>
       {riderState?.specialRiderId
-        ? `Special Rider: ${getSpecialRiderLabel(riderState.specialRiderId)}`
+        ? `Special Rider: ${formatSpecialRiderName(riderState.specialRiderId)}`
         : 'Normal deck'}
     </Text>
 

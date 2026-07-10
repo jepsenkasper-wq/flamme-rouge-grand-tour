@@ -7,6 +7,7 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { gameState } from '@/lib/gameState';
 import { stageDraft } from '@/lib/stageDraft';
 import { getActiveSoloStageState, syncSoloFatigueTransfersFromDecks } from '@/lib/solo/activeSoloStage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -81,12 +82,18 @@ function getDrawList(): DrawListItem[] {
 export default function PlayStageScreen() {
   const drawList = getDrawList();
 
+  const insets = useSafeAreaInsets();
+
+const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
+
   return (
     <View style={styles.screen}>
       <BackgroundWatermark />
 
       <ScrollView
-        contentContainerStyle={styles.content}
+  contentContainerStyle={[styles.content, contentStyle]}
         showsVerticalScrollIndicator={false}>
 
         <Text style={styles.title}>
