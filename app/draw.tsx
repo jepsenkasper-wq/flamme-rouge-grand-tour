@@ -329,7 +329,6 @@ async function drawHumanHand() {
   setDrawnCards(hand);
   updateScreen();
 
-  // Ingen updateFatigueTransfer her
   await persistDrawState();
 }
 

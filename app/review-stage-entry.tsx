@@ -42,7 +42,7 @@ export default function ReviewStageEntryScreen() {
   paddingBottom: 40 + insets.bottom,
 };
 
-  function saveStage() {
+  async function saveStage() {
     const editedEntry =
       editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
 
@@ -89,10 +89,10 @@ if (
       }
     }
 
-    saveGame();
-    updateActiveSavedGame();
+    await saveGame();
+await updateActiveSavedGame();
 
-    router.replace('/(tabs)');
+router.replace('/(tabs)');
   }
   
   

@@ -24,6 +24,7 @@ export type DummyRiderState = {
   deck: DummyCard[];
   setAside: DummyCard[];
   discard: DummyCard[];
+  pendingHand: DummyCard[];
   specialRiderId?: SpecialRiderId;
   round: number;
   lastPlayedValue?: number;
@@ -110,10 +111,11 @@ export function createDummyRider(
       }))
     : createDummyDeck(cardValues);
 
-  return {
+ return {
   deck: shuffle(deckCards),
   setAside: [],
   discard: [],
+  pendingHand: [],
   specialRiderId,
   round: 0,
   lastPlayedValue: undefined,
@@ -259,10 +261,14 @@ function finishRound(
   rider.lastPlayedValue = selectedCard.value;
 }
 
-export function getFatigueCardsForStageResult(rider: DummyRiderState): number {
-  return [...rider.deck, ...rider.setAside].filter(
-    (card) => card.type === 'fatigue'
-  ).length;
+export function getFatigueCardsForStageResult(
+  rider: DummyRiderState
+): number {
+  return [
+    ...rider.deck,
+    ...rider.setAside,
+    ...(rider.pendingHand ?? []),
+  ].filter((card) => card.type === 'fatigue').length;
 }
 
 function drawHand(rider: DummyRiderState): DrawResult {
@@ -347,9 +353,15 @@ return {
 export function drawHumanAppHand(
   rider: DummyRiderState
 ): DummyCard[] {
+  if (rider.pendingHand.length > 0) {
+    return rider.pendingHand;
+  }
+
   const drawResult = drawHand(rider);
 
-  return drawResult.cards;
+  rider.pendingHand = [...drawResult.cards];
+
+  return rider.pendingHand;
 }
 
 export function finishHumanAppDraw(
@@ -357,7 +369,12 @@ export function finishHumanAppDraw(
   drawnCards: DummyCard[],
   selectedCardId: string
 ): DummyCard | undefined {
-  const selectedCard = drawnCards.find(
+  const cards =
+    rider.pendingHand.length > 0
+      ? rider.pendingHand
+      : drawnCards;
+
+  const selectedCard = cards.find(
     (card) => card.id === selectedCardId
   );
 
@@ -365,7 +382,9 @@ export function finishHumanAppDraw(
     return undefined;
   }
 
-  finishRound(rider, { cards: drawnCards }, selectedCard);
+  finishRound(rider, { cards }, selectedCard);
+
+  rider.pendingHand = [];
 
   return selectedCard;
 }
@@ -407,6 +426,7 @@ export function cloneDummyRiderState(
     specialRiderId: rider.specialRiderId,
     round: rider.round,
     lastPlayedValue: rider.lastPlayedValue,
+    pendingHand: [...rider.pendingHand],
   };
 }
 
@@ -420,6 +440,7 @@ export function restoreDummyRiderState(
   rider.specialRiderId = snapshot.specialRiderId;
   rider.round = snapshot.round;
   rider.lastPlayedValue = snapshot.lastPlayedValue;
+  rider.pendingHand = [...snapshot.pendingHand];
 }
 export function prepareRiderForNextStage(
   rider: DummyRiderState
@@ -428,17 +449,24 @@ export function prepareRiderForNextStage(
     ...rider.deck,
     ...rider.discard,
     ...rider.setAside,
+    ...(rider.pendingHand ?? []),
   ]);
 
   rider.discard = [];
   rider.setAside = [];
+  rider.pendingHand = [];
 }
 
 export function setFatigueCardsForStageResult(
   rider: DummyRiderState,
   targetFatigueCards: number
 ): void {
-  const currentFatigueCards = getFatigueCardsForStageResult(rider);
+ const currentFatigueCards = [
+  ...rider.deck,
+  ...rider.setAside,
+  ...rider.discard,
+  ...(rider.pendingHand ?? []),
+].filter((card) => card.type === 'fatigue').length;
 
   if (targetFatigueCards > currentFatigueCards) {
     const cardsToAdd = targetFatigueCards - currentFatigueCards;
@@ -470,5 +498,23 @@ export function setFatigueCardsForStageResult(
 
       return true;
     });
+
+    rider.discard = rider.discard.filter((card) => {
+  if (cardsToRemove > 0 && card.type === 'fatigue') {
+    cardsToRemove--;
+    return false;
+  }
+
+  return true;
+});
+
+rider.pendingHand = (rider.pendingHand ?? []).filter((card) => {
+  if (cardsToRemove > 0 && card.type === 'fatigue') {
+    cardsToRemove--;
+    return false;
+  }
+
+  return true;
+});
   }
 }
