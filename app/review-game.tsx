@@ -9,6 +9,7 @@ import { stageDraft } from '@/lib/stageDraft';
 import { saveGame } from '@/lib/storage';
 import { saveGameToLibrary } from '@/lib/storage';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function formatSpecialRiderName(
   specialRiderId?: string
@@ -65,11 +66,18 @@ export default function ReviewGameScreen() {
   const isDummyGame = createGameDraft.companionMode === 'dummy';
 const dummyTeams = createGameDraft.dummyTeams;
 
+const insets = useSafeAreaInsets();
+
+const contentStyle = {
+  paddingBottom: 40 + insets.bottom,
+};
+
   return (
   <View style={styles.screen}>
       <BackgroundWatermark />
     <ScrollView
-      contentContainerStyle={styles.content}>
+  contentContainerStyle={[styles.content, contentStyle]}
+  showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Review Game</Text>
 
       <Text style={styles.text}>Game name: {createGameDraft.gameName}</Text>

@@ -96,19 +96,28 @@ export async function openSavedGame(gameId: string) {
     return false;
   }
 
+  // Standardværdier til ældre/importerede spil
+  createGameDraft.companionMode = 'normal';
+  createGameDraft.dummyTeams = [];
+
   Object.assign(createGameDraft, game.createGameDraft);
   Object.assign(gameResults, game.gameResults);
   Object.assign(gameState, game.gameState);
-  restoreActiveSoloStageState(game.soloStageState ?? null);
 
-activeGameId = game.id;
+  if (createGameDraft.companionMode === 'dummy') {
+    restoreActiveSoloStageState(game.soloStageState ?? null);
+  } else {
+    restoreActiveSoloStageState(null);
+  }
 
-await AsyncStorage.setItem(
-  ACTIVE_GAME_KEY,
-  game.id
-);
+  activeGameId = game.id;
 
-return true;
+  await AsyncStorage.setItem(
+    ACTIVE_GAME_KEY,
+    game.id
+  );
+
+  return true;
 }
 export async function updateActiveSavedGame() {
   if (!activeGameId) {

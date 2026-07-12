@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
     padding: 24,
-    paddingTop: 30,
+    paddingTop: 0,
   },
 
   title: {
