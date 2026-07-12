@@ -40,6 +40,8 @@ import {
   type DummyScenario,
 } from '@/lib/solo/dummyDeckEngine';
 
+
+
 type DrawMode =
   | 'human-app'
   | 'normal-ai'
@@ -69,6 +71,7 @@ function getRiderLabel(riderKey?: RiderKey): string {
   if (riderKey === 'rouleur') return 'Rouleur';
   return 'Team Deck';
 }
+
 
 function getPlayerColor(colorName: string) {
   switch (colorName) {
@@ -117,6 +120,8 @@ export default function DrawScreen() {
     useState<DummyRiderState | null>(null);
   const [teamUndoSnapshot, setTeamUndoSnapshot] = useState<any>(null);
   const [, forceUpdate] = useState(0);
+
+  const [actionMessage, setActionMessage] = useState('');
 
   const team = createGameDraft.dummyTeams.find(
     (team) => team.id === params.teamId
@@ -178,9 +183,17 @@ const contentStyle = {
   paddingBottom: 40 + insets.bottom,
 };
 
-  function persistDrawState() {
-  saveGame();
-  updateActiveSavedGame();
+function showActionMessage(message: string) {
+  setActionMessage(message);
+
+  setTimeout(() => {
+    setActionMessage('');
+  }, 1200);
+}
+
+  async function persistDrawState() {
+  await saveGame();
+  await updateActiveSavedGame();
 }
 
   function updateFatigueTransfer() {
@@ -194,7 +207,7 @@ const contentStyle = {
   );
 }
 
- function playNormalAIDraw() {
+ async function playNormalAIDraw() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
@@ -211,32 +224,30 @@ const contentStyle = {
 setDrawnCards([]);
 updateFatigueTransfer();
 updateScreen();
-persistDrawState();
+await   persistDrawState();
 }
 
-function drawMuscleTeamCard() {
+async function drawMuscleTeamCard() {
   if (!muscleTeamState || !params.riderKey) return;
 
-  setTeamUndoSnapshot(JSON.parse(JSON.stringify(muscleTeamState)));
-console.log('MUSCLE BEFORE DRAW', {
-  riderKey: params.riderKey,
-  sprinteurDeck: muscleTeamState.sprinteur.deck.length,
-  sprinteurDiscard: muscleTeamState.sprinteur.discard.length,
-  rouleurDeck: muscleTeamState.rouleur.deck.length,
-  rouleurDiscard: muscleTeamState.rouleur.discard.length,
-});
+  const riderKey = params.riderKey;
+
+  setTeamUndoSnapshot(
+    JSON.parse(JSON.stringify(muscleTeamState))
+  );
+
   const card = drawMuscleCard(
     muscleTeamState,
-    params.riderKey
+    riderKey
   );
-console.log('MUSCLE DRAWN CARD', card);
 
   setSelectedCard(card);
   updateScreen();
-  persistDrawState();
+
+  await persistDrawState();
 }
 
-function refreshMuscle(limit: 24 | 25) {
+async function refreshMuscle(limit: 24 | 25) {
   if (!muscleTeamState || !params.riderKey) return;
 
   const riderKey = params.riderKey;
@@ -251,10 +262,10 @@ function refreshMuscle(limit: 24 | 25) {
 
   setSelectedCard(null);
   updateScreen();
-  persistDrawState();
+  await persistDrawState();
 }
 
-function drawPelotonTeamCard() {
+async function drawPelotonTeamCard() {
   if (!pelotonTeamState) return;
 
   setTeamUndoSnapshot(JSON.parse(JSON.stringify(pelotonTeamState)));
@@ -263,10 +274,10 @@ function drawPelotonTeamCard() {
 
   setSelectedCard(card);
   updateScreen();
-  persistDrawState();
+  await persistDrawState();
 }
 
-function refreshPeloton(limit: 24 | 25) {
+async function refreshPeloton(limit: 24 | 25) {
   if (!pelotonTeamState) return;
 
   setTeamUndoSnapshot(JSON.parse(JSON.stringify(pelotonTeamState)));
@@ -275,10 +286,11 @@ function refreshPeloton(limit: 24 | 25) {
 
   setSelectedCard(null);
   updateScreen();
-  persistDrawState();
+
+  await persistDrawState();
 }
 
-function undoTeamDraw() {
+async function undoTeamDraw() {
   if (!teamUndoSnapshot || !teamState) return;
 
   if (drawMode === 'muscle' && teamState.muscleTeam) {
@@ -298,26 +310,30 @@ function undoTeamDraw() {
   setTeamUndoSnapshot(null);
   setSelectedCard(null);
   updateScreen();
-  persistDrawState();
+
+await persistDrawState();
 }
 
   function updateScreen() {
     forceUpdate((current) => current + 1);
   }
 
-function drawHumanHand() {
+async function drawHumanHand() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
   setSelectedCard(null);
 
   const hand = drawHumanAppHand(riderState);
+
   setDrawnCards(hand);
   updateScreen();
-  persistDrawState();
+
+  // Ingen updateFatigueTransfer her
+  await persistDrawState();
 }
 
-function selectHumanCard(cardId: string) {
+async function selectHumanCard(cardId: string) {
   if (!riderState) return;
 
   const card = finishHumanAppDraw(
@@ -328,45 +344,54 @@ function selectHumanCard(cardId: string) {
 
   if (!card) return;
 
-
   setSelectedCard(card);
-setDrawnCards([]);
-updateFatigueTransfer();
-updateScreen();
-persistDrawState();
+  setDrawnCards([]);
+
+  updateFatigueTransfer();
+  updateScreen();
+
+  await persistDrawState();
 }
 
-function addFatigue() {
+async function addFatigue() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
   addFatigueCardToSetAside(riderState);
   updateFatigueTransfer();
   updateScreen();
-  persistDrawState();
+
+  showActionMessage('Fatigue card added.');
+
+  await persistDrawState();
+
 }
 
-function removeFatigue() {
+async function removeFatigue() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
   removeFatigueCardFromSetAside(riderState);
   updateFatigueTransfer();
+  showActionMessage('Fatigue card removed.');
   updateScreen();
-  persistDrawState();
+
+ await persistDrawState(); 
 }
 
-function refresh(limit: 24 | 25) {
+async function refresh(limit: 24 | 25) {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
   refreshFromDiscard(riderState, limit);
   updateFatigueTransfer();
   updateScreen();
-  persistDrawState();
+  showActionMessage('Deck refreshed.');
+ 
+  await persistDrawState();
 }
 
-function undo() {
+async function undo() {
   if (!riderState || !undoSnapshot) return;
 
   restoreDummyRiderState(riderState, undoSnapshot);
@@ -375,7 +400,9 @@ function undo() {
   setSelectedCard(null);
   updateFatigueTransfer();
   updateScreen();
-  persistDrawState();
+  showActionMessage('Last draw undone.');
+
+  await persistDrawState();
 }
 function getDrawModeLabel(drawMode: DrawMode): string {
   switch (drawMode) {
@@ -523,6 +550,12 @@ function getSpecialRiderLabel(
       </Pressable>
     </View>
 
+    {actionMessage !== '' && (
+  <Text style={styles.actionMessage}>
+    ✓ {actionMessage}
+  </Text>
+)}
+
     <Pressable style={styles.undoButton} onPress={undo}>
       <Text style={styles.secondaryButtonText}>Undo</Text>
     </Pressable>
@@ -618,6 +651,12 @@ function getSpecialRiderLabel(
       </Pressable>
     </View>
 
+    {actionMessage !== '' && (
+  <Text style={styles.actionMessage}>
+    ✓ {actionMessage}
+  </Text>
+)}
+
     <Pressable style={styles.undoButton} onPress={undo}>
       <Text style={styles.secondaryButtonText}>Undo</Text>
     </Pressable>
@@ -664,6 +703,12 @@ function getSpecialRiderLabel(
   </Pressable>
 </View> 
 
+{actionMessage !== '' && (
+  <Text style={styles.actionMessage}>
+    ✓ {actionMessage}
+  </Text>
+)}
+
     <Pressable
       style={styles.undoButton}
       onPress={undoTeamDraw}>
@@ -703,6 +748,12 @@ function getSpecialRiderLabel(
           Refresh 24
         </Text>
       </Pressable>
+
+      {actionMessage !== '' && (
+  <Text style={styles.actionMessage}>
+    ✓ {actionMessage}
+  </Text>
+)}
 
       <Pressable
         style={styles.secondaryButton}
@@ -964,5 +1015,12 @@ deckInfoSmall: {
   textAlign: 'center',
   marginTop: 2,
   marginBottom: -30,
+},
+actionMessage: {
+  marginTop: 10,
+  textAlign: 'center',
+  color: '#2E7D32',
+  fontSize: 14,
+  fontWeight: '700',
 },
 });

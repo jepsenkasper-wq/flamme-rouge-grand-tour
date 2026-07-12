@@ -68,7 +68,8 @@ export default function ReviewStageEntryScreen() {
 
 if (
   createGameDraft.companionMode === 'dummy' &&
-  editEntryIndex === null
+  editEntryIndex === null &&
+  entryToSave.entryType === 'stage'
 ) {
   applyStageDraftFatigueToSoloStage(playersToSave);
   prepareActiveSoloStageForNextStage();

@@ -143,7 +143,7 @@ const buttonTitle =
       ? `Continue Stage ${gameState.currentStage}`
       : `Enter Stage ${gameState.currentStage}`
     : `Enter Stage ${gameState.currentStage}`;
-  
+
   return (
   <ScrollView
     style={styles.screen}
@@ -386,6 +386,12 @@ const buttonTitle =
   <Pressable
     style={styles.button}
     onPress={() => {
+  if (gameState.currentEntryType === 'restDay') {
+    stageDraft.initialize(createGameDraft.playerNames.length);
+    router.push('/enter-stage');
+    return;
+  }
+
   if (isDummyGame) {
     router.push('/play-stage');
     return;
