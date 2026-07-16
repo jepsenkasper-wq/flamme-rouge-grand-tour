@@ -1,6 +1,8 @@
 import { createGameDraft } from './createGameDraft';
 import { gameResults } from './gameResults';
 
+
+
 function timeToSeconds(time: string) {
   if (!time) return 0;
 
@@ -508,4 +510,378 @@ export function calculateBonusBreakdown() {
   return players;
 }
 
+export type ProgressionPoint = {
+  stageNumber: number;
+  value: number;
+  sequenceNumber?: number;
+  label?: string;
+};
+
+export type RiderProgression = {
+  playerIndex: number;
+  playerName: string;
+  playerColor: string;
+  riderType?: 'sprinteur' | 'rouleur';
+  values: ProgressionPoint[];
+};
+
+
+
+export function calculateSprintProgression(): RiderProgression[] {
+  const progression: RiderProgression[] = [];
+
+ createGameDraft.playerNames.forEach((playerName, playerIndex) => {
+  const resolvedPlayerName =
+    playerName || `Player ${playerIndex + 1}`;
+
+  const playerColor =
+    createGameDraft.playerColors[playerIndex] || 'Blue';
+
+  progression.push({
+    playerIndex,
+    playerName: resolvedPlayerName,
+    playerColor,
+    riderType: 'sprinteur',
+    values: [],
+  });
+
+  progression.push({
+    playerIndex,
+    playerName: resolvedPlayerName,
+    playerColor,
+    riderType: 'rouleur',
+    values: [],
+  });
+});
+
+  const runningPoints = progression.map(() => 0);
+
+  const stageEntries = gameResults.entries
+    .filter((entry) => entry.entryType === 'stage')
+    .sort((a, b) => a.stageNumber - b.stageNumber);
+
+  stageEntries.forEach((entry) => {
+    entry.players.forEach((player, playerIndex) => {
+      const sprinteurIndex = playerIndex * 2;
+      const rouleurIndex = playerIndex * 2 + 1;
+
+      if (progression[sprinteurIndex]) {
+        runningPoints[sprinteurIndex] += Number(
+          player.sprinteur.sprintPoints || 0
+        );
+
+        progression[sprinteurIndex].values.push({
+  stageNumber: entry.stageNumber,
+  value: runningPoints[sprinteurIndex],
+});
+      }
+
+      if (progression[rouleurIndex]) {
+        runningPoints[rouleurIndex] += Number(
+          player.rouleur.sprintPoints || 0
+        );
+
+        progression[rouleurIndex].values.push({
+  stageNumber: entry.stageNumber,
+  value: runningPoints[rouleurIndex],
+});
+      }
+    });
+  });
+
+  return progression;
+}
+export function calculateMountainProgression(): RiderProgression[] {
+  const progression: RiderProgression[] = [];
+
+  createGameDraft.playerNames.forEach((playerName, playerIndex) => {
+    const resolvedPlayerName =
+      playerName || `Player ${playerIndex + 1}`;
+
+    const playerColor =
+      createGameDraft.playerColors[playerIndex] || 'Blue';
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'sprinteur',
+      values: [],
+    });
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'rouleur',
+      values: [],
+    });
+  });
+
+  const runningPoints = progression.map(() => 0);
+
+  const stageEntries = gameResults.entries
+    .filter((entry) => entry.entryType === 'stage')
+    .sort((a, b) => a.stageNumber - b.stageNumber);
+
+  stageEntries.forEach((entry) => {
+    entry.players.forEach((player, playerIndex) => {
+      const sprinteurIndex = playerIndex * 2;
+      const rouleurIndex = playerIndex * 2 + 1;
+
+      if (progression[sprinteurIndex]) {
+        runningPoints[sprinteurIndex] += Number(
+          player.sprinteur.mountainPoints || 0
+        );
+
+       progression[sprinteurIndex].values.push({
+  stageNumber: entry.stageNumber,
+  value: runningPoints[sprinteurIndex],
+});
+      }
+
+      if (progression[rouleurIndex]) {
+        runningPoints[rouleurIndex] += Number(
+          player.rouleur.mountainPoints || 0
+        );
+
+        progression[rouleurIndex].values.push({
+  stageNumber: entry.stageNumber,
+  value: runningPoints[rouleurIndex],
+});
+      }
+    });
+  });
+
+  return progression;
+}
+
+export function calculateTourPointsProgression(): RiderProgression[] {
+  const progression: RiderProgression[] = [];
+
+  createGameDraft.playerNames.forEach((playerName, playerIndex) => {
+    const resolvedPlayerName =
+      playerName || `Player ${playerIndex + 1}`;
+
+    const playerColor =
+      createGameDraft.playerColors[playerIndex] || 'Blue';
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'sprinteur',
+      values: [],
+    });
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'rouleur',
+      values: [],
+    });
+  });
+
+  const runningPoints = progression.map(() => 0);
+  const hasScored = progression.map(() => false);
+
+  const entries = [...gameResults.entries].sort((a, b) => {
+    if (a.stageNumber !== b.stageNumber) {
+      return a.stageNumber - b.stageNumber;
+    }
+
+    if (a.entryType === b.entryType) {
+      return 0;
+    }
+
+    return a.entryType === 'stage' ? -1 : 1;
+  });
+
+  entries.forEach((entry, entryIndex) => {
+    entry.players.forEach((player, playerIndex) => {
+      const sprinteurIndex = playerIndex * 2;
+      const rouleurIndex = playerIndex * 2 + 1;
+
+      const sprinteurPoints = Number(
+        player.sprinteur.tourPoints || 0
+      );
+
+      const rouleurPoints = Number(
+        player.rouleur.tourPoints || 0
+      );
+
+      runningPoints[sprinteurIndex] += sprinteurPoints;
+      runningPoints[rouleurIndex] += rouleurPoints;
+
+      if (sprinteurPoints > 0) {
+        hasScored[sprinteurIndex] = true;
+      }
+
+      if (rouleurPoints > 0) {
+        hasScored[rouleurIndex] = true;
+      }
+
+      const label =
+        entry.entryType === 'restDay'
+          ? `R${entry.stageNumber}`
+          : `S${entry.stageNumber}`;
+
+      if (hasScored[sprinteurIndex]) {
+        progression[sprinteurIndex].values.push({
+          stageNumber: entry.stageNumber,
+          sequenceNumber: entryIndex + 1,
+          label,
+          value: runningPoints[sprinteurIndex],
+        });
+      }
+
+      if (hasScored[rouleurIndex]) {
+        progression[rouleurIndex].values.push({
+          stageNumber: entry.stageNumber,
+          sequenceNumber: entryIndex + 1,
+          label,
+          value: runningPoints[rouleurIndex],
+        });
+      }
+    });
+  });
+
+  return progression.filter(
+    (series) => series.values.length > 0
+  );
+}
+
+export function calculateYellowTimeProgression(): RiderProgression[] {
+  const progression: RiderProgression[] = [];
+
+  createGameDraft.playerNames.forEach((playerName, playerIndex) => {
+    const resolvedPlayerName =
+      playerName || `Player ${playerIndex + 1}`;
+
+    const playerColor =
+      createGameDraft.playerColors[playerIndex] || 'Blue';
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'sprinteur',
+      values: [],
+    });
+
+    progression.push({
+      playerIndex,
+      playerName: resolvedPlayerName,
+      playerColor,
+      riderType: 'rouleur',
+      values: [],
+    });
+  });
+
+  const runningTimes = progression.map(() => 0);
+  const hasTime = progression.map(() => false);
+
+  const stageEntries = gameResults.entries
+    .filter((entry) => entry.entryType === 'stage')
+    .sort((a, b) => a.stageNumber - b.stageNumber);
+
+  stageEntries.forEach((entry) => {
+    entry.players.forEach((player, playerIndex) => {
+      const sprinteurIndex = playerIndex * 2;
+      const rouleurIndex = playerIndex * 2 + 1;
+
+      const sprinteurTime = player.sprinteur.time
+        ? timeToSeconds(player.sprinteur.time)
+        : 0;
+
+      const rouleurTime = player.rouleur.time
+        ? timeToSeconds(player.rouleur.time)
+        : 0;
+
+      if (player.sprinteur.time !== '') {
+        hasTime[sprinteurIndex] = true;
+        runningTimes[sprinteurIndex] += sprinteurTime;
+      }
+
+      if (player.rouleur.time !== '') {
+        hasTime[rouleurIndex] = true;
+        runningTimes[rouleurIndex] += rouleurTime;
+      }
+
+      if (hasTime[sprinteurIndex]) {
+        progression[sprinteurIndex].values.push({
+          stageNumber: entry.stageNumber,
+          value: runningTimes[sprinteurIndex],
+        });
+      }
+
+      if (hasTime[rouleurIndex]) {
+        progression[rouleurIndex].values.push({
+          stageNumber: entry.stageNumber,
+          value: runningTimes[rouleurIndex],
+        });
+      }
+    });
+  });
+
+  return progression.filter(
+    (series) => series.values.length > 0
+  );
+}
+
+export function calculateTeamTimeProgression(): RiderProgression[] {
+  const progression: RiderProgression[] =
+    createGameDraft.playerNames.map((playerName, playerIndex) => ({
+      playerIndex,
+      playerName:
+        playerName || `Player ${playerIndex + 1}`,
+      playerColor:
+        createGameDraft.playerColors[playerIndex] || 'Blue',
+      values: [],
+    }));
+
+  const runningTimes = progression.map(() => 0);
+  const hasTime = progression.map(() => false);
+
+  const stageEntries = gameResults.entries
+    .filter((entry) => entry.entryType === 'stage')
+    .sort((a, b) => a.stageNumber - b.stageNumber);
+
+  stageEntries.forEach((entry) => {
+    entry.players.forEach((player, playerIndex) => {
+      const sprinteurTime =
+        player.sprinteur.time !== ''
+          ? timeToSeconds(player.sprinteur.time)
+          : 0;
+
+      const rouleurTime =
+        player.rouleur.time !== ''
+          ? timeToSeconds(player.rouleur.time)
+          : 0;
+
+      const teamStageTime =
+        sprinteurTime + rouleurTime;
+
+      if (
+        player.sprinteur.time !== '' ||
+        player.rouleur.time !== ''
+      ) {
+        hasTime[playerIndex] = true;
+        runningTimes[playerIndex] += teamStageTime;
+      }
+
+      if (hasTime[playerIndex] && progression[playerIndex]) {
+        progression[playerIndex].values.push({
+          stageNumber: entry.stageNumber,
+          value: runningTimes[playerIndex],
+        });
+      }
+    });
+  });
+
+  return progression.filter(
+    (series) => series.values.length > 0
+  );
+}
 

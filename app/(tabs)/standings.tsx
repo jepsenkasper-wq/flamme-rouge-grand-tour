@@ -10,8 +10,15 @@ import {
   calculateTeamClassification,
   calculateOverallClassification,
   secondsToTime,
+  calculateSprintProgression,
+  calculateTourPointsProgression,
+  calculateYellowTimeProgression,
+  calculateTeamTimeProgression,
+  calculateMountainProgression
 } from '@/lib/classifications';
 import { createGameDraft } from '@/lib/createGameDraft';
+import ProgressionChartPrototype from '@/components/ProgressionChartPrototype'; 
+
 
 const headerImages = {
   yellow: require('@/assets/images/header/yellow-header.png'),
@@ -53,6 +60,21 @@ const isTablet = width >= 700;
   const yellowClassification = calculateYellowClassification();
   const mountainClassification = calculateMountainClassification();
   const sprintClassification = calculateSprintClassification();
+  const mountainProgression = calculateMountainProgression();
+const sprintProgression = calculateSprintProgression();
+const tourPointsProgression =
+  calculateTourPointsProgression();
+  const yellowTimeProgression =
+  calculateYellowTimeProgression();
+  const teamTimeProgression =
+  calculateTeamTimeProgression();
+
+  console.log(
+  'TEAM TIME PROGRESSION',
+  JSON.stringify(teamTimeProgression, null, 2)
+);
+
+
   const teamClassification = calculateTeamClassification();
   const overallClassification = calculateOverallClassification();
 
@@ -156,6 +178,8 @@ const activeTitle =
   />
 
   <Text style={styles.tabText}>Sprint</Text>
+
+  
 </Pressable>
 
 <Pressable
@@ -181,38 +205,117 @@ const activeTitle =
   style={styles.listContainer}
   contentContainerStyle={styles.listContent}
 >
-      <View style={styles.card}>
-  
+  <View style={styles.card}>
+    {activeClassification.map((rider, index) => (
+      <View key={index} style={styles.resultRow}>
+        <Text style={styles.position}>{index + 1}</Text>
 
-{activeClassification.map((rider, index) => (
-  <View key={index} style={styles.resultRow}>
-    <Text style={styles.position}>{index + 1}</Text>
-    <Image
-  source={getRiderImageFromName(
-    'riderName' in rider ? rider.riderName : rider.playerName
-  )}
-  style={styles.riderAvatar}
+        <Image
+          source={getRiderImageFromName(
+            'riderName' in rider
+              ? rider.riderName
+              : rider.playerName
+          )}
+          style={styles.riderAvatar}
+        />
+
+        <Text style={styles.riderName}>
+          {formatStandingName(
+            'riderName' in rider
+              ? rider.riderName
+              : rider.playerName
+          )}
+        </Text>
+
+        <Text style={styles.time}>
+          {activeTab === 'yellow' || activeTab === 'team'
+            ? index === 0
+              ? secondsToTime(rider.totalTime)
+              : `+${secondsToTime(
+                  rider.totalTime -
+                    activeClassification[0].totalTime
+                )}`
+            : `${rider.points} pts`}
+        </Text>
+      </View>
+    ))}
+  </View>
+
+{(
+  activeTab === 'yellow' ||
+activeTab === 'sprint' ||
+activeTab === 'mountain' ||
+activeTab === 'team'
+) && (
+  <View style={styles.progressionSection}>
+    <Text style={styles.progressionTitle}>
+  {activeTab === 'team'
+    ? 'Tour Point Progression'
+    : 'Stage-by-Stage Progression'}
+</Text>
+
+  <View style={styles.legend}>
+    <View style={styles.legendItem}>
+      <View style={styles.sprinteurLegendPoint} />
+      <View style={styles.solidLegendLine} />
+      <Text style={styles.legendText}>Sprinteur</Text>
+    </View>
+
+    <View style={styles.legendItem}>
+      <View style={styles.rouleurLegendPoint} />
+
+      <View style={styles.dashedLegendLine}>
+        <View style={styles.dash} />
+        <View style={styles.dash} />
+        <View style={styles.dash} />
+      </View>
+
+      <Text style={styles.legendText}>Rouleur</Text>
+    </View>
+  </View>
+
+   <ProgressionChartPrototype
+  progression={
+    activeTab === 'yellow'
+      ? yellowTimeProgression
+      : activeTab === 'sprint'
+        ? sprintProgression
+        : activeTab === 'mountain'
+          ? mountainProgression
+          : tourPointsProgression
+  }
+  valueType={
+    activeTab === 'yellow'
+      ? 'time'
+      : 'points'
+  }
+  invertYAxis={activeTab === 'yellow'}
+  xAxisPosition={
+  activeTab === 'yellow'
+    ? 'top'
+    : 'bottom'
+}
 />
 
-<Text style={styles.riderName}>
-  {formatStandingName(
-    'riderName' in rider ? rider.riderName : rider.playerName
-  )}
-</Text>
+{activeTab === 'team' && (
+  <View style={styles.progressionSection}>
+    <Text style={styles.progressionTitle}>
+      Team Time Progression
+    </Text>
 
-<Text style={styles.time}>
-  {activeTab === 'yellow' || activeTab === 'team'
-    ? index === 0
-      ? secondsToTime(rider.totalTime)
-      : `+${secondsToTime(
-          rider.totalTime - activeClassification[0].totalTime
-        )}`
-    : `${rider.points} pts`}
-</Text>
+    <ProgressionChartPrototype
+      progression={teamTimeProgression}
+      valueType="time"
+      invertYAxis
+      xAxisPosition="top"
+    />
   </View>
-))}
-</View>
-    </ScrollView>
+)}
+
+
+  </View>
+)}
+</ScrollView>
    </View> 
   );
 }
@@ -371,6 +474,71 @@ tabletHeaderBackground: {
     height: 200,
     maxWidth: 650,
     alignSelf: 'center',
-}
+},
+progressionSection: {
+  marginTop: 18,
+},
+
+progressionTitle: {
+  fontSize: 20,
+  fontWeight: '900',
+  color: Colors.brown,
+  marginBottom: 12,
+},
+
+legend: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 18,
+  marginBottom: 12,
+  alignSelf: 'flex-start',
+},
+
+legendItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+},
+
+legendText: {
+  fontSize: 12,
+  fontWeight: '700',
+  color: Colors.brown,
+},
+
+sprinteurLegendPoint: {
+  width: 9,
+  height: 9,
+  borderRadius: 5,
+  backgroundColor: Colors.brown,
+},
+
+rouleurLegendPoint: {
+  width: 9,
+  height: 9,
+  borderRadius: 5,
+  backgroundColor: Colors.brown,
+  borderWidth: 2,
+  borderColor: Colors.card,
+},
+
+solidLegendLine: {
+  width: 24,
+  height: 2,
+  backgroundColor: Colors.brown,
+},
+
+dashedLegendLine: {
+  width: 24,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+},
+
+dash: {
+  width: 6,
+  height: 2,
+  backgroundColor: Colors.brown,
+},
 
 });
