@@ -69,11 +69,6 @@ const tourPointsProgression =
   const teamTimeProgression =
   calculateTeamTimeProgression();
 
-  console.log(
-  'TEAM TIME PROGRESSION',
-  JSON.stringify(teamTimeProgression, null, 2)
-);
-
 
   const teamClassification = calculateTeamClassification();
   const overallClassification = calculateOverallClassification();

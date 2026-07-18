@@ -100,6 +100,8 @@ export async function openSavedGame(gameId: string) {
   createGameDraft.companionMode = 'normal';
   createGameDraft.dummyTeams = [];
 
+  gameState.tourEnded = false;
+  
   Object.assign(createGameDraft, game.createGameDraft);
   Object.assign(gameResults, game.gameResults);
   Object.assign(gameState, game.gameState);

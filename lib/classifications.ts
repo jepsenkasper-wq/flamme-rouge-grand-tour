@@ -406,6 +406,8 @@ export function calculateBonusBreakdown() {
     team: 0,
   }));
 
+  
+
   function addRiderBonus(
     riderName: string,
     type: 'yellow' | 'mountain' | 'sprint',
@@ -508,6 +510,27 @@ export function calculateBonusBreakdown() {
     });
 
   return players;
+}
+
+export function calculateRiderBonusPoints() {
+  const bonusBreakdown = calculateBonusBreakdown();
+
+  return bonusBreakdown.flatMap((player) => [
+    {
+      riderName: `${player.playerName} - Sprinteur`,
+      bonusPoints:
+        player.sprinteur.yellow +
+        player.sprinteur.mountain +
+        player.sprinteur.sprint,
+    },
+    {
+      riderName: `${player.playerName} - Rouleur`,
+      bonusPoints:
+        player.rouleur.yellow +
+        player.rouleur.mountain +
+        player.rouleur.sprint,
+    },
+  ]);
 }
 
 export type ProgressionPoint = {

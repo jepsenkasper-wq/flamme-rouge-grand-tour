@@ -1,6 +1,7 @@
 import {
   ImageBackground,
   Image,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,9 +26,11 @@ import {
 import {
   getActiveSavedGame,
   openSavedGame,
+  updateActiveSavedGame,
   refreshFollowedGame,
 } from '@/lib/storage';
 import { subscribeToRemoteGame } from '@/lib/remoteGames';
+import { TourReviewContent } from '@/app/tour-review';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -133,16 +136,29 @@ const entryTitle =
 const isDummyGame =
   createGameDraft.companionMode === 'dummy';
 
-const buttonTitle =
-  gameState.currentEntryType === 'restDay'
+const totalStages = Number(createGameDraft.stages || 21);
+
+const completedStages = gameResults.entries.filter(
+  (entry) => entry.entryType !== 'restDay'
+).length;
+
+const canEndTour = completedStages >= totalStages;
+
+const buttonTitle = canEndTour
+  ? 'End Tour'
+  : gameState.currentEntryType === 'restDay'
     ? 'Enter Rest Day'
     : isDummyGame
-    ? gameState.stageState === 'waiting-for-play'
-      ? `Play Stage ${gameState.currentStage}`
-      : gameState.stageState === 'playing'
-      ? `Continue Stage ${gameState.currentStage}`
-      : `Enter Stage ${gameState.currentStage}`
-    : `Enter Stage ${gameState.currentStage}`;
+      ? gameState.stageState === 'waiting-for-play'
+        ? `Play Stage ${gameState.currentStage}`
+        : gameState.stageState === 'playing'
+          ? `Continue Stage ${gameState.currentStage}`
+          : `Enter Stage ${gameState.currentStage}`
+      : `Enter Stage ${gameState.currentStage}`;
+
+  if (gameState.tourEnded) {
+  return <TourReviewContent />;
+}    
 
   return (
   <ScrollView
@@ -386,6 +402,30 @@ const buttonTitle =
   <Pressable
     style={styles.button}
     onPress={() => {
+  if (canEndTour) {
+    Alert.alert(
+      'End Tour?',
+      'This will complete the Tour and open the final review.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+  text: 'End Tour',
+  onPress: async () => {
+    gameState.tourEnded = true;
+
+    await updateActiveSavedGame();
+
+    setRefreshVersion((version) => version + 1);
+  },
+},
+      ]
+    );
+
+    return;
+  }
   if (gameState.currentEntryType === 'restDay') {
     stageDraft.initialize(createGameDraft.playerNames.length);
     router.push('/enter-stage');
