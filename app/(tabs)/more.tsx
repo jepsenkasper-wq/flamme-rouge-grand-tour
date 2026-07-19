@@ -280,6 +280,14 @@ setTimeout(() => {
 )}
 
       </View>
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Support</Text>
+
+  <MenuButton
+    title="Support Development"
+    onPress={() => router.push('/support-development')}
+  />
+</View>
 
       <View style={styles.section}>
      

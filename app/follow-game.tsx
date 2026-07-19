@@ -66,7 +66,7 @@ router.replace('/(tabs)');
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.paper,
     padding: 24,
     justifyContent: 'center',
   },
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 24,
-    color: Colors.text,
+    color: Colors.brown,
   },
 
   input: {

@@ -72,19 +72,20 @@ const rider = riders[riderType];
 
  function drawCard() {
   console.log('RIDER BEFORE DRAW', {
-  riderType,
-  riderSpecialRiderId: rider.specialRiderId,
-  deckTop: rider.deck[0],
-  deckIds: rider.deck.slice(0, 3).map((card) => card.id),
-});
-  const nextRider = {
-  deck: [...rider.deck],
-  setAside: [...rider.setAside],
-  discard: [...rider.discard],
-  specialRiderId: rider.specialRiderId,
-};
+    riderType,
+    riderSpecialRiderId: rider.specialRiderId,
+    deckTop: rider.deck[0],
+    deckIds: rider.deck.slice(0, 3).map((card) => card.id),
+  });
 
-  const roundResult = playDummyRound(nextRider, scenario, round);
+  const nextRider: DummyRiderState = {
+    ...rider,
+    deck: [...rider.deck],
+    setAside: [...rider.setAside],
+    discard: [...rider.discard],
+  };
+
+  const roundResult = playDummyRound(nextRider, scenario);
 
   setLastDraw(roundResult.drawnCards);
   setRound((current) => current + 1);
@@ -97,11 +98,11 @@ const rider = riders[riderType];
 }
 
 function addFatigue() {
-  const nextRider = {
+  const nextRider: DummyRiderState = {
+    ...rider,
     deck: [...rider.deck],
     setAside: [...rider.setAside],
     discard: [...rider.discard],
-    specialRiderId: rider.specialRiderId,
   };
 
   addFatigueCardToSetAside(nextRider);
@@ -113,11 +114,11 @@ function addFatigue() {
 }
 
 function removeFatigue() {
-  const nextRider = {
+  const nextRider: DummyRiderState = {
+    ...rider,
     deck: [...rider.deck],
     setAside: [...rider.setAside],
     discard: [...rider.discard],
-    specialRiderId: rider.specialRiderId,
   };
 
   removeFatigueCardFromSetAside(nextRider);

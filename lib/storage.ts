@@ -96,13 +96,15 @@ export async function openSavedGame(gameId: string) {
     return false;
   }
 
-  // Standardværdier til ældre/importerede spil
-  createGameDraft.companionMode = 'normal';
-  createGameDraft.dummyTeams = [];
+ // Standardværdier til ældre/importerede spil
+Object.assign(createGameDraft, {
+  companionMode: 'normal',
+  dummyTeams: [],
+});
 
-  gameState.tourEnded = false;
-  
-  Object.assign(createGameDraft, game.createGameDraft);
+gameState.tourEnded = false;
+
+Object.assign(createGameDraft, game.createGameDraft);
   Object.assign(gameResults, game.gameResults);
   Object.assign(gameState, game.gameState);
 

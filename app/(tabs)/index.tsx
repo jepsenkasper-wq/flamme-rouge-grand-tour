@@ -170,7 +170,6 @@ const buttonTitle = canEndTour
   <ImageBackground
    source={require('@/assets/images/header/home-header.png')}
   style={styles.headerBackground}
-  imageStyle={styles.headerImage}
 >
   <Text
   style={styles.title}
@@ -450,32 +449,6 @@ const buttonTitle = canEndTour
   );
 }
 
-function getPlayerColor(colorName: string) {
-  switch (colorName) {
-    case 'Blue':
-      return '#2f5fb3';
-    case 'White':
-      return '#f7f1df';
-    case 'Green':
-      return '#2f8a3e';
-    case 'Red':
-      return '#b7372f';
-    case 'Black':
-      return '#222222';
-    case 'Pink':
-      return '#d97aa7';
-    default:
-      return Colors.border;
-  }
-}
-
-function formatLeaderName(name?: string) {
-  if (!name) return '-';
-
-  return name
-    .replace(' - Sprinteur', ' - S')
-    .replace(' - Rouleur', ' - R');
-}
 function formatRiderNameShort(name?: string) {
   if (!name) return '-';
 
@@ -648,12 +621,6 @@ content: {
 },
 podiumContainer: {
   marginBottom: 12,
-},
-
-podiumRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingVertical: 8,
 },
 
 remainingContainer: {

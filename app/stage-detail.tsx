@@ -341,20 +341,13 @@ riderName: {
   color: Colors.brown,
 },
 
-time: {
-  fontSize: 16,
-  fontWeight: '900',
-  color: Colors.brown,
-},
+
 content: {
   padding: 24,
   paddingTop: 72,
   paddingBottom: 40,
 },
 
-disabledNavButton: {
-  opacity: 0.3,
-},
 button: {
   backgroundColor: Colors.red,
   padding: 18,
@@ -368,23 +361,14 @@ buttonText: {
   fontSize: 18,
   fontWeight: '900',
 },
-tieButtons: {
-  flexDirection: 'row',
-  gap: 6,
-  marginLeft: 10,
-},
+
 
 tieButton: {
   fontSize: 18,
   fontWeight: '900',
   color: Colors.red,
 },
-tiePressable: {
-  width: 36,
-  height: 36,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+
 riderAvatar: {
   width: 34,
   height: 34,

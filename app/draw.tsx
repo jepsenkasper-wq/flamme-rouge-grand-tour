@@ -418,23 +418,6 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   }
 }
 
-function getSpecialRiderLabel(
-  specialRiderId?: string
-): string | null {
-  if (!specialRiderId) return null;
-
-  switch (specialRiderId) {
-    case 'grimpeur':
-      return 'Grimpeur';
-    case 'descender':
-      return 'Descender';
-    case 'mountaineer':
-      return 'Mountaineer';
-    default:
-      return specialRiderId;
-  }
-}
-
   return (
     <ScrollView
     style={styles.screen}
@@ -1007,6 +990,15 @@ specialInfo: {
   opacity: 0.65,
   textAlign: 'center',
 },
+
+deckInfo: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
+  textAlign: 'center',
+  marginTop: 4,
+},
+
 deckInfoSmall: {
   fontSize: 12,
   color: Colors.brown,

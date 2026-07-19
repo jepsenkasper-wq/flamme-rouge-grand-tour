@@ -108,6 +108,8 @@ const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
   'rouleur'
 );
 
+const [, setDraftVersion] = useState(0);
+
 const currentPlayerEntry = stageDraft.players[playerIndex];
 
 if (!currentPlayerEntry) {
@@ -121,17 +123,29 @@ if (!currentPlayerEntry) {
         </Text>
 
         <Pressable
-          style={styles.button}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.buttonText}>Go Back</Text>
-        </Pressable>
+  style={styles.navButton}
+  onPress={() => router.back()}
+>
+  <Text style={styles.navButtonText}>Go Back</Text>
+</Pressable>
       </View>
     </View>
   );
 }
 
 const currentEntry = currentPlayerEntry[selectedRider];
+
+type EditableEntryField =
+  | 'time'
+  | 'tourPoints'
+  | 'mountainPoints'
+  | 'sprintPoints'
+  | 'fatigueCards';
+
+function updateEntry(field: EditableEntryField, value: string) {
+  currentEntry[field] = value;
+  setDraftVersion((version) => version + 1);
+}
 
 function goToPlayer(nextIndex: number) {
   router.replace({
@@ -145,12 +159,6 @@ function goToPlayer(nextIndex: number) {
   });
 }
 
-const [, setDraftVersion] = useState(0);
-
-function updateEntry(field: keyof typeof currentEntry, value: string) {
-  currentEntry[field] = value;
-  setDraftVersion((version) => version + 1);
-}
 
 const riderImage =
   selectedRider === 'sprinteur'
@@ -571,14 +579,6 @@ gridCard: {
   alignItems: 'center',
 },
 
-gridLabel: {
-  fontSize: 13,
-  fontWeight: '800',
-  color: Colors.brown,
-  marginBottom: 6,
-  textAlign: 'center',
-},
-
 labelRow: {
   flexDirection: 'row',
   alignItems: 'center',
@@ -613,9 +613,7 @@ gridInput: {
   color: Colors.brown,
   textAlign: 'center',
 },
-inputColumn: {
-  flex: 1,
-},
+
 gridInputRow: {
   flexDirection: 'row',
   alignItems: 'flex-end',

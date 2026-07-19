@@ -110,6 +110,9 @@ const activeTitle =
   return riderImages[createGameDraft.playerColors[playerIndex]];
 }
 
+const isTimeClassification =
+  activeTab === 'yellow' || activeTab === 'team';
+
   return (
 
   <View style={styles.screen}>
@@ -223,15 +226,15 @@ const activeTitle =
         </Text>
 
         <Text style={styles.time}>
-          {activeTab === 'yellow' || activeTab === 'team'
-            ? index === 0
-              ? secondsToTime(rider.totalTime)
-              : `+${secondsToTime(
-                  rider.totalTime -
-                    activeClassification[0].totalTime
-                )}`
-            : `${rider.points} pts`}
-        </Text>
+  {isTimeClassification
+    ? index === 0
+      ? secondsToTime((rider as any).totalTime)
+      : `+${secondsToTime(
+          (rider as any).totalTime -
+            (activeClassification[0] as any).totalTime
+        )}`
+    : `${(rider as any).points} pts`}
+</Text>
       </View>
     ))}
   </View>
@@ -344,14 +347,6 @@ tabs: {
   marginHorizontal: 10,
 },
 
-tabButton: {
-  flex: 1,
-  borderRightWidth: 1,
-  borderRightColor: '#c8a96a',
-},
-lastTabButton: {
-  borderRightWidth: 0,
-},
   card: {
   backgroundColor: 'transparent',
   borderRadius: 0,
@@ -422,10 +417,7 @@ tabContent: {
   justifyContent: 'center',
   gap: 6,
 },
-tabJersey: {
-  width: 22,
-  height: 22,
-},
+
 tabButton: {
   flex: 1,
   flexDirection: 'row',
@@ -453,6 +445,7 @@ tabJersey: {
   width: 20,
   height: 20,
 },
+
 lastTabButton: {
   borderRightWidth: 0,
 },
