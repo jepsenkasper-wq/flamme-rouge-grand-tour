@@ -58,6 +58,8 @@ export async function getSavedGames(): Promise<SavedGame[]> {
 export async function saveGameToLibrary() {
   const games = await getSavedGames();
 
+  gameState.tourEnded = false;
+
   const newGame: SavedGame = {
     id: Date.now().toString(),
     name: createGameDraft.gameName || 'Unnamed Game',
@@ -66,27 +68,31 @@ export async function saveGameToLibrary() {
     createGameDraft: JSON.parse(JSON.stringify(createGameDraft)),
     gameResults: JSON.parse(JSON.stringify(gameResults)),
     gameState: JSON.parse(JSON.stringify(gameState)),
-    soloStageState: JSON.parse(JSON.stringify(getRawActiveSoloStageState())),
+    soloStageState: JSON.parse(
+      JSON.stringify(getRawActiveSoloStageState())
+    ),
     role: 'admin',
   };
+
   const remoteMeta = await createRemoteGame(newGame);
 
-newGame.remoteId = remoteMeta.remoteId;
-newGame.followCode = remoteMeta.followCode;
-newGame.adminKey = remoteMeta.adminKey;
+  newGame.remoteId = remoteMeta.remoteId;
+  newGame.followCode = remoteMeta.followCode;
+  newGame.adminKey = remoteMeta.adminKey;
 
   games.push(newGame);
 
   activeGameId = newGame.id;
 
   await AsyncStorage.setItem(
-  SAVED_GAMES_KEY,
-  JSON.stringify(games)
-);
-await AsyncStorage.setItem(
-  ACTIVE_GAME_KEY,
-  newGame.id
-);
+    SAVED_GAMES_KEY,
+    JSON.stringify(games)
+  );
+
+  await AsyncStorage.setItem(
+    ACTIVE_GAME_KEY,
+    newGame.id
+  );
 }
 export async function openSavedGame(gameId: string) {
   const games = await getSavedGames();

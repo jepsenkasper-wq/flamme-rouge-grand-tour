@@ -15,28 +15,35 @@ export function generateAdminKey() {
     .slice(2)}`;
 }
 export async function createRemoteGame(savedGame: SavedGame) {
-  const followCode = generateFollowCode();
   const adminKey = generateAdminKey();
 
-  const { data, error } = await supabase
-    .from('games')
-    .insert({
-      follow_code: followCode,
-      admin_key: adminKey,
-      game_data: savedGame,
-    })
-    .select('id')
-    .single();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const followCode = generateFollowCode();
 
-  if (error) {
-    throw error;
+    const { data, error } = await supabase
+      .from('games')
+      .insert({
+        follow_code: followCode,
+        admin_key: adminKey,
+        game_data: savedGame,
+      })
+      .select('id')
+      .single();
+
+    if (!error) {
+      return {
+        remoteId: data.id as string,
+        followCode,
+        adminKey,
+      };
+    }
+
+    if (error.code !== '23505') {
+      throw error;
+    }
   }
 
-  return {
-    remoteId: data.id as string,
-    followCode,
-    adminKey,
-  };
+  throw new Error('Could not generate a unique follow code.');
 }
 export async function fetchGameByFollowCode(code: string) {
   const { data, error } = await supabase

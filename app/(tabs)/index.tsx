@@ -128,10 +128,7 @@ const mountainLeader = calculateMountainClassification()[0];
 const sprintLeader = calculateSprintClassification()[0];
 const teamLeader = calculateTeamClassification()[0];
 
-const entryTitle =
-  gameState.currentEntryType === 'restDay'
-    ? `Rest Day after Stage ${gameState.currentStage}`
-    : `Stage ${gameState.currentStage} of ${createGameDraft.stages || '21'}`;
+
 
 const isDummyGame =
   createGameDraft.companionMode === 'dummy';
@@ -159,6 +156,13 @@ const buttonTitle = canEndTour
   if (gameState.tourEnded) {
   return <TourReviewContent />;
 }    
+
+const entryTitle =
+  canEndTour
+    ? 'Tour Finished'
+    : gameState.currentEntryType === 'restDay'
+      ? `Rest Day after Stage ${gameState.currentStage}`
+      : `Stage ${gameState.currentStage} of ${totalStages}`;
 
   return (
   <ScrollView

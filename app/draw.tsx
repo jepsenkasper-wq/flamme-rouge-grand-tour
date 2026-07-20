@@ -262,6 +262,8 @@ async function refreshMuscle(limit: 24 | 25) {
 
   setSelectedCard(null);
   updateScreen();
+  showActionMessage('Deck refreshed.');
+
   await persistDrawState();
 }
 
@@ -286,6 +288,7 @@ async function refreshPeloton(limit: 24 | 25) {
 
   setSelectedCard(null);
   updateScreen();
+  showActionMessage('Deck refreshed.');
 
   await persistDrawState();
 }
@@ -723,28 +726,28 @@ function getDrawModeLabel(drawMode: DrawMode): string {
     )}
 
     <View style={styles.actionRow}>
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={() => refreshPeloton(24)}>
-        <Text style={styles.secondaryButtonText}>
-          Refresh 24
-        </Text>
-      </Pressable>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={() => refreshPeloton(24)}>
+    <Text style={styles.secondaryButtonText}>
+      Refresh 24
+    </Text>
+  </Pressable>
 
-      {actionMessage !== '' && (
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={() => refreshPeloton(25)}>
+    <Text style={styles.secondaryButtonText}>
+      Refresh 25
+    </Text>
+  </Pressable>
+</View>
+
+{actionMessage !== '' && (
   <Text style={styles.actionMessage}>
     ✓ {actionMessage}
   </Text>
 )}
-
-      <Pressable
-        style={styles.secondaryButton}
-        onPress={() => refreshPeloton(25)}>
-        <Text style={styles.secondaryButtonText}>
-          Refresh 25
-        </Text>
-      </Pressable>
-    </View>
 
     <Pressable
       style={styles.undoButton}
