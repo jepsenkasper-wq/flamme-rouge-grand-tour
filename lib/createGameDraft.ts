@@ -10,8 +10,10 @@ export const createGameDraft = {
 
   dummyTeams: [] as DummyTeamSetup[],
 
-  playerNames: [] as string[],
-  playerColors: [] as string[],
+ playerNames: [] as string[],
+playerColors: [] as string[],
+playerRouleurSpecialRiders: [] as string[],
+playerSprinteurSpecialRiders: [] as string[],
 
   restDayStages: [] as string[],
 
@@ -36,6 +38,8 @@ export function resetCreateGameDraft() {
 
   createGameDraft.playerNames = [];
   createGameDraft.playerColors = [];
+  createGameDraft.playerRouleurSpecialRiders = [];
+createGameDraft.playerSprinteurSpecialRiders = [];
   createGameDraft.restDayStages = [];
 
   createGameDraft.scoringRules = {

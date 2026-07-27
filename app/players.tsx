@@ -5,6 +5,10 @@ import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+import {
+  specialRiders,
+  type SpecialRiderId,
+} from '@/lib/solo/specialRiders';
 
 const PLAYER_COLORS = [
   { name: 'Blue', value: '#2f5fb3' },
@@ -14,6 +18,7 @@ const PLAYER_COLORS = [
   { name: 'Black', value: '#222222' },
   { name: 'Pink', value: '#d97aa7' },
 ];
+
 
 export default function PlayersScreen() {
   const params = useLocalSearchParams();
@@ -28,6 +33,18 @@ export default function PlayersScreen() {
     const [playerColors, setPlayerColors] = useState(
   Array.from({ length: playerCount }, (_, index) => PLAYER_COLORS[index].name)
     );
+
+  const [playerRouleurSpecialRiders, setPlayerRouleurSpecialRiders] = useState<
+  (SpecialRiderId | '')[]
+>(
+  Array.from({ length: playerCount }, () => '')
+);
+
+const [playerSprinteurSpecialRiders, setPlayerSprinteurSpecialRiders] = useState<
+  (SpecialRiderId | '')[]
+>(
+  Array.from({ length: playerCount }, () => '')
+);
 
     const insets = useSafeAreaInsets();
 
@@ -45,6 +62,24 @@ const contentStyle = {
   const nextColors = [...playerColors];
   nextColors[index] = colorName;
   setPlayerColors(nextColors);
+}
+
+function updatePlayerRouleurSpecialRider(
+  index: number,
+  riderId: SpecialRiderId | ''
+) {
+  const nextRiders = [...playerRouleurSpecialRiders];
+  nextRiders[index] = riderId;
+  setPlayerRouleurSpecialRiders(nextRiders);
+}
+
+function updatePlayerSprinteurSpecialRider(
+  index: number,
+  riderId: SpecialRiderId | ''
+) {
+  const nextRiders = [...playerSprinteurSpecialRiders];
+  nextRiders[index] = riderId;
+  setPlayerSprinteurSpecialRiders(nextRiders);
 }
 
   return (
@@ -89,6 +124,114 @@ const contentStyle = {
     );
   })}
 </View>
+
+<Text style={[styles.label, { marginTop: 16 }]}>
+  Special Rider Rouleur
+</Text>
+
+<View style={styles.specialRiderRow}>
+  <Pressable
+    onPress={() => updatePlayerRouleurSpecialRider(index, '')}
+    style={[
+      styles.specialRiderButton,
+      playerRouleurSpecialRiders[index] === '' &&
+        styles.specialRiderButtonSelected,
+    ]}
+  >
+    <Text
+      style={[
+        styles.specialRiderButtonText,
+        playerRouleurSpecialRiders[index] === '' &&
+          styles.specialRiderButtonTextSelected,
+      ]}
+    >
+      None
+    </Text>
+  </Pressable>
+
+  {Object.values(specialRiders)
+    .filter((rider) => rider.riderType === 'rouleur')
+    .map((rider) => {
+      const isSelected =
+        playerRouleurSpecialRiders[index] === rider.id;
+
+      return (
+        <Pressable
+          key={rider.id}
+          onPress={() =>
+            updatePlayerRouleurSpecialRider(index, rider.id)
+          }
+          style={[
+            styles.specialRiderButton,
+            isSelected && styles.specialRiderButtonSelected,
+          ]}
+        >
+          <Text
+            style={[
+              styles.specialRiderButtonText,
+              isSelected && styles.specialRiderButtonTextSelected,
+            ]}
+          >
+            {rider.name}
+          </Text>
+        </Pressable>
+      );
+    })}
+</View>
+
+<Text style={[styles.label, { marginTop: 16 }]}>
+  Special Rider Sprinteur
+</Text>
+
+<View style={styles.specialRiderRow}>
+  <Pressable
+    onPress={() => updatePlayerSprinteurSpecialRider(index, '')}
+    style={[
+      styles.specialRiderButton,
+      playerSprinteurSpecialRiders[index] === '' &&
+        styles.specialRiderButtonSelected,
+    ]}
+  >
+    <Text
+      style={[
+        styles.specialRiderButtonText,
+        playerSprinteurSpecialRiders[index] === '' &&
+          styles.specialRiderButtonTextSelected,
+      ]}
+    >
+      None
+    </Text>
+  </Pressable>
+
+  {Object.values(specialRiders)
+    .filter((rider) => rider.riderType === 'sprinteur')
+    .map((rider) => {
+      const isSelected =
+        playerSprinteurSpecialRiders[index] === rider.id;
+
+      return (
+        <Pressable
+          key={rider.id}
+          onPress={() =>
+            updatePlayerSprinteurSpecialRider(index, rider.id)
+          }
+          style={[
+            styles.specialRiderButton,
+            isSelected && styles.specialRiderButtonSelected,
+          ]}
+        >
+          <Text
+            style={[
+              styles.specialRiderButtonText,
+              isSelected && styles.specialRiderButtonTextSelected,
+            ]}
+          >
+            {rider.name}
+          </Text>
+        </Pressable>
+      );
+    })}
+</View>
         </View> 
       ))}
 
@@ -100,6 +243,11 @@ const contentStyle = {
   );
 
   createGameDraft.playerColors = playerColors;
+ createGameDraft.playerRouleurSpecialRiders =
+  playerRouleurSpecialRiders;
+
+createGameDraft.playerSprinteurSpecialRiders =
+  playerSprinteurSpecialRiders;
 
   router.push('/rest-days');
 }}>
@@ -204,6 +352,35 @@ selectedColorCircle: {
 
 disabledColorCircle: {
   opacity: 0.25,
+},
+
+specialRiderRow: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+},
+
+specialRiderButton: {
+  backgroundColor: Colors.white,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 12,
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+},
+
+specialRiderButtonSelected: {
+  backgroundColor: Colors.red,
+  borderColor: Colors.red,
+},
+
+specialRiderButtonText: {
+  color: Colors.brown,
+  fontWeight: '800',
+},
+
+specialRiderButtonTextSelected: {
+  color: Colors.white,
 },
 
 

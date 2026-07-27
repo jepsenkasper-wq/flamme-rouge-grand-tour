@@ -63,6 +63,12 @@ export default function ReviewGameScreen() {
   const playerColors = createGameDraft.playerColors;
   const restDayStages = createGameDraft.restDayStages;
 
+  const playerRouleurSpecialRiders =
+  createGameDraft.playerRouleurSpecialRiders;
+
+const playerSprinteurSpecialRiders =
+  createGameDraft.playerSprinteurSpecialRiders;
+
   const isDummyGame = createGameDraft.companionMode === 'dummy';
 const dummyTeams = createGameDraft.dummyTeams;
 
@@ -119,11 +125,29 @@ const contentStyle = {
         )}
       </View>
     ))
-  : playerNames.map((name: string, index: number) => (
-      <Text key={index} style={styles.text}>
-        {index + 1}. {name || `Player ${index + 1}`} ({playerColors[index]})
+   : playerNames.map((name: string, index: number) => (
+    <View key={index} style={styles.reviewCard}>
+      <Text style={styles.reviewTitle}>
+        {index + 1}. {name || `Player ${index + 1}`}
       </Text>
-    ))}
+
+      <Text style={styles.text}>
+        Colour: {playerColors[index]}
+      </Text>
+
+      <Text style={styles.text}>
+        Rouleur: {formatSpecialRiderName(
+          playerRouleurSpecialRiders[index]
+        )}
+      </Text>
+
+      <Text style={styles.text}>
+        Sprinteur: {formatSpecialRiderName(
+          playerSprinteurSpecialRiders[index]
+        )}
+      </Text>
+    </View>
+  ))}
 
       <Text style={styles.sectionTitle}>Rest Days</Text>
 

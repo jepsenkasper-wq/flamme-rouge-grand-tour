@@ -747,7 +747,7 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   <Text style={styles.actionMessage}>
     ✓ {actionMessage}
   </Text>
-)}
+)} 
 
     <Pressable
       style={styles.undoButton}

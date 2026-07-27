@@ -38,17 +38,17 @@ export type DummyGameSetup = {
 };
 export type SoloRiderKey = 'sprinteur' | 'rouleur';
 
-export type SoloTeamStageState = {
-  teamId: string;
+    export type SoloTeamStageState = {
+    teamId: string;
 
-  teamType: DummyTeamType;
-  usesAppDraw: boolean;
+    teamType: DummyTeamType;
+    usesAppDraw: boolean;
 
-  sprinteur?: DummyRiderState;
-  rouleur?: DummyRiderState;
-  muscleTeam?: MuscleTeamState;
-  pelotonTeam?: PelotonTeamState;
-};
+    sprinteur?: DummyRiderState;
+    rouleur?: DummyRiderState;
+    muscleTeam?: MuscleTeamState;
+    pelotonTeam?: PelotonTeamState;
+    };
 
 export type SoloStageState = {
   stageNumber: number;

@@ -108,109 +108,110 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
         </View>
 
         {isDummyGame && (
-          <>
-            <Text style={styles.label}>Team Type</Text>
-        
-            <View style={styles.optionRow}>
-              {TEAM_TYPES.map((option) => (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.optionButton,
-                    teamType === option.value && styles.optionButtonActive,
-                  ]}
-                  onPress={() => setTeamType(option.value)}>
-                  <Text
-                    style={[
-                      styles.optionText,
-                      teamType === option.value && styles.optionTextActive,
-                    ]}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-        
-            {teamType === 'human' && (
-              <>
-                <Text style={styles.label}>Draw Mode</Text>
-        
-                <View style={styles.optionRow}>
-                  {DRAW_MODES.map((option) => (
-                    <Pressable
-                      key={option.value}
-                      style={[
-                        styles.optionButton,
-                        drawMode === option.value && styles.optionButtonActive,
-                      ]}
-                      onPress={() => setDrawMode(option.value)}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          drawMode === option.value && styles.optionTextActive,
-                        ]}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
-            )}
-        
-            {(teamType === 'normal-ai' ||
-              (teamType === 'human' && drawMode === 'app-draw')) && (
-              <>
-                <Text style={styles.label}>Sprinteur Deck</Text>
-        
-                <View style={styles.optionRow}>
-                  {SPRINTEUR_DECKS.map((deck) => (
-                    <Pressable
-                      key={deck.label}
-                      style={[
-                        styles.optionButton,
-                        sprinteurSpecialRiderId === deck.value &&
-                          styles.optionButtonActive,
-                      ]}
-                      onPress={() => setSprinteurSpecialRiderId(deck.value)}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          sprinteurSpecialRiderId === deck.value &&
-                            styles.optionTextActive,
-                        ]}>
-                        {deck.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-        
-                <Text style={styles.label}>Rouleur Deck</Text>
-        
-                <View style={styles.optionRow}>
-                  {ROULEUR_DECKS.map((deck) => (
-                    <Pressable
-                      key={deck.label}
-                      style={[
-                        styles.optionButton,
-                        rouleurSpecialRiderId === deck.value &&
-                          styles.optionButtonActive,
-                      ]}
-                      onPress={() => setRouleurSpecialRiderId(deck.value)}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          rouleurSpecialRiderId === deck.value &&
-                            styles.optionTextActive,
-                        ]}>
-                        {deck.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
-            )}
-          </>
-        )}
+  <>
+    <Text style={styles.label}>Team Type</Text>
+
+    <View style={styles.optionRow}>
+      {TEAM_TYPES.map((option) => (
+        <Pressable
+          key={option.value}
+          style={[
+            styles.optionButton,
+            teamType === option.value && styles.optionButtonActive,
+          ]}
+          onPress={() => setTeamType(option.value)}>
+          <Text
+            style={[
+              styles.optionText,
+              teamType === option.value && styles.optionTextActive,
+            ]}>
+            {option.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+
+    {teamType === 'human' && (
+      <>
+        <Text style={styles.label}>Draw Mode</Text>
+
+        <View style={styles.optionRow}>
+          {DRAW_MODES.map((option) => (
+            <Pressable
+              key={option.value}
+              style={[
+                styles.optionButton,
+                drawMode === option.value && styles.optionButtonActive,
+              ]}
+              onPress={() => setDrawMode(option.value)}>
+              <Text
+                style={[
+                  styles.optionText,
+                  drawMode === option.value && styles.optionTextActive,
+                ]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </>
+    )}
+  </>
+)}
+
+{(!isDummyGame ||
+  teamType === 'normal-ai' ||
+  (teamType === 'human' && drawMode === 'app-draw')) && (
+  <>
+    <Text style={styles.label}>Sprinteur Special Rider</Text>
+
+    <View style={styles.optionRow}>
+      {SPRINTEUR_DECKS.map((deck) => (
+        <Pressable
+          key={deck.label}
+          style={[
+            styles.optionButton,
+            sprinteurSpecialRiderId === deck.value &&
+              styles.optionButtonActive,
+          ]}
+          onPress={() => setSprinteurSpecialRiderId(deck.value)}>
+          <Text
+            style={[
+              styles.optionText,
+              sprinteurSpecialRiderId === deck.value &&
+                styles.optionTextActive,
+            ]}>
+            {deck.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+
+    <Text style={styles.label}>Rouleur Special Rider</Text>
+
+    <View style={styles.optionRow}>
+      {ROULEUR_DECKS.map((deck) => (
+        <Pressable
+          key={deck.label}
+          style={[
+            styles.optionButton,
+            rouleurSpecialRiderId === deck.value &&
+              styles.optionButtonActive,
+          ]}
+          onPress={() => setRouleurSpecialRiderId(deck.value)}>
+          <Text
+            style={[
+              styles.optionText,
+              rouleurSpecialRiderId === deck.value &&
+                styles.optionTextActive,
+            ]}>
+            {deck.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  </>
+)}
 
         <Pressable
           style={styles.button}
@@ -224,6 +225,14 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
 
   createGameDraft.playerNames.push(nextPlayerName);
   createGameDraft.playerColors.push(color);
+  
+  createGameDraft.playerSprinteurSpecialRiders.push(
+  isDummyGame ? '' : sprinteurSpecialRiderId ?? ''
+);
+
+createGameDraft.playerRouleurSpecialRiders.push(
+  isDummyGame ? '' : rouleurSpecialRiderId ?? ''
+);
 
   if (isDummyGame) {
     createGameDraft.dummyTeams.push({

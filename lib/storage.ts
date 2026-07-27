@@ -106,6 +106,8 @@ export async function openSavedGame(gameId: string) {
 Object.assign(createGameDraft, {
   companionMode: 'normal',
   dummyTeams: [],
+  playerRouleurSpecialRiders: [],
+  playerSprinteurSpecialRiders: [],
 });
 
 gameState.tourEnded = false;

@@ -1,10 +1,24 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { useCallback, useState } from 'react';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+
+function formatSpecialRiderName(specialRiderId?: string): string {
+  if (!specialRiderId) {
+    return 'Normal';
+  }
+
+  return specialRiderId
+    .split('-')
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join(' ');
+}
 
 export default function EditPlayersScreen() {
  const [, setRefreshVersion] = useState(0);
@@ -15,49 +29,114 @@ useFocusEffect(
   }, [])
 );
     return (
-    <View style={styles.screen}>
-      <BackgroundWatermark />
+  <View style={styles.screen}>
+    <BackgroundWatermark />
+
+    <ScrollView
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>Players</Text>
 
-   {createGameDraft.playerNames.map((name, index) => (
-  <Pressable
-    key={index}
-    style={styles.playerRow}
-    onPress={() =>
-      router.push({
-        pathname: '/edit-player',
-        params: { playerIndex: String(index) },
-      })
-    }>
-    <Text style={styles.playerName}>
-      {name || `Player ${index + 1}`}
-    </Text>
+      {createGameDraft.playerNames.map((name, index) => {
+  const isDummyGame = createGameDraft.companionMode === 'dummy';
+  const dummyTeam = isDummyGame
+    ? createGameDraft.dummyTeams[index]
+    : undefined;
 
-    <Text style={styles.playerColor}>
-      {createGameDraft.playerColors[index]}
-    </Text>
+  const showSpecialRiders =
+    !isDummyGame ||
+    dummyTeam?.teamType === 'normal-ai' ||
+    (dummyTeam?.teamType === 'human' &&
+      dummyTeam?.drawMode === 'app-draw');
 
-    <Text style={styles.arrow}>›</Text>
-  </Pressable>
-))}
-      {createGameDraft.playerNames.length < 6 && (
+  const rouleurSpecialRiderId = isDummyGame
+    ? dummyTeam?.rouleurSpecialRiderId
+    : createGameDraft.playerRouleurSpecialRiders?.[index];
+
+  const sprinteurSpecialRiderId = isDummyGame
+    ? dummyTeam?.sprinteurSpecialRiderId
+    : createGameDraft.playerSprinteurSpecialRiders?.[index];
+
+  return (
+    <Pressable
+      key={index}
+      style={styles.playerRow}
+      onPress={() =>
+        router.push({
+          pathname: '/edit-player',
+          params: { playerIndex: String(index) },
+        })
+      }
+    >
+      <View style={styles.playerInfo}>
+        <Text style={styles.playerName}>
+          {name || `Player ${index + 1}`}
+        </Text>
+
+        {isDummyGame && dummyTeam?.teamType === 'muscle' && (
+  <Text style={styles.specialRiderText}>
+    Muscle Team
+  </Text>
+)}
+
+{isDummyGame && dummyTeam?.teamType === 'peloton' && (
+  <Text style={styles.specialRiderText}>
+    Peloton Team
+  </Text>
+)}
+
+        {showSpecialRiders && (
+          <>
+            <Text style={styles.specialRiderText}>
+              Rouleur: {formatSpecialRiderName(
+                rouleurSpecialRiderId
+              )}
+            </Text>
+
+            <Text style={styles.specialRiderText}>
+              Sprinteur: {formatSpecialRiderName(
+                sprinteurSpecialRiderId
+              )}
+            </Text>
+          </>
+        )}
+      </View>
+
+      <Text style={styles.playerColor}>
+        {createGameDraft.playerColors[index]}
+      </Text>
+
+      <Text style={styles.arrow}>›</Text>
+    </Pressable>
+  );
+})}
+
+{createGameDraft.playerNames.length < 6 && (
   <Pressable
     style={styles.addButton}
-    onPress={() => router.push('/add-player')}>
+    onPress={() => router.push('/add-player')}
+  >
     <Text style={styles.addButtonText}>+ Add Player</Text>
   </Pressable>
 )}
-    </View>
-  );
+
+    </ScrollView>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 10,
-  },
+  flex: 1,
+  backgroundColor: Colors.paper,
+},
+
+content: {
+  padding: 24,
+  paddingTop: 10,
+  paddingBottom: 40,
+},
 
   title: {
     fontSize: 36,
@@ -78,7 +157,6 @@ const styles = StyleSheet.create({
   },
 
   playerName: {
-    flex: 1,
     fontSize: 18,
     fontWeight: '800',
     color: Colors.brown,
@@ -107,6 +185,16 @@ addButtonText: {
   color: Colors.white,
   fontSize: 18,
   fontWeight: '900',
+},
+
+playerInfo: {
+  flex: 1,
+},
+
+specialRiderText: {
+  fontSize: 14,
+  color: Colors.brown,
+  marginTop: 4,
 },
 
 });

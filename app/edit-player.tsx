@@ -55,6 +55,7 @@ const ROULEUR_DECKS: {
   { label: 'Puncheur', value: 'puncheur' },
 ];
 
+
 export default function EditPlayerScreen() {
   const params = useLocalSearchParams();
   const playerIndex = Number(params.playerIndex ?? 0);
@@ -83,12 +84,20 @@ const [drawMode, setDrawMode] = useState(
 
 const [sprinteurSpecialRiderId, setSprinteurSpecialRiderId] =
   useState<SpecialRiderId | undefined>(
-    dummyTeam?.sprinteurSpecialRiderId
+    isDummyGame
+      ? dummyTeam?.sprinteurSpecialRiderId
+      : (createGameDraft.playerSprinteurSpecialRiders?.[playerIndex] as
+          | SpecialRiderId
+          | undefined)
   );
 
 const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
   useState<SpecialRiderId | undefined>(
-    dummyTeam?.rouleurSpecialRiderId
+    isDummyGame
+      ? dummyTeam?.rouleurSpecialRiderId
+      : (createGameDraft.playerRouleurSpecialRiders?.[playerIndex] as
+          | SpecialRiderId
+          | undefined)
   );
 
   return (
@@ -138,12 +147,14 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
             styles.optionButton,
             teamType === option.value && styles.optionButtonActive,
           ]}
-          onPress={() => setTeamType(option.value)}>
+          onPress={() => setTeamType(option.value)}
+        >
           <Text
             style={[
               styles.optionText,
               teamType === option.value && styles.optionTextActive,
-            ]}>
+            ]}
+          >
             {option.label}
           </Text>
         </Pressable>
@@ -162,66 +173,15 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
                 styles.optionButton,
                 drawMode === option.value && styles.optionButtonActive,
               ]}
-              onPress={() => setDrawMode(option.value)}>
+              onPress={() => setDrawMode(option.value)}
+            >
               <Text
                 style={[
                   styles.optionText,
                   drawMode === option.value && styles.optionTextActive,
-                ]}>
+                ]}
+              >
                 {option.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </>
-    )}
-
-    {(teamType === 'normal-ai' ||
-      (teamType === 'human' && drawMode === 'app-draw')) && (
-      <>
-        <Text style={styles.label}>Sprinteur Deck</Text>
-
-        <View style={styles.optionRow}>
-          {SPRINTEUR_DECKS.map((deck) => (
-            <Pressable
-              key={deck.label}
-              style={[
-                styles.optionButton,
-                sprinteurSpecialRiderId === deck.value &&
-                  styles.optionButtonActive,
-              ]}
-              onPress={() => setSprinteurSpecialRiderId(deck.value)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  sprinteurSpecialRiderId === deck.value &&
-                    styles.optionTextActive,
-                ]}>
-                {deck.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.label}>Rouleur Deck</Text>
-
-        <View style={styles.optionRow}>
-          {ROULEUR_DECKS.map((deck) => (
-            <Pressable
-              key={deck.label}
-              style={[
-                styles.optionButton,
-                rouleurSpecialRiderId === deck.value &&
-                  styles.optionButtonActive,
-              ]}
-              onPress={() => setRouleurSpecialRiderId(deck.value)}>
-              <Text
-                style={[
-                  styles.optionText,
-                  rouleurSpecialRiderId === deck.value &&
-                    styles.optionTextActive,
-                ]}>
-                {deck.label}
               </Text>
             </Pressable>
           ))}
@@ -231,11 +191,77 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
   </>
 )}
 
+{(!isDummyGame ||
+  teamType === 'normal-ai' ||
+  (teamType === 'human' && drawMode === 'app-draw')) && (
+  <>
+    <Text style={styles.label}>Sprinteur Special Rider</Text>
+
+    <View style={styles.optionRow}>
+      {SPRINTEUR_DECKS.map((deck) => (
+        <Pressable
+          key={deck.label}
+          style={[
+            styles.optionButton,
+            sprinteurSpecialRiderId === deck.value &&
+              styles.optionButtonActive,
+          ]}
+          onPress={() => setSprinteurSpecialRiderId(deck.value)}
+        >
+          <Text
+            style={[
+              styles.optionText,
+              sprinteurSpecialRiderId === deck.value &&
+                styles.optionTextActive,
+            ]}
+          >
+            {deck.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+
+    <Text style={styles.label}>Rouleur Special Rider</Text>
+
+    <View style={styles.optionRow}>
+      {ROULEUR_DECKS.map((deck) => (
+        <Pressable
+          key={deck.label}
+          style={[
+            styles.optionButton,
+            rouleurSpecialRiderId === deck.value &&
+              styles.optionButtonActive,
+          ]}
+          onPress={() => setRouleurSpecialRiderId(deck.value)}
+        >
+          <Text
+            style={[
+              styles.optionText,
+              rouleurSpecialRiderId === deck.value &&
+                styles.optionTextActive,
+            ]}
+          >
+            {deck.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  </>
+)}
+
   <Pressable
   style={styles.button}
   onPress={() => {
  createGameDraft.playerNames[playerIndex] = name;
 createGameDraft.playerColors[playerIndex] = color;
+
+if (!isDummyGame) {
+  createGameDraft.playerSprinteurSpecialRiders[playerIndex] =
+    sprinteurSpecialRiderId ?? '';
+
+  createGameDraft.playerRouleurSpecialRiders[playerIndex] =
+    rouleurSpecialRiderId ?? '';
+}
 
 if (isDummyGame && createGameDraft.dummyTeams[playerIndex]) {
   createGameDraft.dummyTeams[playerIndex] = {
@@ -277,6 +303,8 @@ router.back();
         onPress: () => {
           createGameDraft.playerNames.splice(playerIndex, 1);
           createGameDraft.playerColors.splice(playerIndex, 1);
+          createGameDraft.playerRouleurSpecialRiders.splice(playerIndex, 1);
+createGameDraft.playerSprinteurSpecialRiders.splice(playerIndex, 1);
 
           gameResults.entries.forEach((entry) => {
   entry.players.splice(playerIndex, 1);
@@ -303,6 +331,8 @@ router.back();
 
       createGameDraft.playerNames.splice(playerIndex, 1);
       createGameDraft.playerColors.splice(playerIndex, 1);
+      createGameDraft.playerRouleurSpecialRiders.splice(playerIndex, 1);
+createGameDraft.playerSprinteurSpecialRiders.splice(playerIndex, 1);
 
       saveGame();
       updateActiveSavedGame();
