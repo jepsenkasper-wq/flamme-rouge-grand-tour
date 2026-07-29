@@ -37,6 +37,7 @@ export default function CreateGameScreen() {
         value={players}
         onChangeText={setPlayers}
         keyboardType="number-pad"
+        maxLength={1}
       />
 
       <Text style={styles.label}>Stages</Text>
@@ -60,6 +61,15 @@ export default function CreateGameScreen() {
  onPress={() => {
   const stageCount = Number(stages);
   const restDayCount = Number(restDays);
+  const playerCount = Number(players);
+
+  if (!playerCount || playerCount < 1 || playerCount > 6) {
+  Alert.alert(
+    'Invalid number of players',
+    'Please choose between 1 and 6 players.'
+  );
+  return;
+}
 
   if (!stageCount || stageCount < 1) {
     Alert.alert('Invalid stages', 'The game must have at least 1 stage.');

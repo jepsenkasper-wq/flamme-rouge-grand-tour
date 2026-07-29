@@ -1,5 +1,13 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Image,
+} from 'react-native';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
@@ -79,7 +87,62 @@ function getDrawList(): DrawListItem[] {
   });
 }
 
+function getDrawModeLabel(
+  mode: DrawListItem['drawMode']
+): string {
+  switch (mode) {
+    case 'human-app':
+      return 'Human (Draw Assist)';
+    case 'normal-ai':
+      return 'Normal AI';
+    case 'muscle':
+      return 'Muscle Team';
+    case 'peloton':
+      return 'Peloton Team';
+  }
+}
+
+function getCurrentRound(item: DrawListItem): number {
+  const soloStage = getActiveSoloStageState();
+
+  const teamState = soloStage.teams.find(
+    (team) => team.teamId === item.teamId
+  );
+
+  if (!teamState) {
+    return 1;
+  }
+
+  if (item.drawMode === 'peloton') {
+    return (teamState.pelotonTeam?.round ?? 0) + 1;
+  }
+
+  if (item.drawMode === 'muscle') {
+    if (!item.riderKey) {
+      return 1;
+    }
+
+    return (
+      (teamState.muscleTeam?.[item.riderKey]?.round ?? 0) + 1
+    );
+  }
+
+  if (!item.riderKey) {
+    return 1;
+  }
+
+  return (teamState[item.riderKey]?.round ?? 0) + 1;
+}
+
 export default function PlayStageScreen() {
+  const [, setRefreshKey] = useState(0);
+
+useFocusEffect(
+  useCallback(() => {
+    setRefreshKey((current) => current + 1);
+  }, [])
+);
+
   const drawList = getDrawList();
 
   const insets = useSafeAreaInsets();
@@ -123,6 +186,10 @@ const contentStyle = {
     {item.label}
     {item.riderLabel ? ` - ${item.riderLabel}` : ''}
   </Text>
+
+  <Text style={styles.rowSubText}>
+  {getDrawModeLabel(item.drawMode)} • Round {getCurrentRound(item)}
+</Text>
 </View>
 
 <Text style={styles.arrow}>›</Text>
@@ -202,8 +269,8 @@ const styles = StyleSheet.create({
   },
   rowInfo: {
   flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
+  flexDirection: 'column',
+  justifyContent: 'center',
 },
 
 rowText: {
@@ -216,5 +283,10 @@ avatar: {
   width: 32,
   height: 32,
   marginRight: 12,
+},
+rowSubText: {
+  fontSize: 13,
+  color: Colors.brown,
+  marginTop: 2,
 },
 });

@@ -455,6 +455,8 @@ export function prepareRiderForNextStage(
   rider.discard = [];
   rider.setAside = [];
   rider.pendingHand = [];
+
+  rider.round = 0;
 }
 
 export function setFatigueCardsForStageResult(

@@ -218,7 +218,7 @@ function showActionMessage(message: string) {
     riderState.round
   );
 
-  riderState.round += 1;
+  riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(result.selectedCard);
 setDrawnCards([]);
@@ -237,14 +237,17 @@ async function drawMuscleTeamCard() {
   );
 
   const card = drawMuscleCard(
-    muscleTeamState,
-    riderKey
-  );
+  muscleTeamState,
+  riderKey
+);
 
-  setSelectedCard(card);
-  updateScreen();
+muscleTeamState[riderKey].round =
+  (muscleTeamState[riderKey].round ?? 0) + 1;
 
-  await persistDrawState();
+setSelectedCard(card);
+updateScreen();
+
+await persistDrawState();
 }
 
 async function refreshMuscle(limit: 24 | 25) {
@@ -270,12 +273,18 @@ async function refreshMuscle(limit: 24 | 25) {
 async function drawPelotonTeamCard() {
   if (!pelotonTeamState) return;
 
-  setTeamUndoSnapshot(JSON.parse(JSON.stringify(pelotonTeamState)));
+  setTeamUndoSnapshot(
+    JSON.parse(JSON.stringify(pelotonTeamState))
+  );
 
   const card = drawPelotonCard(pelotonTeamState);
 
+  pelotonTeamState.round =
+    (pelotonTeamState.round ?? 0) + 1;
+
   setSelectedCard(card);
   updateScreen();
+
   await persistDrawState();
 }
 
@@ -345,6 +354,8 @@ async function selectHumanCard(cardId: string) {
   );
 
   if (!card) return;
+
+  riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(card);
   setDrawnCards([]);
@@ -469,7 +480,9 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   <>
     <Text style={styles.deckInfo}>
       {riderState?.specialRiderId
-        ? `Special Rider: ${formatSpecialRiderName(riderState.specialRiderId)}`
+        ? `Special Rider: ${formatSpecialRiderName(
+            riderState.specialRiderId
+          )}`
         : 'Normal deck'}
     </Text>
 
@@ -478,6 +491,19 @@ function getDrawModeLabel(drawMode: DrawMode): string {
     </Text>
   </>
 )}
+
+<Text style={styles.deckInfo}>
+  Round{' '}
+  <Text style={styles.roundNumber}>
+    {drawMode === 'human-app' || drawMode === 'normal-ai'
+      ? (riderState?.round ?? 0) + 1
+      : drawMode === 'muscle'
+      ? ((params.riderKey
+          ? muscleTeamState?.[params.riderKey].round
+          : 0) ?? 0) + 1
+      : (pelotonTeamState?.round ?? 0) + 1}
+  </Text>
+</Text>
 
 </View>
 
@@ -1008,7 +1034,6 @@ deckInfoSmall: {
   opacity: 0.65,
   textAlign: 'center',
   marginTop: 2,
-  marginBottom: -30,
 },
 actionMessage: {
   marginTop: 10,
@@ -1016,5 +1041,9 @@ actionMessage: {
   color: '#2E7D32',
   fontSize: 14,
   fontWeight: '700',
+},
+roundNumber: {
+  color: Colors.red,
+  fontWeight: '900',
 },
 });

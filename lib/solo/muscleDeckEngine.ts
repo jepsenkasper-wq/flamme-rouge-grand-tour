@@ -8,6 +8,7 @@ export type MuscleTeamState = {
 export type MuscleRiderState = {
   deck: DummyCard[];
   discard: DummyCard[];
+  round: number;
 };
 
 const MUSCLE_SPRINTEUR_CARDS = [
@@ -46,10 +47,12 @@ export function createMuscleTeam(): MuscleTeamState {
     sprinteur: {
       deck: createDeck(MUSCLE_SPRINTEUR_CARDS, 'muscle-sprinteur'),
       discard: [],
+      round: 0,
     },
     rouleur: {
       deck: createDeck(MUSCLE_ROULEUR_CARDS, 'muscle-rouleur'),
       discard: [],
+      round: 0,
     },
   };
 }
@@ -111,10 +114,12 @@ export function prepareMuscleTeamForNextStage(
     ...team.sprinteur.discard,
   ]);
   team.sprinteur.discard = [];
+  team.sprinteur.round = 0;
 
   team.rouleur.deck = shuffle([
     ...team.rouleur.deck,
     ...team.rouleur.discard,
   ]);
   team.rouleur.discard = [];
+  team.rouleur.round = 0;
 }

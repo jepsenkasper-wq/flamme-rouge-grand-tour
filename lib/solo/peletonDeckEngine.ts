@@ -3,6 +3,7 @@ import { type DummyCard } from './dummyDeckEngine';
 export type PelotonTeamState = {
   deck: DummyCard[];
   discard: DummyCard[];
+  round: number;
 };
 
 const PELOTON_CARDS = [
@@ -24,14 +25,17 @@ function createPelotonDeck(): DummyCard[] {
     type: 'movement',
   }));
 
-  const specialCard: DummyCard = {
-    id: 'peloton-card-2-9',
-    value: 2,
-    displayValue: '2/9',
-    type: 'movement',
-  };
+  const specialCards: DummyCard[] = [1, 2].map((index) => ({
+  id: `peloton-card-2-9-${index}`,
+  value: 9,
+  displayValue: '2/9',
+  type: 'movement',
+}));
 
-  return shuffle([...normalCards, specialCard]);
+  return shuffle([
+  ...normalCards,
+  ...specialCards,
+]);
 }
 
 export function drawPelotonCard(team: PelotonTeamState): DummyCard {
@@ -51,9 +55,10 @@ export function drawPelotonCard(team: PelotonTeamState): DummyCard {
 }
 export function createPelotonTeam(): PelotonTeamState {
   return {
-    deck: createPelotonDeck(),
-    discard: [],
-  };
+  deck: createPelotonDeck(),
+  discard: [],
+  round: 0,
+};
 }
 export function refreshPelotonTeam(
   team: PelotonTeamState,
@@ -90,4 +95,5 @@ export function preparePelotonTeamForNextStage(
   ]);
 
   team.discard = [];
+  team.round = 0;
 }

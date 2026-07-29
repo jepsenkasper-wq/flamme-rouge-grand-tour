@@ -1,6 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -169,7 +179,13 @@ const riderLabel =
   selectedRider === 'sprinteur' ? 'Sprinteur' : 'Rouleur';
 
   return (
-  <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <KeyboardAwareScrollView
+  style={styles.screen}
+  contentContainerStyle={styles.content}
+  enableOnAndroid
+  extraScrollHeight={40}
+  keyboardShouldPersistTaps="handled"
+>
 <Text style={styles.stageTitle}>{entryTitle}</Text>
 
 <View style={styles.entryHero}>
@@ -406,8 +422,8 @@ onEndEditing={() =>
   </Text>
 </Pressable>
 </View>
-    </ScrollView>
-  );
+        </KeyboardAwareScrollView>
+);
 }
 
 const styles = StyleSheet.create({
