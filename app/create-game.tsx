@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { router } from 'expo-router';
-import { Image, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  Alert,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { createGameDraft, resetCreateGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { getClassificationBonusRules } from '@/lib/classifications';
@@ -19,6 +29,7 @@ export default function CreateGameScreen() {
 }, []);
 
   return (
+  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
     <View style={styles.screen}>
       <BackgroundWatermark />
       <Text style={styles.title}>Create Game</Text>
@@ -29,6 +40,8 @@ export default function CreateGameScreen() {
         value={gameName}
         onChangeText={setGameName}
         placeholder="Grand Tour 2026"
+        returnKeyType="done"
+        onSubmitEditing={Keyboard.dismiss}
       />
 
       <Text style={styles.label}>Players</Text>
@@ -57,51 +70,61 @@ export default function CreateGameScreen() {
       />
 
       <Pressable
-  style={styles.button}
- onPress={() => {
-  const stageCount = Number(stages);
-  const restDayCount = Number(restDays);
-  const playerCount = Number(players);
+        style={styles.button}
+        onPress={() => {
+          Keyboard.dismiss();
 
-  if (!playerCount || playerCount < 1 || playerCount > 6) {
-  Alert.alert(
-    'Invalid number of players',
-    'Please choose between 1 and 6 players.'
-  );
-  return;
-}
+          const stageCount = Number(stages);
+          const restDayCount = Number(restDays);
+          const playerCount = Number(players);
 
-  if (!stageCount || stageCount < 1) {
-    Alert.alert('Invalid stages', 'The game must have at least 1 stage.');
-    return;
-  }
+          if (!playerCount || playerCount < 1 || playerCount > 6) {
+            Alert.alert(
+              'Invalid number of players',
+              'Please choose between 1 and 6 players.'
+            );
+            return;
+          }
 
-  if (restDayCount < 0) {
-    Alert.alert('Invalid rest days', 'Rest days cannot be negative.');
-    return;
-  }
+          if (!stageCount || stageCount < 1) {
+            Alert.alert(
+              'Invalid stages',
+              'The game must have at least 1 stage.'
+            );
+            return;
+          }
 
-  if (restDayCount > stageCount - 1) {
-    Alert.alert(
-      'Invalid rest days',
-      'You cannot have more rest days than stages minus one.'
-    );
-    return;
-  }
+          if (restDayCount < 0) {
+            Alert.alert(
+              'Invalid rest days',
+              'Rest days cannot be negative.'
+            );
+            return;
+          }
 
-  createGameDraft.gameName = gameName;
-  createGameDraft.players = players;
-  createGameDraft.stages = stages;
-  createGameDraft.restDays = restDays;
-  createGameDraft.scoringRules =
-    getClassificationBonusRules(stageCount);
+          if (restDayCount > stageCount - 1) {
+            Alert.alert(
+              'Invalid rest days',
+              'You cannot have more rest days than stages minus one.'
+            );
+            return;
+          }
 
-  router.push('/companion-mode');
-}}>
-  <Text style={styles.buttonText}>Next</Text>
-</Pressable>
+          createGameDraft.gameName = gameName;
+          createGameDraft.players = players;
+          createGameDraft.stages = stages;
+          createGameDraft.restDays = restDays;
+          createGameDraft.scoringRules =
+            getClassificationBonusRules(stageCount);
+
+          router.push('/companion-mode');
+        }}
+      >
+        <Text style={styles.buttonText}>Next</Text>
+      </Pressable>
     </View>
-  );
+  </TouchableWithoutFeedback>
+);
 }
 
 const styles = StyleSheet.create({

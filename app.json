@@ -9,17 +9,22 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jepsenkasper.flammerougegrandtour",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-  "adaptiveIcon": {
-    "backgroundColor": "#d8c49a",
-    "foregroundImage": "./assets/images/icon.png"
-  },
-  "edgeToEdgeEnabled": true,
-  "predictiveBackGestureEnabled": false,
-  "package": "com.jepsenkasper.flammerougegrandtour"
-},
+      "adaptiveIcon": {
+        "backgroundColor": "#d8c49a",
+        "foregroundImage": "./assets/images/icon.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.jepsenkasper.flammerougegrandtour"
+    },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
@@ -27,17 +32,17 @@
     "plugins": [
       "expo-router",
       [
-  "expo-splash-screen",
-  {
-    "image": "./assets/images/splash-icon.png",
-    "imageWidth": 220,
-    "resizeMode": "contain",
-    "backgroundColor": "#d8c49a",
-    "dark": {
-      "backgroundColor": "#1f1a12"
-    }
-  }
-],
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#d8c49a",
+          "dark": {
+            "backgroundColor": "#1f1a12"
+          }
+        }
+      ],
       "expo-font"
     ],
     "experiments": {
