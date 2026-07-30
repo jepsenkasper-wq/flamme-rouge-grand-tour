@@ -183,7 +183,7 @@ const riderLabel =
   style={styles.screen}
   contentContainerStyle={styles.content}
   enableOnAndroid
-  extraScrollHeight={40}
+  extraScrollHeight={120}
   keyboardShouldPersistTaps="handled"
 >
 <Text style={styles.stageTitle}>{entryTitle}</Text>

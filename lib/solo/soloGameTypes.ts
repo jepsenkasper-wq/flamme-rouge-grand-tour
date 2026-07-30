@@ -38,20 +38,32 @@ export type DummyGameSetup = {
 };
 export type SoloRiderKey = 'sprinteur' | 'rouleur';
 
+export type SoloPlayedCard = {
+  cardId: string;
+  displayValue: string;
+};
+
+export type SoloPlayedCards = Partial<
+  Record<SoloRiderKey | 'peloton', SoloPlayedCard>
+>;
+
     export type SoloTeamStageState = {
-    teamId: string;
+  teamId: string;
 
-    teamType: DummyTeamType;
-    usesAppDraw: boolean;
+  teamType: DummyTeamType;
+  usesAppDraw: boolean;
 
-    sprinteur?: DummyRiderState;
-    rouleur?: DummyRiderState;
-    muscleTeam?: MuscleTeamState;
-    pelotonTeam?: PelotonTeamState;
-    };
+  sprinteur?: DummyRiderState;
+  rouleur?: DummyRiderState;
+  muscleTeam?: MuscleTeamState;
+  pelotonTeam?: PelotonTeamState;
+
+  playedCards?: SoloPlayedCards;
+};
 
 export type SoloStageState = {
   stageNumber: number;
+  round: number;
   teams: SoloTeamStageState[];
   fatigueTransfers: SoloFatigueTransfer[];
 };

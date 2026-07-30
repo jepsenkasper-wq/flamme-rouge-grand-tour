@@ -16,6 +16,7 @@ import { gameState } from '@/lib/gameState';
 import { stageDraft } from '@/lib/stageDraft';
 import { getActiveSoloStageState, syncSoloFatigueTransfersFromDecks } from '@/lib/solo/activeSoloStage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -102,36 +103,26 @@ function getDrawModeLabel(
   }
 }
 
-function getCurrentRound(item: DrawListItem): number {
+function getCurrentRound(): number {
+  return getActiveSoloStageState().round;
+}
+
+function canEndRound(): boolean {
   const soloStage = getActiveSoloStageState();
 
-  const teamState = soloStage.teams.find(
-    (team) => team.teamId === item.teamId
-  );
-
-  if (!teamState) {
-    return 1;
-  }
-
-  if (item.drawMode === 'peloton') {
-    return (teamState.pelotonTeam?.round ?? 0) + 1;
-  }
-
-  if (item.drawMode === 'muscle') {
-    if (!item.riderKey) {
-      return 1;
+  return soloStage.teams.every((team) => {
+    if (team.teamType === 'human' && !team.usesAppDraw) {
+      return true;
     }
 
-    return (
-      (teamState.muscleTeam?.[item.riderKey]?.round ?? 0) + 1
-    );
-  }
+    const played = team.playedCards ?? {};
 
-  if (!item.riderKey) {
-    return 1;
-  }
+    if (team.teamType === 'peloton') {
+      return Boolean(played.peloton);
+    }
 
-  return (teamState[item.riderKey]?.round ?? 0) + 1;
+    return Boolean(played.sprinteur && played.rouleur);
+  });
 }
 
 export default function PlayStageScreen() {
@@ -151,6 +142,20 @@ const contentStyle = {
   paddingBottom: 40 + insets.bottom,
 };
 
+async function endRound() {
+  const soloStage = getActiveSoloStageState();
+
+  soloStage.round++;
+
+  for (const team of soloStage.teams) {
+    team.playedCards = {};
+  }
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((c) => c + 1);
+}
   return (
     <View style={styles.screen}>
       <BackgroundWatermark />
@@ -160,11 +165,37 @@ const contentStyle = {
         showsVerticalScrollIndicator={false}>
 
         <Text style={styles.title}>
-          Play Stage {gameState.currentStage}
-        </Text>
+  Play Stage {gameState.currentStage}
+</Text>
 
-        {drawList.map((item) => (
-          <Pressable
+<Text style={styles.roundText}>
+  Round {getCurrentRound()}
+</Text>
+
+<Text style={styles.roundHint}>
+Draw Human teams before dummy teams.
+</Text>
+
+        {drawList.map((item) => {
+  const soloStage = getActiveSoloStageState();
+
+  const teamState = soloStage.teams.find(
+    (team) => team.teamId === item.teamId
+  );
+
+  const playedCardKey =
+    item.drawMode === 'peloton'
+      ? 'peloton'
+      : item.riderKey;
+
+  const playedCard = playedCardKey
+    ? teamState?.playedCards?.[playedCardKey]
+    : undefined;
+
+const isDrawLocked = Boolean(playedCard);
+
+  return (
+    <Pressable
             key={item.id}
             style={styles.row}
  onPress={() => {
@@ -188,13 +219,30 @@ const contentStyle = {
   </Text>
 
   <Text style={styles.rowSubText}>
-  {getDrawModeLabel(item.drawMode)} • Round {getCurrentRound(item)}
+  {playedCard
+    ? `${getDrawModeLabel(item.drawMode)} • Played: ${playedCard.displayValue}`
+    : `${getDrawModeLabel(item.drawMode)} • Round ${getCurrentRound()}`}
 </Text>
 </View>
 
-<Text style={styles.arrow}>›</Text>
-          </Pressable>
-        ))}
+<Text style={styles.arrow}>
+  {isDrawLocked ? '✓' : '›'}
+</Text>
+              </Pressable>
+  );
+})}
+
+<Pressable
+  style={[
+    styles.button,
+    !canEndRound() && styles.buttonDisabled,
+  ]}
+  disabled={!canEndRound()}
+  onPress={endRound}>
+  <Text style={styles.buttonText}>
+    End Round {getCurrentRound()}
+  </Text>
+</Pressable>
 
         <Pressable
           style={styles.button}
@@ -234,6 +282,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '900',
     color: Colors.brown,
+    marginTop: -40,
     marginBottom: 24,
   },
 
@@ -288,5 +337,23 @@ rowSubText: {
   fontSize: 13,
   color: Colors.brown,
   marginTop: 2,
+},
+roundText: {
+  textAlign: 'center',
+  marginTop: -18,
+  marginBottom: 16,
+  fontSize: 16,
+  fontWeight: '600',
+  color: Colors.brown,
+},
+buttonDisabled: {
+  opacity: 0.5,
+},
+roundHint: {
+  fontSize: 13,
+  color: '#777',
+  textAlign: 'center',
+  marginTop: -8,
+  marginBottom: 12,
 },
 });

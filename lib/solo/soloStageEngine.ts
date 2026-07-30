@@ -37,6 +37,7 @@ if (team.teamType === 'muscle') {
     teamType: team.teamType,
     usesAppDraw: false,
     muscleTeam: createMuscleTeam(),
+    playedCards: {},
   };
 }
 
@@ -46,6 +47,7 @@ if (team.teamType === 'peloton') {
     teamType: team.teamType,
     usesAppDraw: false,
     pelotonTeam: createPelotonTeam(),
+    playedCards: {},
   };
 }
 
@@ -54,9 +56,9 @@ if (!usesAppDraw) {
     teamId: team.id,
     teamType: team.teamType,
     usesAppDraw: false,
+    playedCards: {},
   };
 }
-
     return {
   teamId: team.id,
   teamType: team.teamType,
@@ -71,11 +73,14 @@ if (!usesAppDraw) {
     'rouleur',
     team.rouleurSpecialRiderId
   ),
+
+  playedCards: {},
 };
   });
 
   return {
   stageNumber,
+  round: 1,
   teams,
   fatigueTransfers: teams.map((team) => ({
     teamId: team.teamId,

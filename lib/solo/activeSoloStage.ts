@@ -61,6 +61,12 @@ export function prepareActiveSoloStageForNextStage(): void {
 
   activeSoloStageState.stageNumber += 1;
 
+  activeSoloStageState.round = 1;
+
+activeSoloStageState.teams.forEach((team) => {
+  team.playedCards = {};
+});
+
   activeSoloStageState.fatigueTransfers =
     activeSoloStageState.teams.map((team) => ({
       teamId: team.teamId,

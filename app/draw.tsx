@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
@@ -141,6 +141,18 @@ export default function DrawScreen() {
     (team) => team.teamId === params.teamId
   );
 
+const playedCardKey =
+  drawMode === 'peloton'
+    ? 'peloton'
+    : params.riderKey;
+
+const playedCard =
+  playedCardKey && teamState?.playedCards
+    ? teamState.playedCards[playedCardKey]
+    : undefined;
+
+const alreadyPlayed = Boolean(playedCard);
+
   const riderState =
     params.riderKey === 'sprinteur'
       ? teamState?.sprinteur
@@ -162,6 +174,7 @@ const riderShortLabel =
     : params.riderKey === 'rouleur'
     ? 'R'
     : '';
+
 
 
   if (!team || !drawMode || !teamState) {
@@ -204,7 +217,7 @@ function showActionMessage(message: string) {
 }
 
  async function playNormalAIDraw() {
-  if (!riderState) return;
+  if (!riderState || !teamState || !params.riderKey) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
 
@@ -217,7 +230,15 @@ function showActionMessage(message: string) {
     drawCount
   );
 
-  riderState.round = (riderState.round ?? 0) + 1;
+teamState.playedCards ??= {};
+
+teamState.playedCards[params.riderKey!] = {
+  cardId: result.selectedCard.id,
+  displayValue: formatCard(result.selectedCard),
+};
+
+
+  // riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(result.selectedCard);
   setDrawnCards([]);
@@ -245,6 +266,16 @@ muscleTeamState[riderKey].round =
   (muscleTeamState[riderKey].round ?? 0) + 1;
 
 setSelectedCard(card);
+
+if (teamState) {
+  teamState.playedCards ??= {};
+
+  teamState.playedCards[riderKey] = {
+    cardId: card.id,
+    displayValue: formatCard(card),
+  };
+}
+
 updateScreen();
 
 await persistDrawState();
@@ -283,6 +314,16 @@ async function drawPelotonTeamCard() {
     (pelotonTeamState.round ?? 0) + 1;
 
   setSelectedCard(card);
+
+  if (teamState) {
+  teamState.playedCards ??= {};
+
+  teamState.playedCards.peloton = {
+    cardId: card.id,
+    displayValue: formatCard(card),
+  };
+}
+
   updateScreen();
 
   await persistDrawState();
@@ -318,6 +359,14 @@ async function undoTeamDraw() {
       JSON.parse(JSON.stringify(teamUndoSnapshot))
     );
   }
+
+  if (drawMode === 'muscle' && params.riderKey) {
+  delete teamState.playedCards?.[params.riderKey];
+}
+
+if (drawMode === 'peloton') {
+  delete teamState.playedCards?.peloton;
+}
 
   setTeamUndoSnapshot(null);
   setSelectedCard(null);
@@ -361,6 +410,16 @@ async function selectHumanCard(cardId: string) {
   riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(card);
+
+  if (teamState && params.riderKey) {
+  teamState.playedCards ??= {};
+
+  teamState.playedCards[params.riderKey] = {
+    cardId: card.id,
+    displayValue: formatCard(card),
+  };
+}
+
   setDrawnCards([]);
 
   updateFatigueTransfer();
@@ -411,6 +470,9 @@ async function undo() {
   if (!riderState || !undoSnapshot) return;
 
   restoreDummyRiderState(riderState, undoSnapshot);
+  if (teamState && params.riderKey) {
+  delete teamState.playedCards?.[params.riderKey];
+}
   setUndoSnapshot(null);
   setDrawnCards([]);
   setSelectedCard(null);
@@ -542,11 +604,21 @@ function getDrawModeLabel(drawMode: DrawMode): string {
     <Text style={styles.sectionTitle}>Choose Card</Text>
 
    {drawnCards.length === 0 && (
-  <Pressable style={styles.primaryButton} onPress={drawHumanHand}>
-    <Text style={styles.primaryButtonText}>
-  Draw {getDrawCount(windScenario)} Cards
-</Text>
-  </Pressable>
+  <Pressable
+  disabled={alreadyPlayed}
+  style={[
+    styles.primaryButton,
+    alreadyPlayed && styles.primaryButtonDisabled,
+  ]}
+  onPress={drawHumanHand}>
+  <Text
+    style={[
+      styles.primaryButtonText,
+      alreadyPlayed && styles.primaryButtonTextDisabled,
+    ]}>
+    {alreadyPlayed ? 'Card Played' : 'Draw'}
+  </Text>
+</Pressable>
 )}
 
     {drawnCards.length > 0 && (
@@ -599,9 +671,23 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Text>
 )}
 
-    <Pressable style={styles.undoButton} onPress={undo}>
-      <Text style={styles.secondaryButtonText}>Undo</Text>
-    </Pressable>
+    <View style={styles.actionRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={undo}>
+    <Text style={styles.secondaryButtonText}>
+      Undo
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.confirmButton}
+    onPress={() => router.back()}>
+    <Text style={styles.secondaryButtonText}>
+      Confirm
+    </Text>
+  </Pressable>
+</View>
   </View>
 )}
 {drawMode === 'normal-ai' && riderState && (
@@ -691,9 +777,21 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   ))}
 </View>
 
-    <Pressable style={styles.primaryButton} onPress={playNormalAIDraw}>
-      <Text style={styles.primaryButtonText}>Draw AI Card</Text>
-    </Pressable>
+  <Pressable
+  disabled={alreadyPlayed}
+  style={[
+    styles.primaryButton,
+    alreadyPlayed && styles.primaryButtonDisabled,
+  ]}
+  onPress={playNormalAIDraw}>
+  <Text
+    style={[
+      styles.primaryButtonText,
+      alreadyPlayed && styles.primaryButtonTextDisabled,
+    ]}>
+    {alreadyPlayed ? 'Card Played' : 'Draw'}
+  </Text>
+</Pressable>
 
     {selectedCard && (
       <View style={styles.selectedCardBox}>
@@ -730,21 +828,43 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Text>
 )}
 
-    <Pressable style={styles.undoButton} onPress={undo}>
-      <Text style={styles.secondaryButtonText}>Undo</Text>
-    </Pressable>
+    <View style={styles.actionRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={undo}>
+    <Text style={styles.secondaryButtonText}>
+      Undo
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.confirmButton}
+    onPress={() => router.back()}>
+    <Text style={styles.secondaryButtonText}>
+      Confirm
+    </Text>
+  </Pressable>
+</View>
   </View>
 )}
 
 {drawMode === 'muscle' && muscleTeamState && (
   <View style={styles.drawArea}>
     <Pressable
-      style={styles.primaryButton}
-      onPress={drawMuscleTeamCard}>
-      <Text style={styles.primaryButtonText}>
-        Draw Card
-      </Text>
-    </Pressable>
+  disabled={alreadyPlayed}
+  style={[
+    styles.primaryButton,
+    alreadyPlayed && styles.primaryButtonDisabled,
+  ]}
+  onPress={drawMuscleTeamCard}>
+  <Text
+    style={[
+      styles.primaryButtonText,
+      alreadyPlayed && styles.primaryButtonTextDisabled,
+    ]}>
+    {alreadyPlayed ? 'Card Played' : 'Draw Card'}
+  </Text>
+</Pressable>
 
     {selectedCard && (
       <View style={styles.selectedCardBox}>
@@ -782,24 +902,42 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Text>
 )}
 
-    <Pressable
-      style={styles.undoButton}
-      onPress={undoTeamDraw}>
-      <Text style={styles.secondaryButtonText}>
-        Undo
-      </Text>
-    </Pressable>
+    <View style={styles.actionRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={undoTeamDraw}>
+    <Text style={styles.secondaryButtonText}>
+      Undo
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.confirmButton}
+    onPress={() => router.back()}>
+    <Text style={styles.secondaryButtonText}>
+      Confirm
+    </Text>
+  </Pressable>
+</View>
   </View>
 )}
 {drawMode === 'peloton' && pelotonTeamState && (
   <View style={styles.drawArea}>
     <Pressable
-      style={styles.primaryButton}
-      onPress={drawPelotonTeamCard}>
-      <Text style={styles.primaryButtonText}>
-        Draw Card
-      </Text>
-    </Pressable>
+  disabled={alreadyPlayed}
+  style={[
+    styles.primaryButton,
+    alreadyPlayed && styles.primaryButtonDisabled,
+  ]}
+  onPress={drawPelotonTeamCard}>
+  <Text
+    style={[
+      styles.primaryButtonText,
+      alreadyPlayed && styles.primaryButtonTextDisabled,
+    ]}>
+    {alreadyPlayed ? 'Card Played' : 'Draw Card'}
+  </Text>
+</Pressable>
 
     {selectedCard && (
       <View style={styles.selectedCardBox}>
@@ -837,13 +975,23 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Text>
 )} 
 
-    <Pressable
-      style={styles.undoButton}
-      onPress={undoTeamDraw}>
-      <Text style={styles.secondaryButtonText}>
-        Undo
-      </Text>
-    </Pressable>
+    <View style={styles.actionRow}>
+  <Pressable
+    style={styles.secondaryButton}
+    onPress={undoTeamDraw}>
+    <Text style={styles.secondaryButtonText}>
+      Undo
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={styles.confirmButton}
+    onPress={() => router.back()}>
+    <Text style={styles.secondaryButtonText}>
+      Confirm
+    </Text>
+  </Pressable>
+</View>
   </View>
 )}
       </View>
@@ -1107,5 +1255,25 @@ actionMessage: {
 roundNumber: {
   color: Colors.red,
   fontWeight: '900',
+},
+
+primaryButtonDisabled: {
+  opacity: 0.45,
+},
+
+primaryButtonTextDisabled: {
+  opacity: 0.8,
+},
+undoRow: {
+  flexDirection: 'row',
+  justifyContent: 'center',
+  gap: 12,
+},
+confirmButton: {
+  flex: 1,
+  backgroundColor: Colors.red,
+  padding: 14,
+  borderRadius: 14,
+  alignItems: 'center',
 },
 });
