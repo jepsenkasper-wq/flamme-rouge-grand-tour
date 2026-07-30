@@ -38,6 +38,8 @@ import {
   type DummyCard,
   type DummyRiderState,
   type DummyScenario,
+type WindScenario,
+getDrawCount,
 } from '@/lib/solo/dummyDeckEngine';
 
 
@@ -132,6 +134,8 @@ export default function DrawScreen() {
   const soloStage = getActiveSoloStageState();
 
   const [scenario, setScenario] = useState<DummyScenario>('normal');
+  const [windScenario, setWindScenario] =
+  useState<WindScenario>('normal');
 
   const teamState = soloStage.teams.find(
     (team) => team.teamId === params.teamId
@@ -169,14 +173,6 @@ const riderShortLabel =
     );
   }
 
-  // DEBUG
-console.log('DRAW DEBUG', {
-  drawMode,
-  teamType: teamState.teamType,
-  hasMuscleTeam: !!muscleTeamState,
-  hasPelotonTeam: !!pelotonTeamState,
-});
-
 const insets = useSafeAreaInsets();
 
 const contentStyle = {
@@ -212,19 +208,23 @@ function showActionMessage(message: string) {
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
 
+  const drawCount = getDrawCount(windScenario);
+
   const result = playDummyRound(
     riderState,
     scenario,
-    riderState.round
+    riderState.round,
+    drawCount
   );
 
   riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(result.selectedCard);
-setDrawnCards([]);
-updateFatigueTransfer();
-updateScreen();
-await   persistDrawState();
+  setDrawnCards([]);
+  updateFatigueTransfer();
+  updateScreen();
+
+  await persistDrawState();
 }
 
 async function drawMuscleTeamCard() {
@@ -336,7 +336,10 @@ async function drawHumanHand() {
   setUndoSnapshot(cloneDummyRiderState(riderState));
   setSelectedCard(null);
 
-  const hand = drawHumanAppHand(riderState);
+  const hand = drawHumanAppHand(
+  riderState,
+  getDrawCount(windScenario)
+);
 
   setDrawnCards(hand);
   updateScreen();
@@ -437,10 +440,6 @@ function getDrawModeLabel(drawMode: DrawMode): string {
     style={styles.screen}
     contentContainerStyle={[styles.content, contentStyle]}>
 
-
-      <Text style={styles.title}>Draw</Text>
-
-
       <View style={styles.card}>
         <View style={styles.entryHero}>
   <View style={styles.playerTitleRow}>
@@ -509,11 +508,44 @@ function getDrawModeLabel(drawMode: DrawMode): string {
 
 {drawMode === 'human-app' && riderState && (
   <View style={styles.drawArea}>
+
+<Text style={styles.label}>Wind</Text>
+
+<View style={styles.optionRow}>
+  {[
+    { label: 'Headwind', value: 'headwind' },
+    { label: 'Normal', value: 'normal' },
+    { label: 'Tailwind', value: 'tailwind' },
+  ].map((option) => (
+    <Pressable
+      key={option.value}
+      style={[
+        styles.optionButton,
+        windScenario === option.value &&
+          styles.optionButtonActive,
+      ]}
+      onPress={() =>
+        setWindScenario(option.value as WindScenario)
+      }>
+      <Text
+        style={[
+          styles.optionText,
+          windScenario === option.value &&
+            styles.optionTextActive,
+        ]}>
+        {option.label}
+      </Text>
+    </Pressable>
+  ))}
+</View>
+
     <Text style={styles.sectionTitle}>Choose Card</Text>
 
    {drawnCards.length === 0 && (
   <Pressable style={styles.primaryButton} onPress={drawHumanHand}>
-    <Text style={styles.primaryButtonText}>Draw 4 Cards</Text>
+    <Text style={styles.primaryButtonText}>
+  Draw {getDrawCount(windScenario)} Cards
+</Text>
   </Pressable>
 )}
 
@@ -628,6 +660,36 @@ function getDrawModeLabel(drawMode: DrawMode): string {
         </Pressable>
       ))}
     </View>
+
+    <Text style={styles.label}>Wind</Text>
+
+<View style={styles.optionRow}>
+  {[
+    { label: 'Headwind', value: 'headwind' },
+    { label: 'Normal', value: 'normal' },
+    { label: 'Tailwind', value: 'tailwind' },
+  ].map((option) => (
+    <Pressable
+      key={option.value}
+      style={[
+        styles.optionButton,
+        windScenario === option.value &&
+          styles.optionButtonActive,
+      ]}
+      onPress={() =>
+        setWindScenario(option.value as WindScenario)
+      }>
+      <Text
+        style={[
+          styles.optionText,
+          windScenario === option.value &&
+            styles.optionTextActive,
+        ]}>
+        {option.label}
+      </Text>
+    </Pressable>
+  ))}
+</View>
 
     <Pressable style={styles.primaryButton} onPress={playNormalAIDraw}>
       <Text style={styles.primaryButtonText}>Draw AI Card</Text>
@@ -820,7 +882,7 @@ const styles = StyleSheet.create({
   },
 
   drawArea: {
-  marginTop: 18,
+  marginTop: -12,
   gap: 14,
 },
 
@@ -960,17 +1022,23 @@ teamName: {
 optionRow: {
   flexDirection: 'row',
   flexWrap: 'wrap',
-  gap: 8,
-  marginBottom: 8,
+  gap: 6,
+  marginBottom: 4,
 },
 
 optionButton: {
   backgroundColor: Colors.card,
   borderWidth: 1,
   borderColor: Colors.border,
-  borderRadius: 12,
-  paddingVertical: 10,
-  paddingHorizontal: 12,
+  borderRadius: 10,
+  paddingVertical: 7,
+  paddingHorizontal: 9,
+},
+
+optionText: {
+  fontSize: 12,
+  fontWeight: '800',
+  color: Colors.brown,
 },
 
 optionButtonActive: {
@@ -978,17 +1046,11 @@ optionButtonActive: {
   borderColor: Colors.red,
 },
 
-optionText: {
-  fontSize: 14,
-  fontWeight: '800',
-  color: Colors.brown,
-},
-
 optionTextActive: {
   color: Colors.white,
 },
 label: {
-  fontSize: 20,
+  fontSize: 16,
   fontWeight: '800',
   color: Colors.brown,
 },
@@ -996,7 +1058,7 @@ label: {
 labelRow: {
   flexDirection: 'row',
   alignItems: 'center',
-  marginBottom: 8,
+  marginBottom: 4,
 },
 
 help: {

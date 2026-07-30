@@ -5,6 +5,11 @@ import {
 
 import { chooseSpecialRiderCard } from './specialRiderAI';
 
+export type WindScenario =
+  | 'normal'
+  | 'headwind'
+  | 'tailwind';
+
 export type DummyScenario =
   | 'normal'
   | 'climb'
@@ -247,6 +252,21 @@ function chooseCard(
   );
 }
 
+export function getDrawCount(
+  wind: WindScenario
+): number {
+  switch (wind) {
+    case 'headwind':
+      return 3;
+
+    case 'tailwind':
+      return 5;
+
+    default:
+      return 4;
+  }
+}
+
 function finishRound(
   rider: DummyRiderState,
   drawResult: DrawResult,
@@ -271,10 +291,13 @@ export function getFatigueCardsForStageResult(
   ].filter((card) => card.type === 'fatigue').length;
 }
 
-function drawHand(rider: DummyRiderState): DrawResult {
+function drawHand(
+  rider: DummyRiderState,
+  drawCount = 4
+): DrawResult {
   const cards: DummyCard[] = [];
 
-  while (cards.length < 4 && rider.deck.length > 0) {
+  while (cards.length < drawCount && rider.deck.length > 0) {
     const card = rider.deck.shift();
 
     if (card) {
@@ -282,11 +305,11 @@ function drawHand(rider: DummyRiderState): DrawResult {
     }
   }
 
-  if (cards.length < 4 && rider.setAside.length > 0) {
+ if (cards.length < drawCount && rider.setAside.length > 0) {
     rider.deck = shuffle(rider.setAside);
     rider.setAside = [];
 
-    while (cards.length < 4 && rider.deck.length > 0) {
+    while (cards.length < drawCount && rider.deck.length > 0) {
       const card = rider.deck.shift();
 
       if (card) {
@@ -295,7 +318,7 @@ function drawHand(rider: DummyRiderState): DrawResult {
     }
   }
 
-  while (cards.length < 4) {
+  while (cards.length < drawCount) {
     cards.push(createFatigueCard());
   }
 
@@ -308,9 +331,10 @@ return {
 export function playDummyRound(
   rider: DummyRiderState,
   scenario: DummyScenario = 'normal',
-  round = 0
+  round = 0,
+  drawCount = 4
 ): DummyRoundResult {
-  const drawResult = drawHand(rider);
+  const drawResult = drawHand(rider, drawCount);
 
 const specialCard =
   scenario === 'supply-zone'
@@ -351,13 +375,14 @@ return {
 }
 
 export function drawHumanAppHand(
-  rider: DummyRiderState
+  rider: DummyRiderState,
+  drawCount = 4
 ): DummyCard[] {
   if (rider.pendingHand.length > 0) {
     return rider.pendingHand;
   }
 
-  const drawResult = drawHand(rider);
+  const drawResult = drawHand(rider, drawCount);
 
   rider.pendingHand = [...drawResult.cards];
 
