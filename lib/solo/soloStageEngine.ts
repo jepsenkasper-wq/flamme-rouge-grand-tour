@@ -38,6 +38,7 @@ if (team.teamType === 'muscle') {
     usesAppDraw: false,
     muscleTeam: createMuscleTeam(),
     playedCards: {},
+    refreshUsed: {},
   };
 }
 
@@ -48,6 +49,7 @@ if (team.teamType === 'peloton') {
     usesAppDraw: false,
     pelotonTeam: createPelotonTeam(),
     playedCards: {},
+    refreshUsed: {},
   };
 }
 
@@ -57,6 +59,7 @@ if (!usesAppDraw) {
     teamType: team.teamType,
     usesAppDraw: false,
     playedCards: {},
+    refreshUsed: {},
   };
 }
     return {
@@ -75,6 +78,7 @@ if (!usesAppDraw) {
   ),
 
   playedCards: {},
+  refreshUsed: {},
 };
   });
 

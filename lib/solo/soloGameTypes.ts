@@ -59,6 +59,9 @@ export type SoloPlayedCards = Partial<
   pelotonTeam?: PelotonTeamState;
 
   playedCards?: SoloPlayedCards;
+  refreshUsed?: Partial<
+  Record<SoloRiderKey | 'peloton', boolean>
+>;
 };
 
 export type SoloStageState = {

@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Image, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -115,7 +115,23 @@ useFocusEffect(
 {createGameDraft.playerNames.length < 6 && (
   <Pressable
     style={styles.addButton}
-    onPress={() => router.push('/add-player')}
+    onPress={() => {
+  Alert.alert(
+    'Add player?',
+    'Adding a player during an active dummy stage will reset the current stage draw rounds. Do you want to continue?',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Continue',
+        style: 'destructive',
+        onPress: () => router.push('/add-player'),
+      },
+    ]
+  );
+}}
   >
     <Text style={styles.addButtonText}>+ Add Player</Text>
   </Pressable>

@@ -153,6 +153,11 @@ const playedCard =
 
 const alreadyPlayed = Boolean(playedCard);
 
+const refreshAlreadyUsed =
+  playedCardKey && teamState?.refreshUsed
+    ? Boolean(teamState.refreshUsed[playedCardKey])
+    : false;
+
   const riderState =
     params.riderKey === 'sprinteur'
       ? teamState?.sprinteur
@@ -294,6 +299,9 @@ async function refreshMuscle(limit: 24 | 25) {
     limit
   );
 
+  teamState.refreshUsed ??= {};
+teamState.refreshUsed[riderKey] = true;
+
   setSelectedCard(null);
   updateScreen();
   showActionMessage('Deck refreshed.');
@@ -336,6 +344,9 @@ async function refreshPeloton(limit: 24 | 25) {
 
   refreshPelotonTeam(pelotonTeamState, limit);
 
+  teamState.refreshUsed ??= {};
+teamState.refreshUsed.peloton = true;
+
   setSelectedCard(null);
   updateScreen();
   showActionMessage('Deck refreshed.');
@@ -360,12 +371,14 @@ async function undoTeamDraw() {
     );
   }
 
-  if (drawMode === 'muscle' && params.riderKey) {
+ if (drawMode === 'muscle' && params.riderKey) {
   delete teamState.playedCards?.[params.riderKey];
+  delete teamState.refreshUsed?.[params.riderKey];
 }
 
 if (drawMode === 'peloton') {
   delete teamState.playedCards?.peloton;
+  delete teamState.refreshUsed?.peloton;
 }
 
   setTeamUndoSnapshot(null);
@@ -458,11 +471,18 @@ async function refresh(limit: 24 | 25) {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
+
   refreshFromDiscard(riderState, limit);
+
+  if (playedCardKey && teamState) {
+    teamState.refreshUsed ??= {};
+    teamState.refreshUsed[playedCardKey] = true;
+  }
+
   updateFatigueTransfer();
   updateScreen();
   showActionMessage('Deck refreshed.');
- 
+
   await persistDrawState();
 }
 
@@ -470,9 +490,12 @@ async function undo() {
   if (!riderState || !undoSnapshot) return;
 
   restoreDummyRiderState(riderState, undoSnapshot);
+
   if (teamState && params.riderKey) {
-  delete teamState.playedCards?.[params.riderKey];
-}
+    delete teamState.playedCards?.[params.riderKey];
+    delete teamState.refreshUsed?.[params.riderKey];
+  }
+
   setUndoSnapshot(null);
   setDrawnCards([]);
   setSelectedCard(null);
@@ -482,6 +505,7 @@ async function undo() {
 
   await persistDrawState();
 }
+
 function getDrawModeLabel(drawMode: DrawMode): string {
   switch (drawMode) {
     case 'human-app':
@@ -655,15 +679,29 @@ function getDrawModeLabel(drawMode: DrawMode): string {
       </Pressable>
     </View>
 
-    <View style={styles.actionRow}>
-      <Pressable style={styles.secondaryButton} onPress={() => refresh(24)}>
-        <Text style={styles.secondaryButtonText}>Refresh 24</Text>
-      </Pressable>
+   <View style={styles.actionRow}>
+  <Pressable
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
+    onPress={() => refresh(24)}
+  >
+    <Text style={styles.secondaryButtonText}>Refresh 24</Text>
+  </Pressable>
 
-      <Pressable style={styles.secondaryButton} onPress={() => refresh(25)}>
-        <Text style={styles.secondaryButtonText}>Refresh 25</Text>
-      </Pressable>
-    </View>
+  <Pressable
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
+    onPress={() => refresh(25)}
+  >
+    <Text style={styles.secondaryButtonText}>Refresh 25</Text>
+  </Pressable>
+</View>
 
     {actionMessage !== '' && (
   <Text style={styles.actionMessage}>
@@ -813,13 +851,27 @@ function getDrawModeLabel(drawMode: DrawMode): string {
     </View>
 
     <View style={styles.actionRow}>
-      <Pressable style={styles.secondaryButton} onPress={() => refresh(24)}>
-        <Text style={styles.secondaryButtonText}>Refresh 24</Text>
-      </Pressable>
+       <Pressable
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
+    onPress={() => refresh(24)}
+  >
+    <Text style={styles.secondaryButtonText}>Refresh 24</Text>
+  </Pressable>
 
-      <Pressable style={styles.secondaryButton} onPress={() => refresh(25)}>
-        <Text style={styles.secondaryButtonText}>Refresh 25</Text>
-      </Pressable>
+  <Pressable
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
+    onPress={() => refresh(25)}
+  >
+    <Text style={styles.secondaryButtonText}>Refresh 25</Text>
+  </Pressable>
     </View>
 
     {actionMessage !== '' && (
@@ -880,7 +932,11 @@ function getDrawModeLabel(drawMode: DrawMode): string {
 
     <View style={styles.actionRow}>
   <Pressable
-    style={styles.secondaryButton}
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
     onPress={() => refreshMuscle(24)}>
     <Text style={styles.secondaryButtonText}>
       Refresh 24
@@ -888,14 +944,17 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Pressable>
 
   <Pressable
-    style={styles.secondaryButton}
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
     onPress={() => refreshMuscle(25)}>
     <Text style={styles.secondaryButtonText}>
       Refresh 25
     </Text>
   </Pressable>
-</View> 
-
+</View>
 {actionMessage !== '' && (
   <Text style={styles.actionMessage}>
     ✓ {actionMessage}
@@ -953,7 +1012,11 @@ function getDrawModeLabel(drawMode: DrawMode): string {
 
     <View style={styles.actionRow}>
   <Pressable
-    style={styles.secondaryButton}
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
     onPress={() => refreshPeloton(24)}>
     <Text style={styles.secondaryButtonText}>
       Refresh 24
@@ -961,7 +1024,11 @@ function getDrawModeLabel(drawMode: DrawMode): string {
   </Pressable>
 
   <Pressable
-    style={styles.secondaryButton}
+    style={[
+      styles.secondaryButton,
+      refreshAlreadyUsed && styles.primaryButtonDisabled,
+    ]}
+    disabled={refreshAlreadyUsed}
     onPress={() => refreshPeloton(25)}>
     <Text style={styles.secondaryButtonText}>
       Refresh 25
