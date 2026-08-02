@@ -6,6 +6,25 @@ import { gameResults } from '@/lib/gameResults';
 import { calculateBonusBreakdown } from '@/lib/classifications';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 
+function getPlayerColor(colorName: string) {
+  switch (colorName) {
+    case 'Blue':
+      return '#2f5fb3';
+    case 'White':
+      return '#f7f1df';
+    case 'Green':
+      return '#2f8a3e';
+    case 'Red':
+      return '#b7372f';
+    case 'Black':
+      return '#222222';
+    case 'Pink':
+      return '#d97aa7';
+    default:
+      return Colors.border;
+  }
+}
+
 export default function TourPointsOverviewScreen() {
 const bonusBreakdown = calculateBonusBreakdown();
   const rows = createGameDraft.playerNames.map((playerName, playerIndex) => {
@@ -37,9 +56,10 @@ const rouleurBonus =
 
 const teamBonus = bonus?.team || 0;
 
-    return {
-      playerName: playerName || `Player ${playerIndex + 1}`,
-      bonus,
+   return {
+  playerName: playerName || `Player ${playerIndex + 1}`,
+  playerColor: createGameDraft.playerColors[playerIndex],
+  bonus,
     sprinteurBonus,
     rouleurBonus,
     teamBonus,
@@ -65,7 +85,28 @@ const teamBonus = bonus?.team || 0;
 
       {rows.map((row) => (
         <View key={row.playerName} style={styles.card}>
-          <Text style={styles.playerName}>{row.playerName}</Text>
+          <View style={styles.playerNameRow}>
+  <Text
+    style={[
+      styles.playerStar,
+      { color: getPlayerColor(row.playerColor) },
+    ]}>
+    ★
+  </Text>
+
+  <Text style={styles.playerName}>
+    {row.playerName}
+  </Text>
+
+  <Text
+    style={[
+      styles.playerStar,
+      { color: getPlayerColor(row.playerColor) },
+    ]}>
+    ★
+  </Text>
+</View>
+
 <Text style={styles.bonusTitle}>Tour Points</Text>
           <View style={styles.line}>
             <Text style={styles.label}>Sprinteur</Text>
@@ -187,5 +228,22 @@ bonusText: {
   fontSize: 13,
   fontWeight: '700',
   color: Colors.brown,
+},
+playerNameRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+},
+
+playerStar: {
+  fontSize: 18,
+  marginTop: -16,
+  textShadowColor: 'rgba(42,36,28,0.5)',
+  textShadowOffset: {
+    width: 0,
+    height: 0,
+  },
+  textShadowRadius: 2,
 },
 });

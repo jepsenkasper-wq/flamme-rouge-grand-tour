@@ -85,6 +85,22 @@ function getPlayerColor(colorName: string) {
       return Colors.border;
   }
 }
+
+function formatSpecialRiderName(
+  specialRiderId?: string
+): string {
+  if (!specialRiderId) {
+    return '';
+  }
+
+  return specialRiderId
+    .split('-')
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join(' ');
+}
 export default function PlayerEntryScreen() {
   const params = useLocalSearchParams();
   const playerIndex = Number(params.playerIndex ?? 0);
@@ -117,6 +133,15 @@ const entryTitle = editedEntry
 const [selectedRider, setSelectedRider] = useState<'sprinteur' | 'rouleur'>(
   'rouleur'
 );
+
+const selectedSpecialRiderId =
+  selectedRider === 'rouleur'
+    ? createGameDraft.playerRouleurSpecialRiders?.[playerIndex]
+    : createGameDraft.playerSprinteurSpecialRiders?.[playerIndex];
+
+const selectedSpecialRiderName = selectedSpecialRiderId
+  ? formatSpecialRiderName(selectedSpecialRiderId)
+  : null;
 
 const [, setDraftVersion] = useState(0);
 
@@ -199,7 +224,14 @@ const riderLabel =
   <Text style={[styles.playerStar, { color: getPlayerColor(playerColor) }]}>
     ★
   </Text>
+
 </View>
+
+{selectedSpecialRiderName && (
+  <Text style={styles.specialRiderLabel}>
+    {selectedSpecialRiderName}
+  </Text>
+)}
 
   <Image
     source={riderImage}
@@ -523,6 +555,7 @@ activeButtonText: {
     padding: 18,
     marginHorizontal: -10,
     marginTop: -8,
+    marginBottom: -14,
   },
   label: {
     fontSize: 14,
@@ -669,5 +702,13 @@ helperText: {
   textAlign: 'center',
   lineHeight: 22,
   marginBottom: 20,
+},
+specialRiderLabel: {
+  fontSize: 12,
+  color: Colors.brown,
+  opacity: 0.65,
+  textAlign: 'center',
+  marginTop: -4,
+  marginBottom: 2,
 },
 });
