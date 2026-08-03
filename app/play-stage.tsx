@@ -128,6 +128,9 @@ function canEndRound(): boolean {
 export default function PlayStageScreen() {
   const [, setRefreshKey] = useState(0);
 
+const [allowIncompleteRound, setAllowIncompleteRound] =
+  useState(false);
+
 useFocusEffect(
   useCallback(() => {
     setRefreshKey((current) => current + 1);
@@ -151,10 +154,12 @@ async function endRound() {
     team.playedCards = {};
   }
 
-  await saveGame();
-  await updateActiveSavedGame();
+await saveGame();
+await updateActiveSavedGame();
 
-  setRefreshKey((c) => c + 1);
+setAllowIncompleteRound(false);
+
+setRefreshKey((c) => c + 1);
 }
   return (
     <View style={styles.screen}>
@@ -233,11 +238,33 @@ const isDrawLocked = Boolean(playedCard);
 })}
 
 <Pressable
+  style={styles.incompleteRoundRow}
+  onPress={() =>
+    setAllowIncompleteRound((current) => !current)
+  }>
+  <View
+    style={[
+      styles.incompleteRoundToggle,
+      allowIncompleteRound &&
+        styles.incompleteRoundToggleActive,
+    ]}>
+    {allowIncompleteRound && (
+      <Text style={styles.incompleteRoundCheck}>✓</Text>
+    )}
+  </View>
+
+  <Text style={styles.incompleteRoundText}>
+    Allow incomplete round
+  </Text>
+</Pressable>
+
+<Pressable
   style={[
     styles.button,
-    !canEndRound() && styles.buttonDisabled,
+    !(canEndRound() || allowIncompleteRound) &&
+      styles.buttonDisabled,
   ]}
-  disabled={!canEndRound()}
+  disabled={!(canEndRound() || allowIncompleteRound)}
   onPress={endRound}>
   <Text style={styles.buttonText}>
     End Round {getCurrentRound()}
@@ -355,5 +382,42 @@ roundHint: {
   textAlign: 'center',
   marginTop: -8,
   marginBottom: 12,
+},
+
+incompleteRoundRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  marginTop: 16,
+  marginBottom: 10,
+},
+
+incompleteRoundToggle: {
+  width: 22,
+  height: 22,
+  borderRadius: 6,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  backgroundColor: Colors.card,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+incompleteRoundToggleActive: {
+  backgroundColor: Colors.red,
+  borderColor: Colors.red,
+},
+
+incompleteRoundCheck: {
+  color: Colors.white,
+  fontSize: 14,
+  fontWeight: '900',
+},
+
+incompleteRoundText: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
 },
 });
