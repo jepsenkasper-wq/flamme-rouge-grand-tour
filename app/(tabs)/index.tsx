@@ -440,8 +440,13 @@ const entryTitle =
     return;
   }
 
-  stageDraft.initialize(createGameDraft.playerNames.length);
-  router.push('/enter-stage');
+  stageDraft.initialize(
+  createGameDraft.playerNames.length,
+  undefined,
+  gameState.currentStage
+);
+
+router.push('/enter-stage');
 }}
   >
     <Text style={styles.buttonText}>

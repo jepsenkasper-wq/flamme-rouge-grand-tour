@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import {
@@ -111,7 +119,7 @@ export default function MyGamesScreen() {
       )}
     </ScrollView>
     </View>
-  );
+);
 }
 
 const styles = StyleSheet.create({
@@ -174,4 +182,5 @@ deleteButtonText: {
   fontSize: 13,
   fontWeight: '900',
 },
+
 });

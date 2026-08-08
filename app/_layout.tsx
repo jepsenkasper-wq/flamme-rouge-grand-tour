@@ -1,31 +1,70 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { loadGame } from '@/lib/storage';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFonts } from 'expo-font';
+import { Platform, Pressable, Text } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  const [gameLoaded, setGameLoaded] = useState(false);
 
   const [fontsLoaded] = useFonts({
     BebasNeue: require('../assets/fonts/BebasNeue-Regular.ttf'),
   });
 
   useEffect(() => {
-    loadGame();
-  }, []);
-
-  if (!fontsLoaded) {
-    return null;
+  async function initializeGame() {
+    await loadGame();
+    setGameLoaded(true);
   }
+
+  initializeGame();
+}, []);
+
+if (!fontsLoaded || !gameLoaded) {
+  return null;
+}
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack
+  screenOptions={{
+    headerBackButtonDisplayMode: 'minimal',
+
+    ...(Platform.OS === 'ios'
+      ? {
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{
+                paddingVertical: 6,
+                paddingRight: 18,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 34,
+                  lineHeight: 34,
+                  color: '#007AFF',
+                  fontWeight: '300',
+                }}
+              >
+                ‹
+              </Text>
+            </Pressable>
+          ),
+        }
+      : {}),
+  }}
+>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="create-game" options={{ title: 'Create Game' }} />
         <Stack.Screen name="players" options={{ title: 'Players' }} />

@@ -1,5 +1,7 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
+
+import { loadGame } from '@/lib/storage';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -12,6 +14,12 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   const insets = useSafeAreaInsets();
+
+  useFocusEffect(
+  useCallback(() => {
+    loadGame();
+  }, [])
+);
 
   return (
   <Tabs

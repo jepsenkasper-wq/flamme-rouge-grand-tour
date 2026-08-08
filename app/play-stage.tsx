@@ -278,10 +278,11 @@ const isDrawLocked = Boolean(playedCard);
 
   const soloStage = getActiveSoloStageState();
 
-  stageDraft.initialize(
-    createGameDraft.playerNames.length,
-    soloStage.fatigueTransfers
-  );
+stageDraft.initialize(
+  createGameDraft.playerNames.length,
+  soloStage.fatigueTransfers,
+  gameState.currentStage
+);
 
   router.push('/enter-stage');
 }}>
