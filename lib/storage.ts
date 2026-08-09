@@ -15,6 +15,7 @@ import {
   getRawActiveSoloStageState,
   restoreActiveSoloStageState,
 } from './solo/activeSoloStage';
+import { stageDraft } from '@/lib/stageDraft';
 
 const ACTIVE_GAME_KEY = 'flamme-rouge-active-game';
 const SAVED_GAMES_KEY = 'flamme-rouge-games';
@@ -116,6 +117,10 @@ Object.assign(createGameDraft, game.createGameDraft);
   Object.assign(gameResults, game.gameResults);
   Object.assign(gameState, game.gameState);
 
+  if (game.stageDraft) {
+  Object.assign(stageDraft, game.stageDraft);
+}
+
   if (createGameDraft.companionMode === 'dummy') {
     restoreActiveSoloStageState(game.soloStageState ?? null);
   } else {
@@ -147,6 +152,7 @@ export async function updateActiveSavedGame() {
           gameResults: JSON.parse(JSON.stringify(gameResults)),
           gameState: JSON.parse(JSON.stringify(gameState)),
           soloStageState: JSON.parse(JSON.stringify(getRawActiveSoloStageState())),
+          stageDraft: JSON.parse(JSON.stringify(stageDraft)),
         }
       : game
   );

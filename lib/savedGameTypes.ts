@@ -15,5 +15,6 @@ export type SavedGame = {
   followCode?: string;
   adminKey?: string;
   soloStageState?: SoloStageState | null;
+  stageDraft?: any;
   
 };

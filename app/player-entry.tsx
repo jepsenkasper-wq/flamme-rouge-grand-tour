@@ -177,9 +177,14 @@ type EditableEntryField =
   | 'sprintPoints'
   | 'fatigueCards';
 
-function updateEntry(field: EditableEntryField, value: string) {
+async function updateEntry(
+  field: EditableEntryField,
+  value: string
+) {
   currentEntry[field] = value;
   setDraftVersion((version) => version + 1);
+
+  await updateActiveSavedGame();
 }
 
 function goToPlayer(nextIndex: number) {

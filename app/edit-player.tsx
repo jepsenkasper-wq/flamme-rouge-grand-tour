@@ -306,6 +306,11 @@ router.back();
           createGameDraft.playerRouleurSpecialRiders.splice(playerIndex, 1);
 createGameDraft.playerSprinteurSpecialRiders.splice(playerIndex, 1);
 
+if (isDummyGame) {
+  createGameDraft.dummyTeams.splice(playerIndex, 1);
+  resetActiveSoloStageState();
+}
+
           gameResults.entries.forEach((entry) => {
   entry.players.splice(playerIndex, 1);
 
@@ -333,6 +338,11 @@ createGameDraft.playerSprinteurSpecialRiders.splice(playerIndex, 1);
       createGameDraft.playerColors.splice(playerIndex, 1);
       createGameDraft.playerRouleurSpecialRiders.splice(playerIndex, 1);
 createGameDraft.playerSprinteurSpecialRiders.splice(playerIndex, 1);
+
+if (isDummyGame) {
+  createGameDraft.dummyTeams.splice(playerIndex, 1);
+  resetActiveSoloStageState();
+}
 
       saveGame();
       updateActiveSavedGame();

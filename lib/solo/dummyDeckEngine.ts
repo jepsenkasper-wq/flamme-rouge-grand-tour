@@ -229,21 +229,65 @@ function chooseCard(
     );
   }
 
-  if (scenario === 'descent' || scenario === 'supply-zone') {
-    const bestDistance = Math.min(
-      ...cards.map((card) => Math.abs(card.value - 2))
-    );
+if (scenario === 'supply-zone') {
+  const fatigueCards = cards.filter(
+    (card) => card.type === 'fatigue'
+  );
 
-    const closestCards = cards.filter(
-      (card) => Math.abs(card.value - 2) === bestDistance
-    );
-
-    const lowestValue = Math.min(...closestCards.map((card) => card.value));
-
-    return getRandomPreferredCard(
-      closestCards.filter((card) => card.value === lowestValue)
-    );
+  if (fatigueCards.length > 0) {
+    return getRandomCard(fatigueCards);
   }
+
+  const shouldSaveSpecialCards =
+    round < 10 &&
+    (
+      specialRiderId === 'grimpeur' ||
+      specialRiderId === 'descender' ||
+      specialRiderId === 'mountaineer'
+    );
+
+  let playableCards = cards;
+
+  if (shouldSaveSpecialCards) {
+    const withoutSpecialCards = cards.filter(
+      (card) => !card.isSpecial
+    );
+
+    if (withoutSpecialCards.length > 0) {
+      playableCards = withoutSpecialCards;
+    }
+  }
+
+  const lowCards = playableCards.filter(
+    (card) => card.value < 4
+  );
+
+  if (lowCards.length > 0) {
+    return getRandomCard(lowCards);
+  }
+
+  return getRandomCard(playableCards);
+}
+
+if (scenario === 'descent') {
+  const bestDistance = Math.min(
+    ...cards.map((card) => Math.abs(card.value - 2))
+  );
+
+  const closestCards = cards.filter(
+    (card) => Math.abs(card.value - 2) === bestDistance
+  );
+
+  const lowestValue = Math.min(
+    ...closestCards.map((card) => card.value)
+  );
+
+  return getRandomPreferredCard(
+    closestCards.filter(
+      (card) => card.value === lowestValue
+    )
+  );
+}
 
   const highestValue = Math.max(...cards.map((card) => card.value));
 
