@@ -84,6 +84,7 @@ if (!usesAppDraw) {
 
   return {
   stageNumber,
+  stageType: setup.stageType,
   round: 1,
   teams,
   fatigueTransfers: teams.map((team) => ({

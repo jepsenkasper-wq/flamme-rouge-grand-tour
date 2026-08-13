@@ -29,6 +29,7 @@ export function getActiveSoloStageState(): SoloStageState {
       {
         companionMode: createGameDraft.companionMode,
         teams: createGameDraft.dummyTeams,
+        stageType: 'standard',
       },
       gameState.currentStage
     );
@@ -62,6 +63,7 @@ export function prepareActiveSoloStageForNextStage(): void {
   activeSoloStageState.stageNumber += 1;
 
   activeSoloStageState.round = 1;
+  activeSoloStageState.stageType = 'standard';
 
 activeSoloStageState.teams.forEach((team) => {
   team.playedCards = {};

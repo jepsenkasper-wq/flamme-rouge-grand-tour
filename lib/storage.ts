@@ -12,6 +12,7 @@ import {
 
 import type { SavedGame } from './savedGameTypes';
 import {
+  getActiveSoloStageState,
   getRawActiveSoloStageState,
   restoreActiveSoloStageState,
 } from './solo/activeSoloStage';
@@ -126,6 +127,29 @@ Object.assign(createGameDraft, game.createGameDraft);
   } else {
     restoreActiveSoloStageState(null);
   }
+
+  if (createGameDraft.companionMode === 'dummy') {
+  const soloStage = getActiveSoloStageState();
+  soloStage.stageType ??= 'standard';
+
+  soloStage.teams.forEach((team) => {
+    if (team.sprinteur) {
+      team.sprinteur.strategyNormalDraws ??= 0;
+      team.sprinteur.strategy ??= 'balanced';
+      team.sprinteur.defensiveTwoPlayed ??= false;
+      team.sprinteur.recoveryDrawsRemaining ??= 0;
+      team.sprinteur.defensiveStrategyEnded ??= false;
+    }
+
+    if (team.rouleur) {
+      team.rouleur.strategyNormalDraws ??= 0;
+      team.rouleur.strategy ??= 'balanced';
+      team.rouleur.defensiveTwoPlayed ??= false;
+      team.rouleur.recoveryDrawsRemaining ??= 0;
+      team.rouleur.defensiveStrategyEnded ??= false;
+    }
+  });
+}
 
   activeGameId = game.id;
 

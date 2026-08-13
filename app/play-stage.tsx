@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import { stageDraft } from '@/lib/stageDraft';
 import { getActiveSoloStageState, syncSoloFatigueTransfersFromDecks } from '@/lib/solo/activeSoloStage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
+import { assignStrategiesForStage } from '@/lib/solo/strategyEngine';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -139,6 +141,15 @@ useFocusEffect(
 
   const drawList = getDrawList();
 
+  const soloStage = getActiveSoloStageState();
+const stageType = soloStage.stageType;
+
+const stageHasStarted =
+  soloStage.round > 1 ||
+  soloStage.teams.some((team) =>
+    Object.values(team.playedCards ?? {}).some(Boolean)
+  );
+
   const insets = useSafeAreaInsets();
 
 const contentStyle = {
@@ -161,17 +172,131 @@ setAllowIncompleteRound(false);
 
 setRefreshKey((c) => c + 1);
 }
-  return (
-    <View style={styles.screen}>
-      <BackgroundWatermark />
+return (
+  <View style={styles.screen}>
+    <BackgroundWatermark />
 
-      <ScrollView
-  contentContainerStyle={[styles.content, contentStyle]}
-        showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={[styles.content, contentStyle]}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.title}>
+        Play Stage {gameState.currentStage}
+      </Text>
 
-        <Text style={styles.title}>
-  Play Stage {gameState.currentStage}
-</Text>
+      {!stageHasStarted && (
+        <View style={styles.stageTypeSection}>
+          <View style={styles.stageTypeTitleRow}>
+  <Text style={styles.stageTypeLabel}>
+    Stage Profile
+  </Text>
+
+  <Pressable
+    onPress={() =>
+      Alert.alert(
+        'Stage Profile',
+        'Choose the profile that best matches the current stage. The selected profile helps the AI adapt its strategy for this stage.\n\n' +
+        'Flat\nMostly flat, with few or no significant climbs.\n\n' +
+        'Hills\nSeveral shorter climbs and frequent changes in terrain.\n\n' +
+        'Mountain\nMultiple and/or long climbs.\n\n' +
+        'Cobbles\nCobblestone sections are an important part of the stage.\n\n' +
+        'Selecting a profile is optional. If no profile is selected, the AI uses its standard strategy.'
+      )
+    }>
+    <Text style={styles.stageTypeHelp}>?</Text>
+  </Pressable>
+</View>
+
+          <View style={styles.stageTypeRow}>
+            {[
+              { key: 'flat', label: 'Flat' },
+              { key: 'hilly', label: 'Hills' },
+              { key: 'mountain', label: 'Mountain' },
+              { key: 'cobbles', label: 'Cobbles' },
+            ].map((item) => (
+              <Pressable
+                key={item.key}
+                style={[
+                  styles.stageTypeButton,
+                  stageType === item.key &&
+                    styles.stageTypeButtonActive,
+                ]}
+                onPress={() => {
+                  const isSelected = stageType === item.key;
+
+                  Alert.alert(
+                    isSelected
+                      ? 'Clear Stage Profile?'
+                      : 'Select Stage Profile?',
+                    isSelected
+                      ? `Remove "${item.label}" and use the standard AI strategy for this stage?`
+                      : `Use "${item.label}" as the stage profile? This will affect the AI riders' strategy for this stage.`,
+                    [
+                      {
+                        text: 'Cancel',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Confirm',
+                      onPress: async () => {
+  soloStage.stageType = isSelected
+    ? 'standard'
+    : (item.key as typeof stageType);
+
+  assignStrategiesForStage(soloStage);
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+},
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text
+                  style={[
+                    styles.stageTypeButtonText,
+                    stageType === item.key &&
+                      styles.stageTypeButtonTextActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+{stageType !== 'standard' && (
+  <View style={styles.strategyDebug}>
+    <Text style={styles.strategyDebugTitle}>
+      AI Strategy Debug
+    </Text>
+
+    {soloStage.teams.map((team, playerIndex) => {
+      if (team.teamType !== 'normal-ai') {
+        return null;
+      }
+
+      const teamName =
+        createGameDraft.playerNames[playerIndex] ||
+        `Player ${playerIndex + 1}`;
+
+      return (
+        <Text
+          key={team.teamId}
+          style={styles.strategyDebugText}
+        >
+          {teamName}: S = {team.sprinteur?.strategy ?? '-'} | R ={' '}
+          {team.rouleur?.strategy ?? '-'}
+        </Text>
+      );
+    })}
+  </View>
+)}
 
 <Text style={styles.roundText}>
   Round {getCurrentRound()}
@@ -420,5 +545,76 @@ incompleteRoundText: {
   fontSize: 14,
   fontWeight: '700',
   color: Colors.brown,
+},
+stageTypeSection: {
+  marginBottom: 24,
+},
+
+stageTypeLabel: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginBottom: 6,
+},
+
+stageTypeRow: {
+  flexDirection: 'row',
+  gap: 6,
+},
+
+stageTypeButton: {
+  flex: 1,
+  paddingVertical: 8,
+  paddingHorizontal: 4,
+  borderRadius: 10,
+  backgroundColor: Colors.red,
+  borderWidth: 1,
+  borderColor: Colors.red,
+  alignItems: 'center',
+},
+
+stageTypeButtonActive: {
+  opacity: 0.65,
+},
+
+stageTypeButtonText: {
+  fontSize: 12,
+  fontWeight: '700',
+  color: Colors.white,
+},
+
+stageTypeButtonTextActive: {
+  color: Colors.white,
+},
+stageTypeTitleRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  marginBottom: 6,
+},
+
+stageTypeHelp: {
+  fontSize: 16,
+  fontWeight: '900',
+  color: Colors.red,
+  marginTop: -8,
+},
+
+strategyDebug: {
+  marginBottom: 16,
+  padding: 10,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 8,
+},
+
+strategyDebugTitle: {
+  fontSize: 12,
+  fontWeight: '700',
+  marginBottom: 4,
+},
+
+strategyDebugText: {
+  fontSize: 11,
 },
 });

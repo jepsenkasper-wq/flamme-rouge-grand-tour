@@ -35,6 +35,7 @@ export type DummyTeamSetup = {
 export type DummyGameSetup = {
   companionMode: CompanionMode;
   teams: DummyTeamSetup[];
+  stageType: SoloStageType;
 };
 export type SoloRiderKey = 'sprinteur' | 'rouleur';
 
@@ -66,6 +67,7 @@ export type SoloPlayedCards = Partial<
 
 export type SoloStageState = {
   stageNumber: number;
+  stageType: SoloStageType;
   round: number;
   teams: SoloTeamStageState[];
   fatigueTransfers: SoloFatigueTransfer[];
@@ -76,3 +78,16 @@ export type SoloFatigueTransfer = {
   sprinteurFatigueCards: number;
   rouleurFatigueCards: number;
 };
+
+export type SoloStageType =
+  | 'standard'
+  | 'flat'
+  | 'hilly'
+  | 'mountain'
+  | 'cobbles';
+
+export type SoloRiderStrategy =
+  | 'aggressive'
+  | 'defensive'
+  | 'balanced'
+  | 'mountain';

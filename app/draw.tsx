@@ -229,11 +229,11 @@ function showActionMessage(message: string) {
   const drawCount = getDrawCount(windScenario);
 
   const result = playDummyRound(
-    riderState,
-    scenario,
-    riderState.round,
-    drawCount
-  );
+  riderState,
+  scenario,
+  soloStage.round,
+  drawCount
+);
 
 teamState.playedCards ??= {};
 
@@ -246,7 +246,7 @@ teamState.playedCards[params.riderKey!] = {
   // riderState.round = (riderState.round ?? 0) + 1;
 
   setSelectedCard(result.selectedCard);
-  setDrawnCards([]);
+  setDrawnCards(result.drawnCards);
   updateFatigueTransfer();
   updateScreen();
 
@@ -445,14 +445,29 @@ async function addFatigue() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
+
+  const gotFatigueLastRound =
+    riderState.lastFatigueRound === soloStage.round - 1;
+
   addFatigueCardToSetAside(riderState);
+
+if (
+  riderState.strategy === 'defensive' &&
+  !riderState.defensiveStrategyEnded &&
+  gotFatigueLastRound
+) {
+  riderState.recoveryDrawsRemaining = 2;
+  riderState.defensiveStrategyEnded = true;
+}
+
+  riderState.lastFatigueRound = soloStage.round;
+
   updateFatigueTransfer();
   updateScreen();
 
   showActionMessage('Fatigue card added.');
 
   await persistDrawState();
-
 }
 
 async function removeFatigue() {
@@ -520,6 +535,27 @@ function getDrawModeLabel(drawMode: DrawMode): string {
       return '';
   }
 }
+
+const scenarioOptions: {
+  label: string;
+  value: DummyScenario;
+}[] = [
+  { label: 'Normal Square', value: 'normal' },
+  { label: 'Ascent / Close to Ascent', value: 'climb' },
+  { label: 'Descent', value: 'descent' },
+
+  ...(soloStage.stageType === 'mountain'
+    ? [
+        {
+          label: 'Open Valley',
+          value: 'open-valley' as DummyScenario,
+        },
+      ]
+    : []),
+
+  { label: 'Supply Zone', value: 'supply-zone' },
+  { label: 'Sprint', value: 'sprint' },
+];
 
   return (
     <ScrollView
@@ -746,10 +782,15 @@ function getDrawModeLabel(drawMode: DrawMode): string {
         'Use when the rider is on an ascent square or within 5 squares of an ascent.\n\n' +
 
         'Descent\n' +
-        'Use when the rider is on a descent.\n\n' +
+'Use when the rider is on a descent.\n\n' +
 
-        'Supply Zone\n' +
-        'Use when the rider is in a supply zone.\n\n' +
+(soloStage.stageType === 'mountain'
+  ? 'Open Valley\n' +
+    'Use when the rider enters an open section between climbs where there is room to make good use of a high movement card.\n\n'
+  : '') +
+
+'Supply Zone\n' +
+'Use when the rider is in a supply zone.\n\n' +
 
         'Sprint\n' +
         'Use when the rider is within 15 squares of the finish line.'
@@ -760,13 +801,7 @@ function getDrawModeLabel(drawMode: DrawMode): string {
 </View>
 
     <View style={styles.optionRow}>
-      {[
-        { label: 'Normal Square', value: 'normal' },
-        { label: 'Ascent / Close to Ascent', value: 'climb' },
-        { label: 'Descent', value: 'descent' },
-        { label: 'Supply Zone', value: 'supply-zone' },
-        { label: 'Sprint', value: 'sprint' },
-      ].map((option) => (
+  {scenarioOptions.map((option) => (
         <Pressable
           key={option.value}
           style={[
@@ -839,6 +874,63 @@ function getDrawModeLabel(drawMode: DrawMode): string {
         </Text>
       </View>
     )}
+
+    {drawMode === 'normal-ai' && drawnCards.length > 0 && (
+  <View style={styles.aiDebugBox}>
+    <Text style={styles.aiDebugTitle}>
+      AI Debug
+    </Text>
+
+    <Text style={styles.aiDebugText}>
+      Strategy: {riderState?.strategy ?? 'balanced'}
+    </Text>
+
+    {riderState?.strategy === 'mountain' &&
+  scenario === 'normal' && (
+    <Text style={styles.aiDebugText}>
+      Mountain draw:{' '}
+      {(riderState.strategyNormalDraws ?? 0) % 2 === 1
+        ? 'HIGH'
+        : 'LOW'}
+    </Text>
+  )}
+
+   {(
+  riderState?.strategy === 'aggressive' &&
+  (riderState.strategyNormalDraws ?? 0) >= 5
+) ||
+(
+  riderState?.strategy === 'defensive' &&
+  (
+    (riderState.strategyNormalDraws ?? 0) >= 5 ||
+    (
+      riderState.defensiveStrategyEnded &&
+      (riderState.recoveryDrawsRemaining ?? 0) === 0
+    )
+  )
+) ? (
+  <Text style={styles.aiDebugText}>
+    Current behavior: Balanced
+  </Text>
+) : (
+  <Text style={styles.aiDebugText}>
+    Strategy draws: {riderState?.strategyNormalDraws ?? 0}
+  </Text>
+)}
+
+    <Text style={styles.aiDebugText}>
+      Recovery draws: {riderState?.recoveryDrawsRemaining ?? 0}
+    </Text>
+
+    <Text style={styles.aiDebugText}>
+      Drawn cards: {drawnCards.map((card) => formatCard(card)).join(' · ')}
+    </Text>
+
+    <Text style={styles.aiDebugText}>
+      Selected: {selectedCard ? formatCard(selectedCard) : '-'}
+    </Text>
+  </View>
+)}
 
     <View style={styles.actionRow}>
       <Pressable style={styles.secondaryButton} onPress={addFatigue}>
@@ -1342,5 +1434,26 @@ confirmButton: {
   padding: 14,
   borderRadius: 14,
   alignItems: 'center',
+},
+aiDebugBox: {
+  marginTop: 12,
+  padding: 12,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 10,
+  backgroundColor: Colors.card,
+},
+
+aiDebugTitle: {
+  fontSize: 13,
+  fontWeight: '900',
+  color: Colors.brown,
+  marginBottom: 6,
+},
+
+aiDebugText: {
+  fontSize: 12,
+  color: Colors.brown,
+  marginBottom: 3,
 },
 });

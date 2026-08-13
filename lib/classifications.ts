@@ -1,7 +1,46 @@
 import { createGameDraft } from './createGameDraft';
 import { gameResults } from './gameResults';
 
+export type RiderClassificationPositions = {
+  gc: number;
+  sprint: number;
+  mountain: number;
+};
 
+export function getRiderClassificationPositions(
+  playerIndex: number,
+  riderType: 'sprinteur' | 'rouleur'
+): RiderClassificationPositions {
+  const playerName =
+    createGameDraft.playerNames[playerIndex] ||
+    `Player ${playerIndex + 1}`;
+
+  const riderName =
+    `${playerName} - ${
+      riderType === 'sprinteur' ? 'Sprinteur' : 'Rouleur'
+    }`;
+
+  const yellow = calculateYellowClassification();
+  const sprint = calculateSprintClassification();
+  const mountain = calculateMountainClassification();
+
+  return {
+    gc:
+      yellow.findIndex(
+        (rider) => rider.riderName === riderName
+      ) + 1,
+
+    sprint:
+      sprint.findIndex(
+        (rider) => rider.riderName === riderName
+      ) + 1,
+
+    mountain:
+      mountain.findIndex(
+        (rider) => rider.riderName === riderName
+      ) + 1,
+  };
+}
 
 function timeToSeconds(time: string) {
   if (!time) return 0;
@@ -351,6 +390,23 @@ export function calculateOverallClassification() {
 
   return players.sort((a, b) => b.points - a.points);
 }
+
+export function getTeamTourPosition(
+  playerIndex: number
+): number {
+  const playerName =
+    createGameDraft.playerNames[playerIndex] ||
+    `Player ${playerIndex + 1}`;
+
+  const overall = calculateOverallClassification();
+
+  const position = overall.findIndex(
+    (player) => player.playerName === playerName
+  );
+
+  return position >= 0 ? position + 1 : 1;
+}
+
 export function getClassificationBonusRules(numberOfStages: number) {
   if (numberOfStages <= 7) {
     return {

@@ -16,6 +16,7 @@ import { Colors } from '@/constants/colors';
 import { getClassificationBonusRules } from '@/lib/classifications';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { resetActiveSoloStageState } from '@/lib/solo/activeSoloStage';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function CreateGameScreen() {
   const [gameName, setGameName] = useState('');
@@ -30,7 +31,13 @@ export default function CreateGameScreen() {
 
   return (
   <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-    <View style={styles.screen}>
+  <KeyboardAwareScrollView
+    style={styles.screen}
+    contentContainerStyle={styles.content}
+    enableOnAndroid
+    extraScrollHeight={120}
+    keyboardShouldPersistTaps="handled"
+  >
       <BackgroundWatermark />
       <Text style={styles.title}>Create Game</Text>
 
@@ -122,18 +129,23 @@ export default function CreateGameScreen() {
       >
         <Text style={styles.buttonText}>Next</Text>
       </Pressable>
-    </View>
+       </KeyboardAwareScrollView>
   </TouchableWithoutFeedback>
 );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 50,
-  },
+ screen: {
+  flex: 1,
+  backgroundColor: Colors.paper,
+},
+
+content: {
+  padding: 24,
+  paddingTop: 50,
+  paddingBottom: 40,
+},
+
   title: {
     fontSize: 36,
     fontWeight: '900',

@@ -4,6 +4,7 @@ import {
 } from './specialRiders';
 
 import { chooseSpecialRiderCard } from './specialRiderAI';
+import type { SoloRiderStrategy } from './soloGameTypes';
 
 export type WindScenario =
   | 'normal'
@@ -15,7 +16,8 @@ export type DummyScenario =
   | 'climb'
   | 'descent'
   | 'supply-zone'
-  | 'sprint';
+  | 'sprint'
+  | 'open-valley';
 
 export type DummyCard = {
   id: string;
@@ -33,6 +35,12 @@ export type DummyRiderState = {
   specialRiderId?: SpecialRiderId;
   round: number;
   lastPlayedValue?: number;
+  strategy?: SoloRiderStrategy;
+  strategyNormalDraws: number;
+defensiveTwoPlayed: boolean;
+recoveryDrawsRemaining: number;
+lastFatigueRound?: number;
+defensiveStrategyEnded: boolean;
 };
 
 export type DummyRoundResult = {
@@ -124,6 +132,12 @@ export function createDummyRider(
   specialRiderId,
   round: 0,
   lastPlayedValue: undefined,
+  strategy: 'balanced',
+strategyNormalDraws: 0,
+defensiveTwoPlayed: false,
+recoveryDrawsRemaining: 0,
+lastFatigueRound: undefined,
+defensiveStrategyEnded: false,
 };
 }
 
@@ -164,12 +178,91 @@ function getRandomPreferredCard(cards: DummyCard[]): DummyCard {
   return getRandomCard(cards);
 }
 
+
+function chooseAggressiveCard(
+  cards: DummyCard[]
+): DummyCard {
+  const sortedCards = [...cards].sort(
+    (a, b) => b.value - a.value
+  );
+
+  const highestCards = sortedCards.slice(0, 2);
+
+  return getRandomCard(highestCards);
+}
+
+function chooseMountainHighCard(
+  cards: DummyCard[]
+): DummyCard {
+  return chooseAggressiveCard(cards);
+}
+
+function chooseMountainLowCard(
+  cards: DummyCard[]
+): DummyCard {
+  const sortedCards = [...cards].sort(
+    (a, b) => a.value - b.value
+  );
+
+  const twoLowest = sortedCards.slice(0, 2);
+
+  const nonTwoAmongLowest = twoLowest.filter(
+    (card) => card.value !== 2
+  );
+
+  // Neither of the two lowest cards is a 2:
+  // choose randomly between them.
+  if (nonTwoAmongLowest.length === 2) {
+    return getRandomCard(nonTwoAmongLowest);
+  }
+
+  // Exactly one of the two lowest cards is a 2:
+  // play the other card.
+  if (nonTwoAmongLowest.length === 1) {
+    return nonTwoAmongLowest[0];
+  }
+
+  // Both lowest cards are 2s:
+  // play the lowest card among the remaining cards.
+  const remainingCards = sortedCards.slice(2);
+
+  if (remainingCards.length > 0) {
+    const lowestRemainingValue = remainingCards[0].value;
+
+    return getRandomCard(
+      remainingCards.filter(
+        (card) => card.value === lowestRemainingValue
+      )
+    );
+  }
+
+  // Safety fallback.
+  return getRandomCard(cards);
+}
+
+function chooseDefensiveCard(
+  cards: DummyCard[]
+): DummyCard {
+  const sortedCards = [...cards].sort(
+    (a, b) => a.value - b.value
+  );
+
+  const lowestCards = sortedCards.slice(0, 2);
+
+  return getRandomCard(lowestCards);
+}
+
 function chooseCard(
   cards: DummyCard[],
   scenario: DummyScenario,
   specialRiderId?: SpecialRiderId,
   round = 0,
-  lastPlayedValue?: number
+  lastPlayedValue?: number,
+  strategy: SoloRiderStrategy = 'balanced',
+  strategyNormalDraws = 0,
+  recoveryDrawsRemaining = 0,
+  defensiveTwoPlayed = false,
+  defensiveStrategyEnded = false
 ): DummyCard {
   if (scenario === 'normal') {
   const shouldSaveSpecialCards =
@@ -182,14 +275,6 @@ function chooseCard(
 
   let playableCards = cards;
 
-  const withoutTwos = playableCards.filter(
-    (card) => card.value !== 2
-  );
-
-  if (withoutTwos.length > 0) {
-    playableCards = withoutTwos;
-  }
-
   if (shouldSaveSpecialCards) {
     const withoutSpecialCards = playableCards.filter(
       (card) => !card.isSpecial
@@ -199,6 +284,57 @@ function chooseCard(
       playableCards = withoutSpecialCards;
     }
   }
+
+  if (
+  strategy === 'defensive' &&
+  recoveryDrawsRemaining > 0
+) {
+  return chooseAggressiveCard(playableCards);
+}
+
+  if (
+  strategy === 'aggressive' &&
+  strategyNormalDraws < 5
+) {
+  return chooseAggressiveCard(playableCards);
+}
+
+if (
+  strategy === 'defensive' &&
+  !defensiveStrategyEnded &&
+  strategyNormalDraws < 5
+) {
+  let defensiveCards = playableCards;
+
+  if (defensiveTwoPlayed) {
+    const withoutTwos = defensiveCards.filter(
+      (card) => card.value !== 2
+    );
+
+    if (withoutTwos.length > 0) {
+      defensiveCards = withoutTwos;
+    }
+  }
+
+  return chooseDefensiveCard(defensiveCards);
+}
+
+if (strategy === 'mountain') {
+  const useHigh =
+    strategyNormalDraws % 2 === 0;
+
+  return useHigh
+    ? chooseMountainHighCard(playableCards)
+    : chooseMountainLowCard(playableCards);
+}
+
+const withoutTwos = playableCards.filter(
+  (card) => card.value !== 2
+);
+
+if (withoutTwos.length > 0) {
+  playableCards = withoutTwos;
+}
 
   if (lastPlayedValue !== undefined) {
     const withoutSameValue = playableCards.filter(
@@ -211,6 +347,30 @@ function chooseCard(
   }
 
   return getRandomCard(playableCards);
+}
+
+if (scenario === 'open-valley') {
+  const shouldSaveSpecialCards =
+    round < 10 &&
+    (
+      specialRiderId === 'grimpeur' ||
+      specialRiderId === 'descender' ||
+      specialRiderId === 'mountaineer'
+    );
+
+  let playableCards = cards;
+
+  if (shouldSaveSpecialCards) {
+    const withoutSpecialCards = playableCards.filter(
+      (card) => !card.isSpecial
+    );
+
+    if (withoutSpecialCards.length > 0) {
+      playableCards = withoutSpecialCards;
+    }
+  }
+
+  return chooseAggressiveCard(playableCards);
 }
 
   if (scenario === 'climb') {
@@ -403,14 +563,49 @@ console.log('SOLO DEBUG', {
 
 const selectedCard =
   specialCard ?? chooseCard(
-  drawResult.cards,
-  scenario,
-  rider.specialRiderId,
-  round,
-  rider.lastPlayedValue
-);
+    drawResult.cards,
+    scenario,
+    rider.specialRiderId,
+    round,
+    rider.lastPlayedValue,
+    rider.strategy,
+    rider.strategyNormalDraws,
+    rider.recoveryDrawsRemaining,
+    rider.defensiveTwoPlayed,
+    rider.defensiveStrategyEnded
+  );
 
 finishRound(rider, drawResult, selectedCard);
+
+if (
+  scenario === 'normal' &&
+  rider.strategy === 'defensive' &&
+  !rider.defensiveStrategyEnded &&
+  rider.strategyNormalDraws < 5 &&
+  selectedCard.value === 2
+) {
+  rider.defensiveTwoPlayed = true;
+}
+
+if (
+  scenario === 'normal' ||
+  (
+    scenario === 'open-valley' &&
+    rider.strategy === 'aggressive'
+  )
+) {
+  rider.strategyNormalDraws += 1;
+}
+
+if (
+  (
+    scenario === 'normal' ||
+    scenario === 'open-valley'
+  ) &&
+  rider.recoveryDrawsRemaining > 0
+) {
+  rider.recoveryDrawsRemaining -= 1;
+}
 
 return {
   drawnCards: drawResult.cards,
@@ -496,6 +691,12 @@ export function cloneDummyRiderState(
     round: rider.round,
     lastPlayedValue: rider.lastPlayedValue,
     pendingHand: [...rider.pendingHand],
+    strategy: rider.strategy,
+    strategyNormalDraws: rider.strategyNormalDraws,
+defensiveTwoPlayed: rider.defensiveTwoPlayed,
+recoveryDrawsRemaining: rider.recoveryDrawsRemaining,
+lastFatigueRound: rider.lastFatigueRound,
+defensiveStrategyEnded: rider.defensiveStrategyEnded,
   };
 }
 
@@ -510,6 +711,12 @@ export function restoreDummyRiderState(
   rider.round = snapshot.round;
   rider.lastPlayedValue = snapshot.lastPlayedValue;
   rider.pendingHand = [...snapshot.pendingHand];
+  rider.strategy = snapshot.strategy;
+  rider.strategyNormalDraws = snapshot.strategyNormalDraws;
+rider.defensiveTwoPlayed = snapshot.defensiveTwoPlayed;
+rider.recoveryDrawsRemaining = snapshot.recoveryDrawsRemaining;
+rider.lastFatigueRound = snapshot.lastFatigueRound;
+rider.defensiveStrategyEnded = snapshot.defensiveStrategyEnded;
 }
 export function prepareRiderForNextStage(
   rider: DummyRiderState
@@ -526,6 +733,13 @@ export function prepareRiderForNextStage(
   rider.pendingHand = [];
 
   rider.round = 0;
+
+  rider.strategy = 'balanced';
+rider.strategyNormalDraws = 0;
+rider.defensiveTwoPlayed = false;
+rider.recoveryDrawsRemaining = 0;
+rider.defensiveStrategyEnded = false;
+rider.lastFatigueRound = undefined;
 }
 
 export function setFatigueCardsForStageResult(
