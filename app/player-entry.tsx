@@ -118,6 +118,21 @@ const editedEntry =
 
 const playerCount = createGameDraft.playerNames.length;
 
+const dummyTeam =
+  createGameDraft.companionMode === 'dummy'
+    ? createGameDraft.dummyTeams[playerIndex]
+    : undefined;
+
+const usesManagedFatigue =
+  createGameDraft.companionMode === 'dummy' &&
+  (
+    dummyTeam?.teamType === 'normal-ai' ||
+    (
+      dummyTeam?.teamType === 'human' &&
+      dummyTeam?.drawMode === 'app-draw'
+    )
+  );
+
 const isRestDay = editedEntry
   ? editedEntry.entryType === 'restDay'
   : gameState.currentEntryType === 'restDay';
@@ -399,14 +414,22 @@ onEndEditing={() =>
 
     <View style={styles.inputColumn}>
       <View style={styles.labelRow}>
-  <Text style={styles.gridLabel}>Fatigue Cards</Text>
+  <Text style={styles.gridLabel}>
+  {usesManagedFatigue
+    ? 'Fatigue Cards'
+    : 'Fatigue Cards for Next Stage'}
+</Text>
 
   <Pressable
     onPress={() =>
       Alert.alert(
-        'Fatigue Cards',
-        "Enter the number of fatigue cards currently in this rider's deck if you want to save the game and resume it later."
-      )
+  usesManagedFatigue
+    ? 'Fatigue Cards'
+    : 'Fatigue Cards for Next Stage',
+  usesManagedFatigue
+  ? 'Shows the number of Fatigue Cards added to this rider during the current stage. Remember to manually adjust this number following the discard rules between stages and after Rest Days.'
+  : 'Enter the number of Fatigue Cards that should be added to this rider\'s deck for the next stage, after discarding cards between stages and any additional discard from a Rest Day.'
+)
     }
   >
     <Ionicons

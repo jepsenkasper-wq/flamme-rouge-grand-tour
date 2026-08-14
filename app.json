@@ -9,13 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.jepsenkasper.flammerougegrandtour",
-      "buildNumber": "1",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
+  "supportsTablet": false,
+  "bundleIdentifier": "com.jepsenkasper.flammerougegrandtour",
+  "buildNumber": "1",
+  "infoPlist": {
+    "ITSAppUsesNonExemptEncryption": false,
+    "CFBundleDisplayName": "Grand Tour Companion"
+  }
+},
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#d8c49a",
