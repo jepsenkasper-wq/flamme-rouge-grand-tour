@@ -191,6 +191,12 @@ const riderShortLabel =
     );
   }
 
+const [lastAddFatigueRound, setLastAddFatigueRound] =
+  useState<number | null>(null);
+
+const [lastRemoveFatigueRound, setLastRemoveFatigueRound] =
+  useState<number | null>(null);  
+
 const insets = useSafeAreaInsets();
 
 const contentStyle = {
@@ -232,7 +238,8 @@ function showActionMessage(message: string) {
   riderState,
   scenario,
   soloStage.round,
-  drawCount
+  drawCount,
+  refreshAlreadyUsed
 );
 
 teamState.playedCards ??= {};
@@ -441,7 +448,7 @@ async function selectHumanCard(cardId: string) {
   await persistDrawState();
 }
 
-async function addFatigue() {
+async function performAddFatigue() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
@@ -451,16 +458,18 @@ async function addFatigue() {
 
   addFatigueCardToSetAside(riderState);
 
-if (
-  riderState.strategy === 'defensive' &&
-  !riderState.defensiveStrategyEnded &&
-  gotFatigueLastRound
-) {
-  riderState.recoveryDrawsRemaining = 2;
-  riderState.defensiveStrategyEnded = true;
-}
+  if (
+    riderState.strategy === 'defensive' &&
+    !riderState.defensiveStrategyEnded &&
+    gotFatigueLastRound
+  ) {
+    riderState.recoveryDrawsRemaining = 2;
+    riderState.defensiveStrategyEnded = true;
+  }
 
   riderState.lastFatigueRound = soloStage.round;
+
+  setLastAddFatigueRound(soloStage.round);
 
   updateFatigueTransfer();
   updateScreen();
@@ -470,18 +479,74 @@ if (
   await persistDrawState();
 }
 
-async function removeFatigue() {
+async function addFatigue() {
+  if (!riderState) return;
+
+  if (lastAddFatigueRound === soloStage.round) {
+    Alert.alert(
+      'Add another Fatigue Card?',
+      'You have already added a Fatigue Card to this rider in this round. Are you sure you want to add another one?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Add',
+          onPress: () => {
+            void performAddFatigue();
+          },
+        },
+      ]
+    );
+
+    return;
+  }
+
+  await performAddFatigue();
+}
+async function performRemoveFatigue() {
   if (!riderState) return;
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
+
   removeFatigueCardFromSetAside(riderState);
+
+  setLastRemoveFatigueRound(soloStage.round);
+
   updateFatigueTransfer();
   showActionMessage('Fatigue card removed.');
   updateScreen();
 
- await persistDrawState(); 
+  await persistDrawState();
 }
 
+async function removeFatigue() {
+  if (!riderState) return;
+
+  if (lastRemoveFatigueRound === soloStage.round) {
+    Alert.alert(
+      'Remove another Fatigue Card?',
+      'You have already removed a Fatigue Card from this rider in this round. Are you sure you want to remove another one?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          onPress: () => {
+            void performRemoveFatigue();
+          },
+        },
+      ]
+    );
+
+    return;
+  }
+
+  await performRemoveFatigue();
+}
 async function refresh(limit: 24 | 25) {
   if (!riderState) return;
 
@@ -612,19 +677,6 @@ const scenarioOptions: {
     </Text>
   </>
 )}
-
-<Text style={styles.deckInfo}>
-  Round{' '}
-  <Text style={styles.roundNumber}>
-    {drawMode === 'human-app' || drawMode === 'normal-ai'
-      ? (riderState?.round ?? 0) + 1
-      : drawMode === 'muscle'
-      ? ((params.riderKey
-          ? muscleTeamState?.[params.riderKey].round
-          : 0) ?? 0) + 1
-      : (pelotonTeamState?.round ?? 0) + 1}
-  </Text>
-</Text>
 
 </View>
 
@@ -1410,10 +1462,6 @@ actionMessage: {
   color: '#2E7D32',
   fontSize: 14,
   fontWeight: '700',
-},
-roundNumber: {
-  color: Colors.red,
-  fontWeight: '900',
 },
 
 primaryButtonDisabled: {

@@ -4,7 +4,7 @@ import {
 } from './specialRiders';
 
 import { chooseSpecialRiderCard } from './specialRiderAI';
-import type { SoloRiderStrategy } from './soloGameTypes';
+import type { SoloRiderStrategy, SoloStageType } from './soloGameTypes';
 
 export type WindScenario =
   | 'normal'
@@ -262,18 +262,36 @@ function chooseCard(
   strategyNormalDraws = 0,
   recoveryDrawsRemaining = 0,
   defensiveTwoPlayed = false,
-  defensiveStrategyEnded = false
+  defensiveStrategyEnded = false,
+  refreshUsed = false,
+  stageType: SoloStageType = 'flat'
 ): DummyCard {
   if (scenario === 'normal') {
+  const specialProtectionLimit = refreshUsed ? 14 : 10;
+
   const shouldSaveSpecialCards =
-    round < 10 &&
+    round < specialProtectionLimit &&
     (
       specialRiderId === 'grimpeur' ||
       specialRiderId === 'descender' ||
       specialRiderId === 'mountaineer'
     );
 
+  const prioritizeAvoidingTwos =
+    (stageType === 'flat' || stageType === 'cobbles') &&
+    strategy !== 'defensive';
+
   let playableCards = cards;
+
+  if (prioritizeAvoidingTwos) {
+    const withoutTwos = playableCards.filter(
+      (card) => card.value !== 2
+    );
+
+    if (withoutTwos.length > 0) {
+      playableCards = withoutTwos;
+    }
+  }
 
   if (shouldSaveSpecialCards) {
     const withoutSpecialCards = playableCards.filter(
@@ -350,13 +368,15 @@ if (withoutTwos.length > 0) {
 }
 
 if (scenario === 'open-valley') {
-  const shouldSaveSpecialCards =
-    round < 10 &&
-    (
-      specialRiderId === 'grimpeur' ||
-      specialRiderId === 'descender' ||
-      specialRiderId === 'mountaineer'
-    );
+  const specialProtectionLimit = refreshUsed ? 14 : 10;
+
+const shouldSaveSpecialCards =
+  round < specialProtectionLimit &&
+  (
+    specialRiderId === 'grimpeur' ||
+    specialRiderId === 'descender' ||
+    specialRiderId === 'mountaineer'
+  );
 
   let playableCards = cards;
 
@@ -370,24 +390,46 @@ if (scenario === 'open-valley') {
     }
   }
 
-  return chooseAggressiveCard(playableCards);
+  const highestValue = Math.max(
+  ...playableCards.map((card) => card.value)
+);
+
+return getRandomPreferredCard(
+  playableCards.filter(
+    (card) => card.value === highestValue
+  )
+);
 }
 
-  if (scenario === 'climb') {
-    const bestDistance = Math.min(
-      ...cards.map((card) => Math.abs(card.value - 5))
-    );
+ if (scenario === 'climb') {
+  let playableCards = cards;
 
-    const closestCards = cards.filter(
-      (card) => Math.abs(card.value - 5) === bestDistance
-    );
+  const withoutTwos = playableCards.filter(
+    (card) => card.value !== 2
+  );
 
-    const lowestValue = Math.min(...closestCards.map((card) => card.value));
-
-    return getRandomPreferredCard(
-      closestCards.filter((card) => card.value === lowestValue)
-    );
+  if (withoutTwos.length > 0) {
+    playableCards = withoutTwos;
   }
+
+  const bestDistance = Math.min(
+    ...playableCards.map((card) => Math.abs(card.value - 5))
+  );
+
+  const closestCards = playableCards.filter(
+    (card) => Math.abs(card.value - 5) === bestDistance
+  );
+
+  const lowestValue = Math.min(
+    ...closestCards.map((card) => card.value)
+  );
+
+  return getRandomCard(
+    closestCards.filter(
+      (card) => card.value === lowestValue
+    )
+  );
+}
 
 if (scenario === 'supply-zone') {
   const fatigueCards = cards.filter(
@@ -522,9 +564,9 @@ function drawHand(
     }
   }
 
-  while (cards.length < drawCount) {
-    cards.push(createFatigueCard());
-  }
+  if (cards.length === 0) {
+  cards.push(createFatigueCard());
+}
 
 return {
   cards,
@@ -536,7 +578,9 @@ export function playDummyRound(
   rider: DummyRiderState,
   scenario: DummyScenario = 'normal',
   round = 0,
-  drawCount = 4
+  drawCount = 4,
+  refreshUsed = false,
+  stageType: SoloStageType = 'flat'
 ): DummyRoundResult {
   const drawResult = drawHand(rider, drawCount);
 
@@ -572,7 +616,9 @@ const selectedCard =
     rider.strategyNormalDraws,
     rider.recoveryDrawsRemaining,
     rider.defensiveTwoPlayed,
-    rider.defensiveStrategyEnded
+    rider.defensiveStrategyEnded,
+    refreshUsed,
+    stageType
   );
 
 finishRound(rider, drawResult, selectedCard);

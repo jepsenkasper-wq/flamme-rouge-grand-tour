@@ -55,9 +55,9 @@ function getBaseWeights(
     case 'mountain':
       return {
         aggressive: 5,
-        defensive: 30,
+        defensive: 0,
         balanced: 0,
-        mountain: 65,
+        mountain: 95,
       };
 
     case 'cobbles':
@@ -331,7 +331,7 @@ export function getStrategyWeights(
 
   if (input.stageType === 'mountain') {
     weights.aggressive = Math.max(5, weights.aggressive);
-    weights.defensive = Math.max(5, weights.defensive);
+    weights.defensive = 0;
     weights.mountain = Math.max(5, weights.mountain);
     weights.balanced = 0;
   } else {

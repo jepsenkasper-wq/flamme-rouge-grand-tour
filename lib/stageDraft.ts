@@ -38,13 +38,23 @@ initialize(
   }[],
   stageNumber?: number
 ) {
-  if (
-    stageNumber !== undefined &&
-    this.stageNumber === stageNumber &&
-    this.players.length === playerCount
-  ) {
-    return;
+ if (
+  stageNumber !== undefined &&
+  this.stageNumber === stageNumber &&
+  this.players.length === playerCount
+) {
+  if (fatigueTransfers) {
+    this.players.forEach((player, index) => {
+      player.sprinteur.fatigueCards =
+        fatigueTransfers[index]?.sprinteurFatigueCards?.toString() ?? '';
+
+      player.rouleur.fatigueCards =
+        fatigueTransfers[index]?.rouleurFatigueCards?.toString() ?? '';
+    });
   }
+
+  return;
+}
 
   this.stageNumber = stageNumber ?? this.stageNumber;
 
