@@ -270,6 +270,7 @@ return (
         </View>
       )}
 
+{/*
 {stageType !== 'standard' && (
   <View style={styles.strategyDebug}>
     <Text style={styles.strategyDebugTitle}>
@@ -297,6 +298,7 @@ return (
     })}
   </View>
 )}
+*/}
 
 <Text style={styles.roundText}>
   Round {getCurrentRound()}

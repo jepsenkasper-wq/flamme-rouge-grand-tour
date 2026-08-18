@@ -593,6 +593,7 @@ const specialCard =
         rider.specialRiderId
       );
 
+/*
 console.log('SOLO DEBUG', {
   scenario,
   specialRiderId: rider.specialRiderId,
@@ -604,6 +605,7 @@ console.log('SOLO DEBUG', {
   })),
   specialCard,
 });
+*/
 
 const selectedCard =
   specialCard ?? chooseCard(

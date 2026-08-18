@@ -239,7 +239,8 @@ function showActionMessage(message: string) {
   scenario,
   soloStage.round,
   drawCount,
-  refreshAlreadyUsed
+  refreshAlreadyUsed,
+  soloStage.stageType
 );
 
 teamState.playedCards ??= {};
@@ -927,7 +928,9 @@ const scenarioOptions: {
       </View>
     )}
 
-    {drawMode === 'normal-ai' && drawnCards.length > 0 && (
+
+{/*
+{drawMode === 'normal-ai' && drawnCards.length > 0 && (
   <View style={styles.aiDebugBox}>
     <Text style={styles.aiDebugTitle}>
       AI Debug
@@ -938,37 +941,37 @@ const scenarioOptions: {
     </Text>
 
     {riderState?.strategy === 'mountain' &&
-  scenario === 'normal' && (
-    <Text style={styles.aiDebugText}>
-      Mountain draw:{' '}
-      {(riderState.strategyNormalDraws ?? 0) % 2 === 1
-        ? 'HIGH'
-        : 'LOW'}
-    </Text>
-  )}
+      scenario === 'normal' && (
+        <Text style={styles.aiDebugText}>
+          Mountain draw:{' '}
+          {(riderState.strategyNormalDraws ?? 0) % 2 === 1
+            ? 'HIGH'
+            : 'LOW'}
+        </Text>
+      )}
 
-   {(
-  riderState?.strategy === 'aggressive' &&
-  (riderState.strategyNormalDraws ?? 0) >= 5
-) ||
-(
-  riderState?.strategy === 'defensive' &&
-  (
-    (riderState.strategyNormalDraws ?? 0) >= 5 ||
+    {(
+      riderState?.strategy === 'aggressive' &&
+      (riderState.strategyNormalDraws ?? 0) >= 5
+    ) ||
     (
-      riderState.defensiveStrategyEnded &&
-      (riderState.recoveryDrawsRemaining ?? 0) === 0
-    )
-  )
-) ? (
-  <Text style={styles.aiDebugText}>
-    Current behavior: Balanced
-  </Text>
-) : (
-  <Text style={styles.aiDebugText}>
-    Strategy draws: {riderState?.strategyNormalDraws ?? 0}
-  </Text>
-)}
+      riderState?.strategy === 'defensive' &&
+      (
+        (riderState.strategyNormalDraws ?? 0) >= 5 ||
+        (
+          riderState.defensiveStrategyEnded &&
+          (riderState.recoveryDrawsRemaining ?? 0) === 0
+        )
+      )
+    ) ? (
+      <Text style={styles.aiDebugText}>
+        Current behavior: Balanced
+      </Text>
+    ) : (
+      <Text style={styles.aiDebugText}>
+        Strategy draws: {riderState?.strategyNormalDraws ?? 0}
+      </Text>
+    )}
 
     <Text style={styles.aiDebugText}>
       Recovery draws: {riderState?.recoveryDrawsRemaining ?? 0}
@@ -983,6 +986,7 @@ const scenarioOptions: {
     </Text>
   </View>
 )}
+*/}
 
     <View style={styles.actionRow}>
       <Pressable style={styles.secondaryButton} onPress={addFatigue}>
