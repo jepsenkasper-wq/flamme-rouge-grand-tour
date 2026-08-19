@@ -1,8 +1,9 @@
-const isIos = process.env.EAS_BUILD_PLATFORM === 'ios';
+const appName =
+  process.env.APP_NAME || 'Flamme Rouge Companion';
 
 export default {
   expo: {
-    name: isIos ? 'Grand Tour Companion' : 'Flamme Rouge Companion',
+    name: appName,
     slug: 'flamme-rouge-grand-tour',
     version: '1.0.0',
     orientation: 'portrait',

@@ -3,18 +3,29 @@
     "version": ">= 20.2.0",
     "appVersionSource": "remote"
   },
+
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal"
     },
+
     "preview": {
       "distribution": "internal"
     },
+
     "production": {
       "autoIncrement": true
+    },
+
+    "production-ios": {
+      "extends": "production",
+      "env": {
+        "APP_NAME": "Grand Tour Companion"
+      }
     }
   },
+
   "submit": {
     "production": {}
   }
