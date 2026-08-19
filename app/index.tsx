@@ -1,4 +1,12 @@
-import { ImageBackground, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  ImageBackground,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Link } from 'expo-router';
 
 import { Colors } from '@/constants/colors';
@@ -26,9 +34,18 @@ const isTablet = width >= 700;
     isTablet && styles.tabletOverlay,
   ]}>
         <View style={styles.logoArea}>
-          <Text style={styles.title}>FLAMME{'\n'}ROUGE</Text>
-          <Text style={styles.subtitle}>GRAND TOUR</Text>
-        </View>
+  {Platform.OS === 'ios' ? (
+    <>
+      <Text style={styles.title}>GRAND TOUR{'\n'}COMPANION</Text>
+      <Text style={styles.subtitle}>BOARD GAME TOUR MANAGER</Text>
+    </>
+  ) : (
+    <>
+      <Text style={styles.title}>FLAMME{'\n'}ROUGE</Text>
+      <Text style={styles.subtitle}>GRAND TOUR</Text>
+    </>
+  )}
+</View>
 
         <View style={styles.buttonGroup}>
           <Link href="/create-game" asChild>
@@ -94,10 +111,11 @@ const styles = StyleSheet.create({
 },
   subtitle: {
     marginTop: -6,
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: '900',
     color: '#1E232A',
-    letterSpacing: 3,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
   buttonGroup: {
     gap: 10,
