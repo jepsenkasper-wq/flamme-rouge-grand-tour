@@ -19,6 +19,14 @@ import { getActiveSoloStageState, syncSoloFatigueTransfersFromDecks } from '@/li
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { assignStrategiesForStage } from '@/lib/solo/strategyEngine';
+import {
+  drawBreakawayHand,
+  registerBreakawayBid,
+  resolveBreakaway,
+  selectBreakawayBidCard,
+  selectBreakawayRider,
+  startBreakaway,
+} from '@/lib/solo/breakawayEngine';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -144,6 +152,43 @@ useFocusEffect(
   const soloStage = getActiveSoloStageState();
 const stageType = soloStage.stageType;
 
+const humanAppDrawTeams = createGameDraft.dummyTeams.filter(
+  (team) =>
+    team.teamType === 'human' &&
+    team.drawMode === 'app-draw'
+);
+
+const humanCardDrawTeams = createGameDraft.dummyTeams.filter(
+  (team) =>
+    team.teamType === 'human' &&
+    team.drawMode === 'card-draw'
+);
+
+const allHumanBreakawayRidersSelected =
+  humanAppDrawTeams.every((team) =>
+    soloStage.breakaway.bids.some(
+      (bid) => bid.teamId === team.id
+    )
+  );
+
+const allHumanBid1Completed =
+  humanAppDrawTeams.every((team) => {
+    const bid = soloStage.breakaway.bids.find(
+      (bid) => bid.teamId === team.id
+    );
+
+    return bid?.bid1CardId !== undefined;
+  });
+
+const allHumanBid2Completed =
+  humanAppDrawTeams.every((team) => {
+    const bid = soloStage.breakaway.bids.find(
+      (bid) => bid.teamId === team.id
+    );
+
+    return bid?.bid2CardId !== undefined;
+  });
+
 const stageHasStarted =
   soloStage.round > 1 ||
   soloStage.teams.some((team) =>
@@ -172,6 +217,127 @@ setAllowIncompleteRound(false);
 
 setRefreshKey((c) => c + 1);
 }
+
+async function drawAIBreakawayBid1() {
+  for (const bid of soloStage.breakaway.bids) {
+    const teamState = soloStage.teams.find(
+      (team) => team.teamId === bid.teamId
+    );
+
+    if (!teamState || teamState.teamType !== 'normal-ai') {
+      continue;
+    }
+
+    if (bid.bid1CardId !== undefined) {
+      continue;
+    }
+
+    const riderState =
+      bid.riderKey === 'sprinteur'
+        ? teamState.sprinteur
+        : teamState.rouleur;
+
+    if (!riderState) {
+      continue;
+    }
+
+    const cards = drawBreakawayHand(riderState);
+
+    if (cards.length === 0) {
+      continue;
+    }
+
+    const selectedCard =
+      cards[Math.floor(Math.random() * cards.length)];
+
+    selectBreakawayBidCard(
+      riderState,
+      cards,
+      selectedCard
+    );
+
+    registerBreakawayBid(
+      bid,
+      selectedCard
+    );
+  }
+
+  soloStage.breakaway.phase = 'bid-1-results';
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+}
+
+async function drawAIBreakawayBid2() {
+  for (const bid of soloStage.breakaway.bids) {
+    const teamState = soloStage.teams.find(
+      (team) => team.teamId === bid.teamId
+    );
+
+    if (!teamState || teamState.teamType !== 'normal-ai') {
+      continue;
+    }
+
+    if (bid.bid2CardId !== undefined) {
+      continue;
+    }
+
+    const riderState =
+      bid.riderKey === 'sprinteur'
+        ? teamState.sprinteur
+        : teamState.rouleur;
+
+    if (!riderState) {
+      continue;
+    }
+
+    const cards = drawBreakawayHand(riderState);
+
+    if (cards.length === 0) {
+      continue;
+    }
+
+    const selectedCard =
+      cards[Math.floor(Math.random() * cards.length)];
+
+    selectBreakawayBidCard(
+      riderState,
+      cards,
+      selectedCard
+    );
+
+    registerBreakawayBid(
+      bid,
+      selectedCard
+    );
+  }
+
+  soloStage.breakaway.phase = 'bid-2-results';
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+}
+
+function toggleBreakawayWinner(teamId: string) {
+  const winnerIds = soloStage.breakaway.winnerIds;
+
+  if (winnerIds.includes(teamId)) {
+    soloStage.breakaway.winnerIds =
+      winnerIds.filter((id) => id !== teamId);
+  } else {
+    soloStage.breakaway.winnerIds = [
+      ...winnerIds,
+      teamId,
+    ];
+  }
+
+  setRefreshKey((current) => current + 1);
+}
+
 return (
   <View style={styles.screen}>
     <BackgroundWatermark />
@@ -300,6 +466,468 @@ return (
 )}
 */}
 
+{!stageHasStarted && !soloStage.breakaway.completed && (
+  <View style={styles.breakawaySection}>
+    <Text style={styles.breakawayLabel}>Breakaway</Text>
+
+    <View style={styles.breakawayRow}>
+      <Pressable
+        style={styles.breakawayButton}
+       onPress={() => {
+  Alert.alert(
+    'No Breakaway',
+    'Are you sure? This choice cannot be changed.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Confirm',
+        style: 'destructive',
+        onPress: async () => {
+          startBreakaway(soloStage, 'none');
+
+          await saveGame();
+          await updateActiveSavedGame();
+
+          setRefreshKey((current) => current + 1);
+        },
+      },
+    ]
+  );
+}}
+      >
+        <Text style={styles.breakawayButtonText}>
+          No Breakaway
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.breakawayButton}
+        onPress={() => {
+  startBreakaway(soloStage, 'one');
+
+  soloStage.teams.forEach((team) => {
+    if (team.teamType !== 'normal-ai') {
+      return;
+    }
+
+    const riderKey =
+      Math.random() < 0.5
+        ? 'sprinteur'
+        : 'rouleur';
+
+    selectBreakawayRider(
+      soloStage,
+      team.teamId,
+      riderKey
+    );
+  });
+
+  if (humanAppDrawTeams.length === 0) {
+  soloStage.breakaway.phase = 'bid-1';
+}
+
+  setRefreshKey((current) => current + 1);
+}}
+      >
+        <Text style={styles.breakawayButtonText}>
+          Breakaway
+        </Text>
+      </Pressable>
+    </View>
+  </View>
+)}
+
+{!stageHasStarted &&
+  soloStage.breakaway.mode !== 'none' &&
+  !soloStage.breakaway.completed &&
+  humanAppDrawTeams.length > 0 && (
+    <View style={styles.breakawayHumanSection}>
+      <Text style={styles.breakawayLabel}>
+        Select Breakaway Rider
+      </Text>
+
+      {humanAppDrawTeams.map((team) => {
+        const selectedBid = soloStage.breakaway.bids.find(
+          (bid) => bid.teamId === team.id
+        );
+        const bid1Completed =
+  selectedBid?.bid1CardId !== undefined;
+
+        return (
+          <View
+            key={team.id}
+            style={styles.breakawayHumanRow}
+          >
+            <Text style={styles.breakawayHumanName}>
+              {team.name}
+            </Text>
+
+           <View style={styles.breakawayRiderButtons}>
+  <Pressable
+    disabled={bid1Completed}
+    style={[
+      styles.breakawayRiderButton,
+      selectedBid?.riderKey === 'sprinteur' &&
+        styles.breakawayRiderButtonActive,
+      bid1Completed &&
+        styles.breakawayRiderButtonDisabled,
+    ]}
+    onPress={() => {
+      selectBreakawayRider(
+        soloStage,
+        team.id,
+        'sprinteur'
+      );
+
+      soloStage.breakaway.phase = 'bid-1';
+
+      setRefreshKey((current) => current + 1);
+    }}
+  >
+    <Text style={styles.breakawayRiderButtonText}>
+      S
+    </Text>
+  </Pressable>
+
+              <Pressable
+              disabled={bid1Completed}
+                style={[
+  styles.breakawayRiderButton,
+  selectedBid?.riderKey === 'rouleur' &&
+    styles.breakawayRiderButtonActive,
+  bid1Completed &&
+    styles.breakawayRiderButtonDisabled,
+]}
+                onPress={() => {
+                  selectBreakawayRider(
+                    soloStage,
+                    team.id,
+                    'rouleur'
+                  );
+
+                  soloStage.breakaway.phase = 'bid-1';
+
+                  setRefreshKey((current) => current + 1);
+                }}
+              >
+                <Text style={styles.breakawayRiderButtonText}>
+                  R
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  )}
+
+{soloStage.breakaway.phase === 'bid-1' &&
+  humanAppDrawTeams.map((team) => {
+    const bid = soloStage.breakaway.bids.find(
+      (bid) => bid.teamId === team.id
+    );
+
+    if (!bid) {
+      return null;
+    }
+  
+        const bid1Completed =
+  bid.bid1CardId !== undefined;
+
+    return (
+      <Pressable
+  key={team.id}
+  disabled={bid1Completed}
+  style={[
+    styles.breakawayButton,
+    bid1Completed && styles.buttonDisabled,
+  ]}
+  onPress={() => {
+    router.push({
+      pathname: '/draw',
+      params: {
+        teamId: team.id,
+        riderKey: bid.riderKey,
+        drawMode: 'human-app',
+        breakawayBid: '1',
+      },
+    });
+  }}
+>
+  <Text style={styles.breakawayButtonText}>
+    {team.name} – {bid1Completed ? 'Bid 1 Completed' : 'Draw Bid 1'}
+  </Text>
+</Pressable>
+    );
+  })}
+
+{soloStage.breakaway.phase === 'bid-1' &&
+  allHumanBid1Completed && (
+  <Pressable
+    style={styles.breakawayButton}
+    onPress={drawAIBreakawayBid1}
+  >
+    <Text style={styles.breakawayButtonText}>
+      Draw AI Bid 1
+    </Text>
+  </Pressable>
+)}
+
+{(soloStage.breakaway.phase === 'bid-1' ||
+  soloStage.breakaway.phase === 'bid-1-results' ||
+  soloStage.breakaway.phase === 'bid-2') &&
+  soloStage.breakaway.bids.some(
+    (bid) => bid.bid1Value !== undefined
+  ) && (
+    <View style={styles.breakawayResults}>
+      <Text style={styles.breakawayLabel}>
+        Bid 1 Results
+      </Text>
+
+      {soloStage.breakaway.bids.map((bid) => {
+        if (bid.bid1Value === undefined) {
+          return null;
+        }
+
+        const team = createGameDraft.dummyTeams.find(
+          (team) => team.id === bid.teamId
+        );
+
+        if (!team) {
+          return null;
+        }
+
+        const riderLabel =
+          bid.riderKey === 'sprinteur' ? 'S' : 'R';
+
+        return (
+          <Text
+            key={bid.teamId}
+            style={styles.breakawayResultText}
+          >
+            {team.name} – {riderLabel}: {bid.bid1Value}
+          </Text>
+        );
+      })}
+    </View>
+  )}
+
+  {soloStage.breakaway.phase === 'bid-1-results' && (
+  <Pressable
+    style={styles.breakawayButton}
+    onPress={async () => {
+      soloStage.breakaway.phase = 'bid-2';
+
+      await saveGame();
+      await updateActiveSavedGame();
+
+      setRefreshKey((current) => current + 1);
+    }}
+  >
+    <Text style={styles.breakawayButtonText}>
+      Start Bid 2
+    </Text>
+  </Pressable>
+)}
+
+{soloStage.breakaway.phase === 'bid-2-results' &&
+  !soloStage.breakaway.completed && (
+  <View style={styles.breakawayResults}>
+    <Text style={styles.breakawayLabel}>
+      Breakaway Results
+    </Text>
+
+    <Text style={styles.breakawayWinnerHint}>
+  Choose breakaway rider(s)
+</Text>
+
+    {soloStage.breakaway.bids.map((bid) => {
+      const team = createGameDraft.dummyTeams.find(
+        (team) => team.id === bid.teamId
+      );
+
+      if (!team) {
+        return null;
+      }
+
+      const riderLabel =
+        bid.riderKey === 'sprinteur' ? 'S' : 'R';
+
+  
+      return (
+        <Pressable
+  key={bid.teamId}
+  style={[
+    styles.breakawayFinalResult,
+    soloStage.breakaway.winnerIds.includes(bid.teamId) &&
+      styles.breakawayFinalResultSelected,
+  ]}
+  onPress={() => toggleBreakawayWinner(bid.teamId)}
+>
+  <Text style={styles.breakawayResultText}>
+    {team.name} – {riderLabel}
+  </Text>
+
+  <Text style={styles.breakawayResultDetail}>
+    Bid 1: {bid.bid1Value ?? '-'} · Bid 2:{' '}
+    {bid.bid2Value ?? '-'} · Total: {bid.totalBid}
+  </Text>
+</Pressable>
+      );
+    })}
+    {humanCardDrawTeams.map((team) => (
+  <Pressable
+    key={team.id}
+    style={[
+      styles.breakawayFinalResult,
+      soloStage.breakaway.winnerIds.includes(team.id) &&
+        styles.breakawayFinalResultSelected,
+    ]}
+    onPress={() => toggleBreakawayWinner(team.id)}
+  >
+    <Text style={styles.breakawayResultText}>
+      {team.name}
+    </Text>
+
+    <Text style={styles.breakawayResultDetail}>
+      Human Card Draw
+    </Text>
+  </Pressable>
+))}
+  </View>
+)}
+
+{soloStage.breakaway.phase === 'bid-2-results' &&
+  !soloStage.breakaway.completed &&
+  soloStage.breakaway.winnerIds.length > 0 && (
+    <Pressable
+      style={styles.breakawayButton}
+      onPress={async () => {
+        resolveBreakaway(
+          soloStage,
+          soloStage.breakaway.winnerIds
+        );
+
+        await saveGame();
+        await updateActiveSavedGame();
+
+        setRefreshKey((current) => current + 1);
+      }}
+    >
+      <Text style={styles.breakawayButtonText}>
+        Confirm Breakaway Winners
+      </Text>
+    </Pressable>
+)}
+
+{soloStage.breakaway.phase === 'bid-2' &&
+  humanAppDrawTeams.map((team) => {
+    const bid = soloStage.breakaway.bids.find(
+      (bid) => bid.teamId === team.id
+    );
+
+    if (!bid) {
+      return null;
+    }
+
+    const bid2Completed =
+  bid.bid2CardId !== undefined;
+
+    return (
+      <Pressable
+  key={team.id}
+  disabled={bid2Completed}
+  style={[
+    styles.breakawayButton,
+    bid2Completed && styles.buttonDisabled,
+  ]}
+  onPress={() => {
+    router.push({
+      pathname: '/draw',
+      params: {
+        teamId: team.id,
+        riderKey: bid.riderKey,
+        drawMode: 'human-app',
+        breakawayBid: '2',
+      },
+    });
+  }}
+>
+  <Text style={styles.breakawayButtonText}>
+    {team.name} – {bid2Completed ? 'Bid 2 Completed' : 'Draw Bid 2'}
+  </Text>
+</Pressable>
+    );
+  })}
+
+  {soloStage.breakaway.phase === 'bid-2' &&
+  allHumanBid2Completed && (
+    <Pressable
+      style={styles.breakawayButton}
+      onPress={drawAIBreakawayBid2}
+    >
+      <Text style={styles.breakawayButtonText}>
+        Draw AI Bid 2
+      </Text>
+    </Pressable>
+)}
+
+{soloStage.breakaway.completed &&
+  soloStage.round === 1 &&
+  soloStage.breakaway.winnerIds.length > 0 && (
+    <View style={styles.breakawaySummary}>
+      <Text style={styles.breakawayLabel}>
+        Breakaway
+      </Text>
+
+      {soloStage.breakaway.bids
+        .filter((bid) =>
+          soloStage.breakaway.winnerIds.includes(bid.teamId)
+        )
+        .sort((a, b) => b.totalBid - a.totalBid)
+        .map((bid) => {
+          const team = createGameDraft.dummyTeams.find(
+            (team) => team.id === bid.teamId
+          );
+
+          if (!team) {
+            return null;
+          }
+
+          const riderLabel =
+            bid.riderKey === 'sprinteur' ? 'S' : 'R';
+
+          return (
+            <Text
+              key={bid.teamId}
+              style={styles.breakawaySummaryText}
+            >
+              {team.name} – {riderLabel}: {bid.totalBid}
+            </Text>
+          );
+        })}
+
+        {humanCardDrawTeams
+  .filter((team) =>
+    soloStage.breakaway.winnerIds.includes(team.id)
+  )
+  .map((team) => (
+    <Text
+      key={team.id}
+      style={styles.breakawaySummaryText}
+    >
+      {team.name} – Human Card Draw
+    </Text>
+  ))}
+    </View>
+  )}
+
+
+{soloStage.breakaway.completed && (
+  <>
 <Text style={styles.roundText}>
   Round {getCurrentRound()}
 </Text>
@@ -413,12 +1041,15 @@ stageDraft.initialize(
 
   router.push('/enter-stage');
 }}>
-          <Text style={styles.buttonText}>End Stage</Text>
-        </Pressable>
+              <Text style={styles.buttonText}>End Stage</Text>
+  </Pressable>
 
-      </ScrollView>
-    </View>
-  );
+  </>
+)}
+
+</ScrollView>
+</View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -495,7 +1126,7 @@ rowSubText: {
 },
 roundText: {
   textAlign: 'center',
-  marginTop: -18,
+  marginTop: 10,
   marginBottom: 16,
   fontSize: 16,
   fontWeight: '600',
@@ -618,5 +1249,128 @@ strategyDebugTitle: {
 
 strategyDebugText: {
   fontSize: 11,
+},
+
+breakawaySection: {
+  marginBottom: 20,
+},
+
+breakawayLabel: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginBottom: 6,
+},
+
+breakawayRow: {
+  flexDirection: 'row',
+  gap: 8,
+},
+
+breakawayButton: {
+  flex: 1,
+  paddingVertical: 10,
+  marginTop: 8,
+  borderRadius: 10,
+  backgroundColor: Colors.red,
+  alignItems: 'center',
+},
+
+breakawayButtonText: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: Colors.white,
+},
+breakawayHumanSection: {
+  marginBottom: 5,
+},
+
+breakawayHumanRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  marginBottom: 10,
+},
+
+breakawayHumanName: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
+},
+
+breakawayRiderButtons: {
+  flexDirection: 'row',
+  gap: 8,
+},
+
+breakawayRiderButton: {
+  width: 42,
+  height: 36,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: Colors.red,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+breakawayRiderButtonActive: {
+  backgroundColor: Colors.red,
+},
+
+breakawayRiderButtonText: {
+  fontSize: 14,
+  fontWeight: '900',
+  color: Colors.brown,
+},
+
+breakawayResults: {
+  marginTop: 14,
+  marginBottom: 14,
+},
+
+breakawayResultText: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginBottom: 4,
+},
+
+breakawayFinalResult: {
+  marginBottom: 10,
+},
+
+breakawayResultDetail: {
+  fontSize: 13,
+  color: Colors.brown,
+},
+
+breakawayFinalResultSelected: {
+  borderWidth: 2,
+  borderColor: Colors.red,
+  borderRadius: 8,
+  padding: 8,
+},
+
+breakawayRiderButtonDisabled: {
+  opacity: 0.4,
+},
+
+breakawayWinnerHint: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginTop: 12,
+  marginBottom: 8,
+},
+
+breakawaySummary: {
+  marginBottom: 18,
+},
+
+breakawaySummaryText: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: Colors.brown,
+  marginBottom: 4,
 },
 });

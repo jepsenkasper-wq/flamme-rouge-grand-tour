@@ -65,6 +65,14 @@ export function prepareActiveSoloStageForNextStage(): void {
   activeSoloStageState.round = 1;
   activeSoloStageState.stageType = 'standard';
 
+  activeSoloStageState.breakaway = {
+  mode: 'none',
+  completed: false,
+  phase: 'rider-selection',
+  bids: [],
+  winnerIds: [],
+};
+
 activeSoloStageState.teams.forEach((team) => {
   team.playedCards = {};
   team.refreshUsed = {};

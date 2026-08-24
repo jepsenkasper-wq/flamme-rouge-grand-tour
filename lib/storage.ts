@@ -132,6 +132,14 @@ Object.assign(createGameDraft, game.createGameDraft);
   const soloStage = getActiveSoloStageState();
   soloStage.stageType ??= 'standard';
 
+  soloStage.breakaway ??= {
+  mode: 'none',
+  completed: false,
+  phase: 'rider-selection',
+  bids: [],
+  winnerIds: [],
+};
+
   soloStage.teams.forEach((team) => {
     if (team.sprinteur) {
       team.sprinteur.strategyNormalDraws ??= 0;

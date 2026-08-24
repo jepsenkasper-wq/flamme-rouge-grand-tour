@@ -39,6 +39,37 @@ export type DummyGameSetup = {
 };
 export type SoloRiderKey = 'sprinteur' | 'rouleur';
 
+export type BreakawayMode =
+  | 'none'
+  | 'one'
+  | 'two';
+
+export type BreakawayBidState = {
+  teamId: string;
+  riderKey: SoloRiderKey;
+  bid1CardId?: string;
+  bid1Value?: number;
+  bid2CardId?: string;
+  bid2Value?: number;
+  totalBid: number;
+};
+
+export type BreakawayState = {
+  mode: BreakawayMode;
+  completed: boolean;
+  phase: BreakawayPhase;
+  bids: BreakawayBidState[];
+  winnerIds: string[];
+};
+
+export type BreakawayPhase =
+  | 'rider-selection'
+  | 'bid-1'
+  | 'bid-1-results'
+  | 'bid-2'
+  | 'bid-2-results'
+  | 'winner-selection';
+
 export type SoloPlayedCard = {
   cardId: string;
   displayValue: string;
@@ -71,6 +102,7 @@ export type SoloStageState = {
   round: number;
   teams: SoloTeamStageState[];
   fatigueTransfers: SoloFatigueTransfer[];
+  breakaway: BreakawayState;
 };
 
 export type SoloFatigueTransfer = {

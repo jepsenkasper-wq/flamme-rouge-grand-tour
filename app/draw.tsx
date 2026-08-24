@@ -8,7 +8,7 @@ import {
   saveGame,
   updateActiveSavedGame,
 } from '@/lib/storage';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   updateSoloFatigueTransfer,
@@ -41,6 +41,14 @@ import {
 type WindScenario,
 getDrawCount,
 } from '@/lib/solo/dummyDeckEngine';
+
+import {
+  drawBreakawayHand,
+  registerBreakawayBid,
+  selectBreakawayBidCard,
+} from '@/lib/solo/breakawayEngine';
+
+
 
 
 
@@ -111,10 +119,11 @@ function formatSpecialRiderName(
 
 export default function DrawScreen() {
   const params = useLocalSearchParams<{
-    teamId?: string;
-    riderKey?: RiderKey;
-    drawMode?: DrawMode;
-  }>();
+  teamId?: string;
+  riderKey?: RiderKey;
+  drawMode?: DrawMode;
+  breakawayBid?: '1' | '2';
+}>();
 
   const [drawnCards, setDrawnCards] = useState<DummyCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<DummyCard | null>(null);
@@ -130,6 +139,10 @@ export default function DrawScreen() {
   );
 
   const drawMode = params.drawMode;
+
+  const isBreakawayBid =
+  params.breakawayBid === '1' ||
+  params.breakawayBid === '2';
 
   const soloStage = getActiveSoloStageState();
 
@@ -167,6 +180,18 @@ const refreshAlreadyUsed =
 
 const muscleTeamState = teamState?.muscleTeam;
 const pelotonTeamState = teamState?.pelotonTeam;
+
+useEffect(() => {
+  if (!isBreakawayBid || !riderState) {
+    return;
+  }
+
+  if (drawnCards.length > 0) {
+    return;
+  }
+
+  drawBreakawayBid();
+}, [isBreakawayBid, riderState]);
 
       const riderImage =
   params.riderKey === 'sprinteur'
@@ -294,6 +319,7 @@ updateScreen();
 await persistDrawState();
 }
 
+
 async function refreshMuscle(limit: 24 | 25) {
   if (!muscleTeamState || !params.riderKey) return;
 
@@ -360,6 +386,45 @@ teamState.refreshUsed.peloton = true;
   showActionMessage('Deck refreshed.');
 
   await persistDrawState();
+}
+
+function drawBreakawayBid() {
+  if (!riderState) {
+    return;
+  }
+
+  const cards = drawBreakawayHand(riderState);
+
+  setDrawnCards(cards);
+  setSelectedCard(null);
+}
+
+function selectHumanBreakawayBid(card: DummyCard) {
+  if (!riderState) {
+    return;
+  }
+
+  const bid = soloStage.breakaway.bids.find(
+    (bid) => bid.teamId === params.teamId
+  );
+
+  if (!bid) {
+    return;
+  }
+
+  selectBreakawayBidCard(
+    riderState,
+    drawnCards,
+    card
+  );
+
+  registerBreakawayBid(
+    bid,
+    card
+  );
+
+  setSelectedCard(card);
+  setDrawnCards([]);
 }
 
 async function undoTeamDraw() {
@@ -684,37 +749,47 @@ const scenarioOptions: {
 {drawMode === 'human-app' && riderState && (
   <View style={styles.drawArea}>
 
-<Text style={styles.label}>Wind</Text>
+    {!isBreakawayBid && (
+      <>
+        <Text style={styles.label}>Wind</Text>
 
-<View style={styles.optionRow}>
-  {[
-    { label: 'Headwind', value: 'headwind' },
-    { label: 'Normal', value: 'normal' },
-    { label: 'Tailwind', value: 'tailwind' },
-  ].map((option) => (
-    <Pressable
-      key={option.value}
-      style={[
-        styles.optionButton,
-        windScenario === option.value &&
-          styles.optionButtonActive,
-      ]}
-      onPress={() =>
-        setWindScenario(option.value as WindScenario)
-      }>
-      <Text
-        style={[
-          styles.optionText,
-          windScenario === option.value &&
-            styles.optionTextActive,
-        ]}>
-        {option.label}
-      </Text>
-    </Pressable>
-  ))}
-</View>
+        <View style={styles.optionRow}>
+          {[
+            { label: 'Headwind', value: 'headwind' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Tailwind', value: 'tailwind' },
+          ].map((option) => (
+            <Pressable
+              key={option.value}
+              style={[
+                styles.optionButton,
+                windScenario === option.value &&
+                  styles.optionButtonActive,
+              ]}
+              onPress={() =>
+                setWindScenario(option.value as WindScenario)
+              }
+            >
+              <Text
+                style={[
+                  styles.optionText,
+                  windScenario === option.value &&
+                    styles.optionTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </>
+    )}
 
-    <Text style={styles.sectionTitle}>Choose Card</Text>
+    <Text style={styles.sectionTitle}>
+      {isBreakawayBid
+        ? `Breakaway Bid ${params.breakawayBid}`
+        : 'Choose Card'}
+    </Text>
 
    {drawnCards.length === 0 && (
   <Pressable
@@ -736,11 +811,17 @@ const scenarioOptions: {
 
     {drawnCards.length > 0 && (
       <View style={styles.cardRow}>
-        {drawnCards.map((card) => (
+        {drawnCards.map((card, index) => (
           <Pressable
-            key={card.id}
+            key={`${card.id}-${index}`}
             style={styles.drawnCard}
-            onPress={() => selectHumanCard(card.id)}>
+            onPress={() => {
+  if (isBreakawayBid) {
+    selectHumanBreakawayBid(card);
+  } else {
+    selectHumanCard(card.id);
+  }
+}}>
             <Text style={styles.drawnCardText}>
               {formatCard(card)}
             </Text>
@@ -750,13 +831,33 @@ const scenarioOptions: {
     )}
 
     {selectedCard && (
-      <View style={styles.selectedCardBox}>
-        <Text style={styles.sectionTitle}>Played Card</Text>
-        <Text style={styles.playedCardText}>
-          {formatCard(selectedCard)}
-        </Text>
-      </View>
-    )}
+  <View style={styles.selectedCardBox}>
+    <Text style={styles.sectionTitle}>
+      {isBreakawayBid ? 'Breakaway Bid' : 'Played Card'}
+    </Text>
+
+    <Text style={styles.playedCardText}>
+      {formatCard(selectedCard)}
+    </Text>
+  </View>
+)}
+
+{isBreakawayBid && selectedCard && (
+  <Pressable
+    style={styles.primaryButton}
+    onPress={async () => {
+      await saveGame();
+      await updateActiveSavedGame();
+
+      router.back();
+    }}
+  >
+    <Text style={styles.primaryButtonText}>
+      Finish Bid
+    </Text>
+  </Pressable>
+)}
+
 
     <View style={styles.actionRow}>
       <Pressable style={styles.secondaryButton} onPress={addFatigue}>

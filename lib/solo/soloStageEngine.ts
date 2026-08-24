@@ -82,7 +82,7 @@ if (!usesAppDraw) {
 };
   });
 
-  return {
+ return {
   stageNumber,
   stageType: setup.stageType,
   round: 1,
@@ -92,6 +92,13 @@ if (!usesAppDraw) {
     sprinteurFatigueCards: 0,
     rouleurFatigueCards: 0,
   })),
+  breakaway: {
+    mode: 'none',
+    completed: false,
+    phase: 'rider-selection',
+    bids: [],
+    winnerIds: [],
+  },
 };
 }
 

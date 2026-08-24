@@ -72,7 +72,7 @@ const FATIGUE_CARD_VALUE = 2;
 
 
 
-function shuffle<T>(items: T[]): T[] {
+export function shuffle<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
@@ -86,7 +86,7 @@ function createDummyDeck(values: number[]): DummyCard[] {
   );
 }
 
-function createFatigueCard(): DummyCard {
+export function createFatigueCard(): DummyCard {
   return {
     id: `fatigue-${Date.now()}-${Math.random()}`,
     value: FATIGUE_CARD_VALUE,
