@@ -23,6 +23,7 @@ export type StrategyInput = {
   currentStage: number;
   totalStages: number;
   teamTourPosition: number;
+  isInBreakaway?: boolean;
 };
 
 type StrategyWeights = {
@@ -319,6 +320,12 @@ export function getStrategyWeights(
     input.totalStages
   );
 
+  weights = applyBreakawayModifier(
+  weights,
+  input.stageType,
+  input.isInBreakaway ?? false
+);
+
   if (
     input.stageType === 'mountain' &&
     !isLateTour(input.currentStage, input.totalStages)
@@ -342,6 +349,34 @@ export function getStrategyWeights(
   }
 
   return weights;
+}
+
+function applyBreakawayModifier(
+  weights: StrategyWeights,
+  stageType: SoloStageType,
+  isInBreakaway: boolean
+): StrategyWeights {
+  const next = { ...weights };
+
+  if (!isInBreakaway) {
+    return next;
+  }
+
+  if (
+    stageType === 'flat' ||
+    stageType === 'hilly'
+  ) {
+    next.aggressive -= 20;
+    next.defensive += 5;
+    next.balanced += 15;
+  }
+
+  if (stageType === 'mountain') {
+    next.aggressive -= 5;
+    next.mountain += 5;
+  }
+
+  return next;
 }
 export function chooseRiderStrategy(
   input: StrategyInput
@@ -377,25 +412,28 @@ export function buildStrategyInput(
   playerIndex: number,
   riderType: 'sprinteur' | 'rouleur',
   stageType: SoloStageType,
-  fatigueCards: number
+  fatigueCards: number,
+  isInBreakaway = false
 ): StrategyInput {
   const positions = getRiderClassificationPositions(
     playerIndex,
     riderType
   );
 
-  return {
-    stageType,
-    riderType,
-    fatigueCards,
-    playerCount: createGameDraft.playerNames.length,
-    teamTourPosition: getTeamTourPosition(playerIndex),
-    gcPosition: positions.gc,
-    sprintPosition: positions.sprint,
-    mountainPosition: positions.mountain,
-    currentStage: gameState.currentStage,
-    totalStages: Number(createGameDraft.stages || 1),
-  };
+return {
+  stageType,
+  riderType,
+  fatigueCards,
+  playerCount: createGameDraft.playerNames.length,
+  teamTourPosition: getTeamTourPosition(playerIndex),
+  gcPosition: positions.gc,
+  sprintPosition: positions.sprint,
+  mountainPosition: positions.mountain,
+  currentStage: gameState.currentStage,
+  totalStages: Number(createGameDraft.stages || 1),
+  isInBreakaway,
+};
+
 }
 export function assignStrategiesForStage(
   soloStage: SoloStageState
@@ -405,15 +443,25 @@ export function assignStrategiesForStage(
       return;
     }
 
+    const winningBid =
+  soloStage.breakaway.bids.find(
+    (bid) =>
+      bid.teamId === teamState.teamId &&
+      soloStage.breakaway.winnerIds.includes(
+        bid.teamId
+      )
+  );
+
     if (teamState.sprinteur) {
-      const input = buildStrategyInput(
-        playerIndex,
-        'sprinteur',
-        soloStage.stageType,
-        teamState.sprinteur.deck.filter(
-          (card) => card.type === 'fatigue'
-        ).length
-      );
+     const input = buildStrategyInput(
+  playerIndex,
+  'sprinteur',
+  soloStage.stageType,
+  teamState.sprinteur.deck.filter(
+    (card) => card.type === 'fatigue'
+  ).length,
+  winningBid?.riderKey === 'sprinteur'
+);
 
       teamState.sprinteur.strategy =
         chooseRiderStrategy(input);
@@ -421,13 +469,14 @@ export function assignStrategiesForStage(
 
     if (teamState.rouleur) {
       const input = buildStrategyInput(
-        playerIndex,
-        'rouleur',
-        soloStage.stageType,
-        teamState.rouleur.deck.filter(
-          (card) => card.type === 'fatigue'
-        ).length
-      );
+  playerIndex,
+  'rouleur',
+  soloStage.stageType,
+  teamState.rouleur.deck.filter(
+    (card) => card.type === 'fatigue'
+  ).length,
+  winningBid?.riderKey === 'rouleur'
+);
 
       teamState.rouleur.strategy =
         chooseRiderStrategy(input);

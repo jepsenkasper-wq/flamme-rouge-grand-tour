@@ -20,7 +20,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { assignStrategiesForStage } from '@/lib/solo/strategyEngine';
 import {
+  chooseAIBreakawayBid1Card,
+  chooseAIBreakawayBid2Card,
+  chooseBreakawayRiderByFatigue,
   drawBreakawayHand,
+  getBreakawayTarget,
   registerBreakawayBid,
   resolveBreakaway,
   selectBreakawayBidCard,
@@ -243,23 +247,40 @@ async function drawAIBreakawayBid1() {
 
     const cards = drawBreakawayHand(riderState);
 
-    if (cards.length === 0) {
-      continue;
-    }
+if (cards.length === 0) {
+  continue;
+}
 
-    const selectedCard =
-      cards[Math.floor(Math.random() * cards.length)];
+const playerIndex =
+  createGameDraft.dummyTeams.findIndex(
+    (team) => team.id === bid.teamId
+  );
 
-    selectBreakawayBidCard(
-      riderState,
-      cards,
-      selectedCard
-    );
+if (playerIndex === -1) {
+  continue;
+}
 
-    registerBreakawayBid(
-      bid,
-      selectedCard
-    );
+const target = getBreakawayTarget(
+  playerIndex,
+  soloStage.stageType
+);
+
+const selectedCard =
+  chooseAIBreakawayBid1Card(
+    cards,
+    target
+  );
+
+selectBreakawayBidCard(
+  riderState,
+  cards,
+  selectedCard
+);
+
+registerBreakawayBid(
+  bid,
+  selectedCard
+);
   }
 
   soloStage.breakaway.phase = 'bid-1-results';
@@ -299,8 +320,26 @@ async function drawAIBreakawayBid2() {
       continue;
     }
 
-    const selectedCard =
-      cards[Math.floor(Math.random() * cards.length)];
+ const playerIndex =
+  createGameDraft.dummyTeams.findIndex(
+    (team) => team.id === bid.teamId
+  );
+
+if (playerIndex === -1) {
+  continue;
+}
+
+const target = getBreakawayTarget(
+  playerIndex,
+  soloStage.stageType
+);
+
+const selectedCard =
+  chooseAIBreakawayBid2Card(
+    cards,
+    target,
+    bid.bid1Value ?? 0
+  );
 
     selectBreakawayBidCard(
       riderState,
@@ -513,10 +552,14 @@ return (
       return;
     }
 
-    const riderKey =
-      Math.random() < 0.5
-        ? 'sprinteur'
-        : 'rouleur';
+  if (!team.sprinteur || !team.rouleur) {
+  return;
+}
+
+const riderKey = chooseBreakawayRiderByFatigue(
+  team.sprinteur,
+  team.rouleur
+);
 
     selectBreakawayRider(
       soloStage,
@@ -546,81 +589,92 @@ return (
   humanAppDrawTeams.length > 0 && (
     <View style={styles.breakawayHumanSection}>
       <Text style={styles.breakawayLabel}>
-        Select Breakaway Rider
+        Select Human Breakaway Rider
       </Text>
 
       {humanAppDrawTeams.map((team) => {
-        const selectedBid = soloStage.breakaway.bids.find(
-          (bid) => bid.teamId === team.id
-        );
-        const bid1Completed =
-  selectedBid?.bid1CardId !== undefined;
+  const selectedBid = soloStage.breakaway.bids.find(
+    (bid) => bid.teamId === team.id
+  );
 
-        return (
-          <View
-            key={team.id}
-            style={styles.breakawayHumanRow}
-          >
-            <Text style={styles.breakawayHumanName}>
-              {team.name}
-            </Text>
+  const bid1Completed =
+    selectedBid?.bid1CardId !== undefined;
 
-           <View style={styles.breakawayRiderButtons}>
-  <Pressable
-    disabled={bid1Completed}
+  return (
+  <View
+    key={team.id}
     style={[
-      styles.breakawayRiderButton,
-      selectedBid?.riderKey === 'sprinteur' &&
-        styles.breakawayRiderButtonActive,
-      bid1Completed &&
-        styles.breakawayRiderButtonDisabled,
-    ]}
-    onPress={() => {
-      selectBreakawayRider(
-        soloStage,
-        team.id,
-        'sprinteur'
-      );
-
-      soloStage.breakaway.phase = 'bid-1';
-
-      setRefreshKey((current) => current + 1);
-    }}
-  >
-    <Text style={styles.breakawayRiderButtonText}>
-      S
-    </Text>
-  </Pressable>
-
-              <Pressable
-              disabled={bid1Completed}
-                style={[
-  styles.breakawayRiderButton,
-  selectedBid?.riderKey === 'rouleur' &&
-    styles.breakawayRiderButtonActive,
-  bid1Completed &&
-    styles.breakawayRiderButtonDisabled,
+  styles.row,
+  styles.breakawayRiderRow,
 ]}
-                onPress={() => {
-                  selectBreakawayRider(
-                    soloStage,
-                    team.id,
-                    'rouleur'
-                  );
+  >
+    <Image
+      source={riderImages[team.color]}
+      style={styles.avatar}
+    />
 
-                  soloStage.breakaway.phase = 'bid-1';
+    <View style={styles.rowInfo}>
+      <Text style={styles.rowText}>
+        {team.name}
+      </Text>
+    </View>
 
-                  setRefreshKey((current) => current + 1);
-                }}
-              >
-                <Text style={styles.breakawayRiderButtonText}>
-                  R
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        );
-      })}
+    <View style={styles.breakawayRiderButtons}>
+      <Pressable
+        disabled={bid1Completed}
+        style={[
+          styles.breakawayRiderButton,
+          selectedBid?.riderKey === 'sprinteur' &&
+            styles.breakawayRiderButtonActive,
+          bid1Completed &&
+            styles.breakawayRiderButtonDisabled,
+        ]}
+        onPress={() => {
+          selectBreakawayRider(
+            soloStage,
+            team.id,
+            'sprinteur'
+          );
+
+          soloStage.breakaway.phase = 'bid-1';
+
+          setRefreshKey((current) => current + 1);
+        }}
+      >
+        <Text style={styles.breakawayRiderButtonText}>
+          S
+        </Text>
+      </Pressable>
+
+      <Pressable
+        disabled={bid1Completed}
+        style={[
+          styles.breakawayRiderButton,
+          selectedBid?.riderKey === 'rouleur' &&
+            styles.breakawayRiderButtonActive,
+          bid1Completed &&
+            styles.breakawayRiderButtonDisabled,
+        ]}
+        onPress={() => {
+          selectBreakawayRider(
+            soloStage,
+            team.id,
+            'rouleur'
+          );
+
+          soloStage.breakaway.phase = 'bid-1';
+
+          setRefreshKey((current) => current + 1);
+        }}
+      >
+        <Text style={styles.breakawayRiderButtonText}>
+          R
+        </Text>
+      </Pressable>
+    </View>
+  </View>
+);
+})}
     </View>
   )}
 
@@ -633,34 +687,54 @@ return (
     if (!bid) {
       return null;
     }
-  
-        const bid1Completed =
-  bid.bid1CardId !== undefined;
+
+    const bid1Completed =
+      bid.bid1CardId !== undefined;
+
+    const riderLabel =
+      bid.riderKey === 'sprinteur' ? 'S' : 'R';
 
     return (
       <Pressable
-  key={team.id}
-  disabled={bid1Completed}
-  style={[
-    styles.breakawayButton,
-    bid1Completed && styles.buttonDisabled,
-  ]}
-  onPress={() => {
-    router.push({
-      pathname: '/draw',
-      params: {
-        teamId: team.id,
-        riderKey: bid.riderKey,
-        drawMode: 'human-app',
-        breakawayBid: '1',
-      },
-    });
-  }}
->
-  <Text style={styles.breakawayButtonText}>
-    {team.name} – {bid1Completed ? 'Bid 1 Completed' : 'Draw Bid 1'}
-  </Text>
-</Pressable>
+        key={team.id}
+        disabled={bid1Completed}
+        style={[
+          styles.row,
+          bid1Completed && styles.buttonDisabled,
+        ]}
+        onPress={() => {
+          router.push({
+            pathname: '/draw',
+            params: {
+              teamId: team.id,
+              riderKey: bid.riderKey,
+              drawMode: 'human-app',
+              breakawayBid: '1',
+            },
+          });
+        }}
+      >
+        <Image
+          source={riderImages[team.color]}
+          style={styles.avatar}
+        />
+
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowText}>
+            {team.name} - {riderLabel}
+          </Text>
+
+          <Text style={styles.rowSubText}>
+            {bid1Completed
+              ? `Bid 1 • Played: ${bid.bid1Value}`
+              : 'Breakaway • Draw Bid 1'}
+          </Text>
+        </View>
+
+        <Text style={styles.arrow}>
+          {bid1Completed ? '✓' : '›'}
+        </Text>
+      </Pressable>
     );
   })}
 
@@ -704,12 +778,29 @@ return (
           bid.riderKey === 'sprinteur' ? 'S' : 'R';
 
         return (
-          <Text
+          <View
             key={bid.teamId}
-            style={styles.breakawayResultText}
+            style={styles.row}
           >
-            {team.name} – {riderLabel}: {bid.bid1Value}
-          </Text>
+            <Image
+              source={riderImages[team.color]}
+              style={styles.avatar}
+            />
+
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowText}>
+                {team.name} - {riderLabel}
+              </Text>
+
+              <Text style={styles.rowSubText}>
+                Bid 1
+              </Text>
+            </View>
+
+            <Text style={styles.breakawayBidValue}>
+              {bid.bid1Value}
+            </Text>
+          </View>
         );
       })}
     </View>
@@ -745,58 +836,96 @@ return (
 </Text>
 
     {soloStage.breakaway.bids.map((bid) => {
-      const team = createGameDraft.dummyTeams.find(
-        (team) => team.id === bid.teamId
-      );
+  const team = createGameDraft.dummyTeams.find(
+    (team) => team.id === bid.teamId
+  );
 
-      if (!team) {
-        return null;
+  if (!team) {
+    return null;
+  }
+
+  const riderLabel =
+    bid.riderKey === 'sprinteur' ? 'S' : 'R';
+
+  const isSelected =
+    soloStage.breakaway.winnerIds.includes(
+      bid.teamId
+    );
+
+  return (
+    <Pressable
+      key={bid.teamId}
+      style={[
+        styles.row,
+        isSelected &&
+          styles.breakawayFinalResultSelected,
+      ]}
+      onPress={() =>
+        toggleBreakawayWinner(bid.teamId)
       }
+    >
+      <Image
+        source={riderImages[team.color]}
+        style={styles.avatar}
+      />
 
-      const riderLabel =
-        bid.riderKey === 'sprinteur' ? 'S' : 'R';
+      <View style={styles.rowInfo}>
+        <Text style={styles.rowText}>
+          {team.name} - {riderLabel}
+        </Text>
 
-  
-      return (
-        <Pressable
-  key={bid.teamId}
-  style={[
-    styles.breakawayFinalResult,
-    soloStage.breakaway.winnerIds.includes(bid.teamId) &&
-      styles.breakawayFinalResultSelected,
-  ]}
-  onPress={() => toggleBreakawayWinner(bid.teamId)}
->
-  <Text style={styles.breakawayResultText}>
-    {team.name} – {riderLabel}
-  </Text>
+        <Text style={styles.rowSubText}>
+          Bid 1: {bid.bid1Value ?? '-'} • Bid 2:{' '}
+          {bid.bid2Value ?? '-'}
+        </Text>
+      </View>
 
-  <Text style={styles.breakawayResultDetail}>
-    Bid 1: {bid.bid1Value ?? '-'} · Bid 2:{' '}
-    {bid.bid2Value ?? '-'} · Total: {bid.totalBid}
-  </Text>
-</Pressable>
-      );
-    })}
-    {humanCardDrawTeams.map((team) => (
-  <Pressable
-    key={team.id}
-    style={[
-      styles.breakawayFinalResult,
-      soloStage.breakaway.winnerIds.includes(team.id) &&
-        styles.breakawayFinalResultSelected,
-    ]}
-    onPress={() => toggleBreakawayWinner(team.id)}
-  >
-    <Text style={styles.breakawayResultText}>
-      {team.name}
-    </Text>
+      <Text style={styles.breakawayBidValue}>
+        {bid.totalBid}
+      </Text>
+    </Pressable>
+  );
+})}
 
-    <Text style={styles.breakawayResultDetail}>
-      Human Card Draw
-    </Text>
-  </Pressable>
-))}
+{humanCardDrawTeams.map((team) => {
+  const isSelected =
+    soloStage.breakaway.winnerIds.includes(
+      team.id
+    );
+
+  return (
+    <Pressable
+      key={team.id}
+      style={[
+        styles.row,
+        isSelected &&
+          styles.breakawayFinalResultSelected,
+      ]}
+      onPress={() =>
+        toggleBreakawayWinner(team.id)
+      }
+    >
+      <Image
+        source={riderImages[team.color]}
+        style={styles.avatar}
+      />
+
+      <View style={styles.rowInfo}>
+        <Text style={styles.rowText}>
+          {team.name}
+        </Text>
+
+        <Text style={styles.rowSubText}>
+          Human Card Draw
+        </Text>
+      </View>
+
+      <Text style={styles.arrow}>
+        {isSelected ? '✓' : '›'}
+      </Text>
+    </Pressable>
+  );
+})}
   </View>
 )}
 
@@ -834,32 +963,52 @@ return (
     }
 
     const bid2Completed =
-  bid.bid2CardId !== undefined;
+      bid.bid2CardId !== undefined;
+
+    const riderLabel =
+      bid.riderKey === 'sprinteur' ? 'S' : 'R';
 
     return (
       <Pressable
-  key={team.id}
-  disabled={bid2Completed}
-  style={[
-    styles.breakawayButton,
-    bid2Completed && styles.buttonDisabled,
-  ]}
-  onPress={() => {
-    router.push({
-      pathname: '/draw',
-      params: {
-        teamId: team.id,
-        riderKey: bid.riderKey,
-        drawMode: 'human-app',
-        breakawayBid: '2',
-      },
-    });
-  }}
->
-  <Text style={styles.breakawayButtonText}>
-    {team.name} – {bid2Completed ? 'Bid 2 Completed' : 'Draw Bid 2'}
-  </Text>
-</Pressable>
+        key={team.id}
+        disabled={bid2Completed}
+        style={[
+          styles.row,
+          bid2Completed && styles.buttonDisabled,
+        ]}
+        onPress={() => {
+          router.push({
+            pathname: '/draw',
+            params: {
+              teamId: team.id,
+              riderKey: bid.riderKey,
+              drawMode: 'human-app',
+              breakawayBid: '2',
+            },
+          });
+        }}
+      >
+        <Image
+          source={riderImages[team.color]}
+          style={styles.avatar}
+        />
+
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowText}>
+            {team.name} - {riderLabel}
+          </Text>
+
+          <Text style={styles.rowSubText}>
+            {bid2Completed
+              ? `Bid 2 • Played: ${bid.bid2Value}`
+              : `Bid 1: ${bid.bid1Value ?? '-'} • Draw Bid 2`}
+          </Text>
+        </View>
+
+        <Text style={styles.arrow}>
+          {bid2Completed ? '✓' : '›'}
+        </Text>
+      </Pressable>
     );
   })}
 
@@ -1373,4 +1522,28 @@ breakawaySummaryText: {
   color: Colors.brown,
   marginBottom: 4,
 },
+breakawayBidValue: {
+  fontSize: 22,
+  fontWeight: '700',
+},
+
+breakawayRiderRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 12,
+  marginBottom: 8,
+  minHeight: 0,
+},
+
+breakawayRiderChoice: {
+  width: 38,
+  height: 38,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 8,
+},
+
+
 });

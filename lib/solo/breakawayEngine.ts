@@ -3,7 +3,11 @@ import type {
   BreakawayMode,
   SoloRiderKey,
   SoloStageState,
+  SoloStageType,
 } from './soloGameTypes';
+
+import { getTeamTourPosition } from '@/lib/classifications';
+import { createGameDraft } from '@/lib/createGameDraft';
 
 import type {
   DummyCard,
@@ -222,4 +226,167 @@ export function selectAIRidersForBreakaway(
       riderKey
     );
   });
+}
+
+export function getBreakawayTarget(
+  playerIndex: number,
+  stageType: SoloStageType
+): number {
+  const playerCount = createGameDraft.playerNames.length;
+  const teamPosition = getTeamTourPosition(playerIndex);
+
+  const positionFromLast =
+    playerCount - teamPosition + 1;
+
+  let target: number;
+
+  if (playerCount <= 4) {
+    const targetsFromLast = [5, 6, 7, 8];
+
+    target =
+      targetsFromLast[positionFromLast - 1] ?? 5;
+  } else {
+    const targetsFromLast = [5, 6, 6, 7, 8, 8];
+
+    target =
+      targetsFromLast[positionFromLast - 1] ?? 5;
+  }
+
+  if (stageType === 'cobbles') {
+    if (target === 7) {
+      target = 8;
+    } else if (target === 8) {
+      target = 9;
+    }
+  }
+
+  return target;
+}
+
+export function chooseBreakawayRiderByFatigue(
+  sprinteur: DummyRiderState,
+  rouleur: DummyRiderState
+): SoloRiderKey {
+  const sprinteurFatigue =
+    sprinteur.deck.filter(
+      (card) => card.type === 'fatigue'
+    ).length;
+
+  const rouleurFatigue =
+    rouleur.deck.filter(
+      (card) => card.type === 'fatigue'
+    ).length;
+
+  if (sprinteurFatigue < rouleurFatigue) {
+    return 'sprinteur';
+  }
+
+  if (rouleurFatigue < sprinteurFatigue) {
+    return 'rouleur';
+  }
+
+  return Math.random() < 0.5
+    ? 'sprinteur'
+    : 'rouleur';
+}
+
+function getBreakawayPlayableCards(
+  cards: DummyCard[]
+): DummyCard[] {
+  const nonSpecialCards = cards.filter(
+    (card) => !card.isSpecial
+  );
+
+  return nonSpecialCards.length > 0
+    ? nonSpecialCards
+    : cards;
+}
+
+export function chooseAIBreakawayBid1Card(
+  cards: DummyCard[],
+  target: number
+): DummyCard {
+  const playableCards =
+    getBreakawayPlayableCards(cards);
+
+  if (target <= 6) {
+    const lowestValue = Math.min(
+      ...playableCards.map((card) => card.value)
+    );
+
+    const candidates = playableCards.filter(
+  (card) => card.value === lowestValue
+);
+
+const fatigueCandidates = candidates.filter(
+  (card) => card.type === 'fatigue'
+);
+
+const finalCandidates =
+  fatigueCandidates.length > 0
+    ? fatigueCandidates
+    : candidates;
+
+return finalCandidates[
+  Math.floor(Math.random() * finalCandidates.length)
+];
+  }
+
+  const desiredValue =
+    target === 7 ? 3 : 4;
+
+  const bestDistance = Math.min(
+    ...playableCards.map(
+      (card) =>
+        Math.abs(card.value - desiredValue)
+    )
+  );
+
+  const candidates = playableCards.filter(
+    (card) =>
+      Math.abs(card.value - desiredValue) ===
+      bestDistance
+  );
+
+  return candidates[
+    Math.floor(Math.random() * candidates.length)
+  ];
+}
+
+export function chooseAIBreakawayBid2Card(
+  cards: DummyCard[],
+  target: number,
+  bid1Value: number
+): DummyCard {
+  const playableCards =
+    getBreakawayPlayableCards(cards);
+
+  const remainingTarget =
+    target - bid1Value;
+
+  const bestDistance = Math.min(
+    ...playableCards.map(
+      (card) =>
+        Math.abs(card.value - remainingTarget)
+    )
+  );
+
+  const candidates = playableCards.filter(
+    (card) =>
+      Math.abs(card.value - remainingTarget) ===
+      bestDistance
+  );
+
+  const fatigueCandidates = candidates.filter(
+    (card) => card.type === 'fatigue'
+  );
+
+  const finalCandidates =
+    fatigueCandidates.length > 0
+      ? fatigueCandidates
+      : candidates;
+
+  return finalCandidates[
+    Math.floor(Math.random() * finalCandidates.length)
+  ];
 }
