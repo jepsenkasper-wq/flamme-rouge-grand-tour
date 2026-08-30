@@ -62,28 +62,27 @@ if (!usesAppDraw) {
     refreshUsed: {},
   };
 }
-    return {
+return {
   teamId: team.id,
   teamType: team.teamType,
   usesAppDraw: true,
-
   sprinteur: createDummyRider(
     'sprinteur',
     team.sprinteurSpecialRiderId
   ),
-
   rouleur: createDummyRider(
     'rouleur',
     team.rouleurSpecialRiderId
   ),
-
   playedCards: {},
   refreshUsed: {},
+  teamTimeTrialCanProvideSlipstream: {},
 };
   });
 
  return {
   stageNumber,
+  raceType: 'normal',
   stageType: setup.stageType,
   round: 1,
   teams,

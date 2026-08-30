@@ -94,10 +94,21 @@ export type SoloPlayedCards = Partial<
   refreshUsed?: Partial<
   Record<SoloRiderKey | 'peloton', boolean>
 >;
+teamTimeTrialGap?: number;
+teamTimeTrialCanProvideSlipstream?: {
+  sprinteur?: boolean;
+  rouleur?: boolean;
 };
+};
+
+export type SoloRaceType =
+  | 'normal'
+  | 'time-trial'
+  | 'team-time-trial';
 
 export type SoloStageState = {
   stageNumber: number;
+  raceType: SoloRaceType;
   stageType: SoloStageType;
   round: number;
   teams: SoloTeamStageState[];

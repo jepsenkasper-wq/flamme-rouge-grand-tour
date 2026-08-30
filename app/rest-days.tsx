@@ -1,6 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Image,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
@@ -25,9 +36,17 @@ const restDayCount = Number(createGameDraft.restDays || 0);
 
  return (
    <View style={styles.screen}>
-    <BackgroundWatermark />
-  <ScrollView
-    contentContainerStyle={styles.content}>
+  <BackgroundWatermark />
+
+ <KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={100}
+>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>Rest Days</Text>
 
       <Text style={styles.description}>
@@ -99,8 +118,9 @@ const restDayCount = Number(createGameDraft.restDays || 0);
 }}>
   <Text style={styles.buttonText}>Review Game</Text>
 </Pressable>
-    </ScrollView>
-    </View>
+        </ScrollView>
+  </KeyboardAvoidingView>
+</View>
   );
 }
 

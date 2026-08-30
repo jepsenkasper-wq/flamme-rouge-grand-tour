@@ -155,6 +155,7 @@ useFocusEffect(
 
   const soloStage = getActiveSoloStageState();
 const stageType = soloStage.stageType;
+const raceType = soloStage.raceType ?? 'normal';
 
 const humanAppDrawTeams = createGameDraft.dummyTeams.filter(
   (team) =>
@@ -205,14 +206,57 @@ const contentStyle = {
   paddingBottom: 40 + insets.bottom,
 };
 
+function setRaceType(
+  raceType: 'normal' | 'time-trial' | 'team-time-trial'
+) {
+  if (stageHasStarted) {
+    return;
+  }
+
+  soloStage.raceType = raceType;
+  setRefreshKey((current) => current + 1);
+}
+
 async function endRound() {
   const soloStage = getActiveSoloStageState();
 
   soloStage.round++;
 
+  if (soloStage.raceType === 'team-time-trial') {
   for (const team of soloStage.teams) {
-    team.playedCards = {};
+    const gap = team.teamTimeTrialGap ?? 0;
+
+    if (soloStage.stageType === 'mountain') {
+      continue;
+    }
+
+    if (gap === 2) {
+      const canProvide =
+        team.teamTimeTrialCanProvideSlipstream?.sprinteur ?? true;
+
+      if (canProvide) {
+        team.teamTimeTrialGap = 1;
+      }
+    }
+
+    if (gap === -2) {
+      const canProvide =
+        team.teamTimeTrialCanProvideSlipstream?.rouleur ?? true;
+
+      if (canProvide) {
+        team.teamTimeTrialGap = -1;
+      }
+    }
   }
+}
+
+  for (const team of soloStage.teams) {
+  team.playedCards = {};
+
+  if (soloStage.raceType === 'team-time-trial') {
+    team.teamTimeTrialCanProvideSlipstream = {};
+  }
+}
 
 await saveGame();
 await updateActiveSavedGame();
@@ -391,6 +435,51 @@ return (
 
       {!stageHasStarted && (
         <View style={styles.stageTypeSection}>
+
+<Text style={styles.stageTypeLabel}>
+  Stage Type
+</Text>
+
+<View style={styles.stageTypeRow}>
+  {[
+    { key: 'normal', label: 'Normal' },
+    { key: 'time-trial', label: 'Time Trial' },
+    { key: 'team-time-trial', label: 'Team Time Trial' },
+  ].map((item) => (
+    <Pressable
+      key={item.key}
+      style={[
+        styles.stageTypeButton,
+        raceType === item.key &&
+          styles.stageTypeButtonActive,
+      ]}
+      onPress={async () => {
+  soloStage.raceType =
+    item.key as typeof raceType;
+
+  assignStrategiesForStage(soloStage);
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+}}
+    >
+      <Text
+        style={[
+          styles.stageTypeButtonText,
+          raceType === item.key &&
+            styles.stageTypeButtonTextActive,
+        ]}
+      >
+        {item.label}
+      </Text>
+    </Pressable>
+  ))}
+</View>
+
+<View style={{ height: 24 }} />
+
           <View style={styles.stageTypeTitleRow}>
   <Text style={styles.stageTypeLabel}>
     Stage Profile
@@ -505,7 +594,9 @@ return (
 )}
 */}
 
-{!stageHasStarted && !soloStage.breakaway.completed && (
+{raceType === 'normal' &&
+  !stageHasStarted &&
+  !soloStage.breakaway.completed && (
   <View style={styles.breakawaySection}>
     <Text style={styles.breakawayLabel}>Breakaway</Text>
 
@@ -583,7 +674,8 @@ const riderKey = chooseBreakawayRiderByFatigue(
   </View>
 )}
 
-{!stageHasStarted &&
+{raceType === 'normal' &&
+  !stageHasStarted &&
   soloStage.breakaway.mode !== 'none' &&
   !soloStage.breakaway.completed &&
   humanAppDrawTeams.length > 0 && (
@@ -678,7 +770,8 @@ const riderKey = chooseBreakawayRiderByFatigue(
     </View>
   )}
 
-{soloStage.breakaway.phase === 'bid-1' &&
+{raceType === 'normal' &&
+soloStage.breakaway.phase === 'bid-1' &&
   humanAppDrawTeams.map((team) => {
     const bid = soloStage.breakaway.bids.find(
       (bid) => bid.teamId === team.id
@@ -738,7 +831,8 @@ const riderKey = chooseBreakawayRiderByFatigue(
     );
   })}
 
-{soloStage.breakaway.phase === 'bid-1' &&
+{raceType === 'normal' &&
+soloStage.breakaway.phase === 'bid-1' &&
   allHumanBid1Completed && (
   <Pressable
     style={styles.breakawayButton}
@@ -750,7 +844,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
   </Pressable>
 )}
 
-{(soloStage.breakaway.phase === 'bid-1' ||
+{(raceType === 'normal' && soloStage.breakaway.phase === 'bid-1' ||
   soloStage.breakaway.phase === 'bid-1-results' ||
   soloStage.breakaway.phase === 'bid-2') &&
   soloStage.breakaway.bids.some(
@@ -806,7 +900,8 @@ const riderKey = chooseBreakawayRiderByFatigue(
     </View>
   )}
 
-  {soloStage.breakaway.phase === 'bid-1-results' && (
+  {raceType === 'normal' &&
+  soloStage.breakaway.phase === 'bid-1-results' && (
   <Pressable
     style={styles.breakawayButton}
     onPress={async () => {
@@ -824,7 +919,8 @@ const riderKey = chooseBreakawayRiderByFatigue(
   </Pressable>
 )}
 
-{soloStage.breakaway.phase === 'bid-2-results' &&
+{raceType === 'normal' &&
+soloStage.breakaway.phase === 'bid-2-results' &&
   !soloStage.breakaway.completed && (
   <View style={styles.breakawayResults}>
     <Text style={styles.breakawayLabel}>
@@ -929,7 +1025,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
   </View>
 )}
 
-{soloStage.breakaway.phase === 'bid-2-results' &&
+{raceType === 'normal' &&soloStage.breakaway.phase === 'bid-2-results' &&
   !soloStage.breakaway.completed &&
   soloStage.breakaway.winnerIds.length > 0 && (
     <Pressable
@@ -952,7 +1048,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
     </Pressable>
 )}
 
-{soloStage.breakaway.phase === 'bid-2' &&
+{raceType === 'normal' &&soloStage.breakaway.phase === 'bid-2' &&
   humanAppDrawTeams.map((team) => {
     const bid = soloStage.breakaway.bids.find(
       (bid) => bid.teamId === team.id
@@ -1012,7 +1108,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
     );
   })}
 
-  {soloStage.breakaway.phase === 'bid-2' &&
+  {raceType === 'normal' && soloStage.breakaway.phase === 'bid-2' &&
   allHumanBid2Completed && (
     <Pressable
       style={styles.breakawayButton}
@@ -1024,7 +1120,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
     </Pressable>
 )}
 
-{soloStage.breakaway.completed &&
+{raceType === 'normal' && soloStage.breakaway.completed &&
   soloStage.round === 1 &&
   soloStage.breakaway.winnerIds.length > 0 && (
     <View style={styles.breakawaySummary}>
@@ -1075,7 +1171,7 @@ const riderKey = chooseBreakawayRiderByFatigue(
   )}
 
 
-{soloStage.breakaway.completed && (
+{(raceType !== 'normal' || soloStage.breakaway.completed) && (
   <>
 <Text style={styles.roundText}>
   Round {getCurrentRound()}

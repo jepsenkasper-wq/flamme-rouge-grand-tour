@@ -3,8 +3,11 @@ import {
   type SpecialRiderId,
 } from './specialRiders';
 
-import { chooseSpecialRiderCard } from './specialRiderAI';
-import type { SoloRiderStrategy, SoloStageType } from './soloGameTypes';
+import {
+  chooseSpecialRiderCard,
+  getSuperSprinteurPhase,
+} from './specialRiderAI';
+import type { SoloRaceType, SoloRiderStrategy, SoloStageType } from './soloGameTypes';
 
 export type WindScenario =
   | 'normal'
@@ -41,11 +44,14 @@ defensiveTwoPlayed: boolean;
 recoveryDrawsRemaining: number;
 lastFatigueRound?: number;
 defensiveStrategyEnded: boolean;
+superSprinteurPowerCardsByPhase?: [number, number, number];
 };
 
 export type DummyRoundResult = {
   drawnCards: DummyCard[];
   selectedCard: DummyCard;
+  effectiveMovement?: number;
+  canProvideSlipstream?: boolean;
 };
 
 type DrawResult = {
@@ -138,6 +144,7 @@ defensiveTwoPlayed: false,
 recoveryDrawsRemaining: 0,
 lastFatigueRound: undefined,
 defensiveStrategyEnded: false,
+superSprinteurPowerCardsByPhase: [0, 0, 0],
 };
 }
 
@@ -252,6 +259,347 @@ function chooseDefensiveCard(
   return getRandomCard(lowestCards);
 }
 
+type TeamTimeTrialSpecialEffect = {
+  hasImmediateSlipstream: boolean;
+  blocksProvidingSlipstream: boolean;
+};
+
+function getTeamTimeTrialSpecialEffect(
+  card: DummyCard,
+  specialRiderId?: SpecialRiderId
+): TeamTimeTrialSpecialEffect {
+  if (!card.isSpecial || !specialRiderId) {
+    return {
+      hasImmediateSlipstream: false,
+      blocksProvidingSlipstream: false,
+    };
+  }
+
+  if (specialRiderId === 'flandrien') {
+    return {
+      hasImmediateSlipstream: true,
+      blocksProvidingSlipstream: false,
+    };
+  }
+
+  if (specialRiderId === 'baroudeur') {
+    return {
+      hasImmediateSlipstream: false,
+      blocksProvidingSlipstream: true,
+    };
+  }
+
+  if (specialRiderId === 'squirrel') {
+    return {
+      hasImmediateSlipstream: true,
+      blocksProvidingSlipstream: true,
+    };
+  }
+
+  return {
+    hasImmediateSlipstream: false,
+    blocksProvidingSlipstream: false,
+  };
+}
+
+type TeamTimeTrialCardOutcome = {
+  printedValue: number;
+  effectiveMovement: number;
+  resultingGap: number;
+  immediateSlipstreamUsed: boolean;
+  canProvideSlipstream: boolean;
+};
+
+function getTeamTimeTrialCardOutcome(
+  card: DummyCard,
+  currentGap: number,
+  specialRiderId?: SpecialRiderId,
+  scenario: DummyScenario = 'normal'
+): TeamTimeTrialCardOutcome {
+  const specialEffect = getTeamTimeTrialSpecialEffect(
+    card,
+    specialRiderId
+  );
+
+let effectiveMovement = card.value;
+
+if (scenario === 'descent') {
+  effectiveMovement = Math.max(effectiveMovement, 5);
+}
+
+if (scenario === 'supply-zone') {
+  effectiveMovement = Math.max(effectiveMovement, 4);
+}
+
+const canExceedClimbLimit =
+  card.isSpecial &&
+  (
+    (specialRiderId === 'grimpeur' && card.value === 6) ||
+    (specialRiderId === 'mountaineer' && card.value === 7)
+  );
+
+if (
+  scenario === 'climb' &&
+  !canExceedClimbLimit
+) {
+  effectiveMovement = Math.min(effectiveMovement, 5);
+}
+
+let resultingGap = currentGap + effectiveMovement;
+
+let immediateSlipstreamUsed = false;
+
+if (
+  specialEffect.hasImmediateSlipstream &&
+  (resultingGap === -2 || resultingGap === -1)
+) {
+  effectiveMovement += 1;
+  resultingGap += 1;
+  immediateSlipstreamUsed = true;
+}
+
+return {
+  printedValue: card.value,
+  effectiveMovement,
+  resultingGap,
+  immediateSlipstreamUsed,
+  canProvideSlipstream:
+    !specialEffect.blocksProvidingSlipstream,
+};
+}
+
+export function updateTeamTimeTrialGap(
+  currentGap: number,
+  riderType: RiderType,
+  movement: number
+): number {
+  if (riderType === 'sprinteur') {
+    return currentGap + movement;
+  }
+
+  return currentGap - movement;
+}
+
+type TeamTimeTrialOutcomeScore = {
+  teamworkRank: number;
+  gapDistance: number;
+  forwardMovement: number;
+};
+
+function scoreTeamTimeTrialOutcome(
+  outcome: TeamTimeTrialCardOutcome,
+  scenario: DummyScenario
+): TeamTimeTrialOutcomeScore {
+  const gap = outcome.resultingGap;
+  const absoluteGap = Math.abs(gap);
+let teamworkRank: number;
+
+if (scenario === 'climb') {
+  if (absoluteGap === 1) {
+    // No slipstream on climbs, so staying one space apart is best.
+    teamworkRank = 5;
+  } else if (gap === 0) {
+    // Same double-space: both receive fatigue.
+    teamworkRank = 4;
+  } else if (absoluteGap === 2) {
+    // Still reasonably close, but there is no slipstream benefit.
+    teamworkRank = 3;
+  } else {
+    teamworkRank = 1;
+  }
+} else {
+  if (gap === -2) {
+    // Active rider is behind and can receive slipstream.
+    teamworkRank = 5;
+  } else if (
+    gap === 2 &&
+    outcome.canProvideSlipstream
+  ) {
+    // Active rider is ahead and can provide slipstream.
+    teamworkRank = 5;
+  } else if (absoluteGap === 1) {
+    teamworkRank = 4;
+  } else if (gap === 0) {
+    teamworkRank = 3;
+  } else if (gap === 2) {
+    // Active rider is ahead but cannot provide slipstream.
+    teamworkRank = 2;
+  } else {
+    teamworkRank = 1;
+  }
+}
+
+  return {
+    teamworkRank,
+    gapDistance: absoluteGap,
+    forwardMovement: outcome.effectiveMovement,
+  };
+}
+
+function chooseTeamTimeTrialCard(
+  cards: DummyCard[],
+  teamTimeTrialGap: number,
+  riderType: RiderType,
+  specialRiderId?: SpecialRiderId,
+  scenario: DummyScenario = 'normal',
+  isFirstTeamTimeTrialRider = false
+): DummyCard {
+  if (cards.length === 0) {
+    throw new Error('No cards available for Team Time Trial');
+  }
+
+  // Close to the finish, speed is more important than formation.
+  if (scenario === 'sprint') {
+    return [...cards].sort(
+      (a, b) => b.value - a.value
+    )[0];
+  }
+
+  const riderGap =
+  riderType === 'sprinteur'
+    ? teamTimeTrialGap
+    : -teamTimeTrialGap;
+
+let playableCards = cards;
+
+const nonFatigueCards = cards.filter(
+  (card) => card.type !== 'fatigue'
+);
+
+if (
+  riderGap <= 2 &&
+  nonFatigueCards.length > 0
+) {
+  playableCards = nonFatigueCards;
+}
+  
+if (isFirstTeamTimeTrialRider) {
+  const sortedCards = [...playableCards].sort(
+    (a, b) => a.value - b.value
+  );
+
+  let selectedCard: DummyCard;
+if (riderGap > 0) {
+  const twoLowest = sortedCards.slice(
+    0,
+    Math.min(2, sortedCards.length)
+  );
+
+  selectedCard =
+    twoLowest[
+      Math.floor(Math.random() * twoLowest.length)
+    ];
+} else if (riderGap < 0) {
+  const twoHighest = sortedCards.slice(
+    Math.max(0, sortedCards.length - 2)
+  );
+
+  selectedCard =
+    twoHighest[
+      Math.floor(Math.random() * twoHighest.length)
+    ];
+} else {
+  selectedCard =
+  playableCards[
+    Math.floor(Math.random() * playableCards.length)
+  ];
+}
+
+  console.log('TTT FIRST RIDER', {
+    riderType,
+    riderGap,
+    scenario,
+    card: selectedCard.value,
+    special: selectedCard.isSpecial ?? false,
+    specialRiderId,
+  });
+
+  return selectedCard;
+}
+
+  const evaluatedCards = playableCards.map((card) => {
+    const outcome = getTeamTimeTrialCardOutcome(
+      card,
+      riderGap,
+      specialRiderId,
+      scenario
+    );
+
+    const score = scoreTeamTimeTrialOutcome(
+  outcome,
+  scenario
+);
+
+    return {
+      card,
+      outcome,
+      score,
+    };
+  });
+
+  evaluatedCards.sort((a, b) => {
+    // 1. Best team formation.
+    if (a.score.teamworkRank !== b.score.teamworkRank) {
+      return b.score.teamworkRank - a.score.teamworkRank;
+    }
+
+    // 2. If both formations are poor, stay as close
+    // as possible to the teammate.
+    if (
+      a.score.teamworkRank === 1 &&
+      a.score.gapDistance !== b.score.gapDistance
+    ) {
+      return a.score.gapDistance - b.score.gapDistance;
+    }
+
+    // 3. If the formation is equally good,
+    // choose the greatest forward movement.
+    if (
+      a.score.forwardMovement !== b.score.forwardMovement
+    ) {
+      return (
+        b.score.forwardMovement -
+        a.score.forwardMovement
+      );
+    }
+
+    // 4. On descent and supply zone, save stronger cards
+// when the effective movement is identical.
+if (
+  scenario === 'descent' ||
+  scenario === 'supply-zone'
+) {
+  return a.card.value - b.card.value;
+}
+
+// 5. Final tie-break elsewhere: highest printed card.
+return b.card.value - a.card.value;
+  });
+
+
+const selectedEvaluation = evaluatedCards[0];
+
+console.log('TTT SELECTED OUTCOME', {
+  riderType,
+  riderGap,
+  scenario,
+  specialRiderId,
+  card: selectedEvaluation.card.value,
+  special: selectedEvaluation.card.isSpecial ?? false,
+  effectiveMovement:
+    selectedEvaluation.outcome.effectiveMovement,
+  resultingGap:
+    selectedEvaluation.outcome.resultingGap,
+  immediateSlipstream:
+    selectedEvaluation.outcome.immediateSlipstreamUsed,
+  canProvideSlipstream:
+    selectedEvaluation.outcome.canProvideSlipstream,
+});
+
+  return evaluatedCards[0].card;
+}
+
+
 function chooseCard(
   cards: DummyCard[],
   scenario: DummyScenario,
@@ -264,7 +612,8 @@ function chooseCard(
   defensiveTwoPlayed = false,
   defensiveStrategyEnded = false,
   refreshUsed = false,
-  stageType: SoloStageType = 'flat'
+  stageType: SoloStageType = 'flat',
+  raceType: SoloRaceType = 'normal'
 ): DummyCard {
   if (scenario === 'normal') {
   const specialProtectionLimit = refreshUsed ? 14 : 10;
@@ -277,11 +626,26 @@ function chooseCard(
       specialRiderId === 'mountaineer'
     );
 
-  const prioritizeAvoidingTwos =
-    (stageType === 'flat' || stageType === 'cobbles') &&
-    strategy !== 'defensive';
+ const defensiveActive =
+  strategy === 'defensive' &&
+  !defensiveStrategyEnded &&
+  strategyNormalDraws < 3;
+
+const prioritizeAvoidingTwos =
+  (stageType === 'flat' || stageType === 'cobbles') &&
+  !defensiveActive;
 
   let playableCards = cards;
+
+  if (raceType === 'time-trial') {
+  const withoutLowCards = playableCards.filter(
+    (card) => card.value !== 2 && card.value !== 3
+  );
+
+  if (withoutLowCards.length > 0) {
+    playableCards = withoutLowCards;
+  }
+}
 
   if (prioritizeAvoidingTwos) {
     const withoutTwos = playableCards.filter(
@@ -320,7 +684,7 @@ function chooseCard(
 if (
   strategy === 'defensive' &&
   !defensiveStrategyEnded &&
-  strategyNormalDraws < 5
+  strategyNormalDraws < 3
 ) {
   let defensiveCards = playableCards;
 
@@ -580,7 +944,11 @@ export function playDummyRound(
   round = 0,
   drawCount = 4,
   refreshUsed = false,
-  stageType: SoloStageType = 'flat'
+  stageType: SoloStageType = 'flat',
+  raceType: SoloRaceType = 'normal',
+  teamTimeTrialGap = 0,
+  riderType: RiderType = 'sprinteur',
+  isFirstTeamTimeTrialRider = false
 ): DummyRoundResult {
   const drawResult = drawHand(rider, drawCount);
 
@@ -588,10 +956,14 @@ const specialCard =
   scenario === 'supply-zone'
     ? undefined
     : chooseSpecialRiderCard(
-        drawResult.cards,
-        scenario,
-        rider.specialRiderId
-      );
+  drawResult.cards,
+  scenario,
+  rider.specialRiderId,
+  round,
+  stageType,
+  rider.superSprinteurPowerCardsByPhase ?? [0, 0, 0],
+  rider.strategyNormalDraws
+);
 
 /*
 console.log('SOLO DEBUG', {
@@ -608,28 +980,74 @@ console.log('SOLO DEBUG', {
 */
 
 const selectedCard =
-  specialCard ?? chooseCard(
+  raceType === 'team-time-trial'
+    ? chooseTeamTimeTrialCard(
     drawResult.cards,
-    scenario,
+    teamTimeTrialGap,
+    riderType,
     rider.specialRiderId,
-    round,
-    rider.lastPlayedValue,
-    rider.strategy,
-    rider.strategyNormalDraws,
-    rider.recoveryDrawsRemaining,
-    rider.defensiveTwoPlayed,
-    rider.defensiveStrategyEnded,
-    refreshUsed,
-    stageType
+    scenario,
+    isFirstTeamTimeTrialRider
+  )
+    : specialCard ?? chooseCard(
+        drawResult.cards,
+        scenario,
+        rider.specialRiderId,
+        round,
+        rider.lastPlayedValue,
+        rider.strategy,
+        rider.strategyNormalDraws,
+        rider.recoveryDrawsRemaining,
+        rider.defensiveTwoPlayed,
+        rider.defensiveStrategyEnded,
+        refreshUsed,
+        stageType,
+        raceType
+      );
+
+let effectiveMovement: number | undefined;
+let canProvideSlipstream: boolean | undefined;
+
+if (raceType === 'team-time-trial') {
+  const riderGap =
+    riderType === 'sprinteur'
+      ? teamTimeTrialGap
+      : -teamTimeTrialGap;
+
+  const outcome = getTeamTimeTrialCardOutcome(
+    selectedCard,
+    riderGap,
+    rider.specialRiderId,
+    scenario
   );
 
+  effectiveMovement = outcome.effectiveMovement;
+  canProvideSlipstream = outcome.canProvideSlipstream;
+}
+
 finishRound(rider, drawResult, selectedCard);
+
+if (
+  rider.specialRiderId === 'super-sprinteur' &&
+  scenario === 'normal' &&
+  (
+    selectedCard.value === 9 ||
+    selectedCard.value === 10 ||
+    selectedCard.value === 11
+  )
+) {
+  const phase = getSuperSprinteurPhase(round);
+
+  rider.superSprinteurPowerCardsByPhase ??= [0, 0, 0];
+
+rider.superSprinteurPowerCardsByPhase[phase] += 1;
+}
 
 if (
   scenario === 'normal' &&
   rider.strategy === 'defensive' &&
   !rider.defensiveStrategyEnded &&
-  rider.strategyNormalDraws < 5 &&
+  rider.strategyNormalDraws < 3 &&
   selectedCard.value === 2
 ) {
   rider.defensiveTwoPlayed = true;
@@ -658,6 +1076,8 @@ if (
 return {
   drawnCards: drawResult.cards,
   selectedCard,
+  effectiveMovement,
+  canProvideSlipstream,
 };
 }
 
@@ -700,12 +1120,120 @@ export function finishHumanAppDraw(
 
   return selectedCard;
 }
+
+function getMountainRefreshCardScore(card: DummyCard): number {
+  if (card.value === 2) {
+    return 0;
+  }
+
+  if (card.value === 5) {
+    return 3;
+  }
+
+  if (card.value === 4 || card.value === 6) {
+    return 2;
+  }
+
+  return 1;
+}
+
+function findBestMountainRefreshCards(
+  cards: DummyCard[],
+  limit: 24 | 25,
+  specialRiderId?: SpecialRiderId
+): DummyCard[] {
+
+  const prioritizedSpecialCards =
+  specialRiderId === 'grimpeur' ||
+  specialRiderId === 'mountaineer'
+    ? cards.filter(
+        (card) =>
+          card.isSpecial &&
+          (card.value === 6 || card.value === 7)
+      )
+    : [];
+
+const prioritizedValue = prioritizedSpecialCards.reduce(
+  (sum, card) => sum + card.value,
+  0
+);
+
+const remainingLimit = limit - prioritizedValue;
+
+  const usableCards = cards.filter(
+  (card) =>
+    card.value !== 2 &&
+    !prioritizedSpecialCards.some(
+      (specialCard) => specialCard.id === card.id
+    )
+);
+
+  let bestCards: DummyCard[] = [];
+  let bestScore = -1;
+  let bestTotalValue = -1;
+
+  const combinationCount = 1 << usableCards.length;
+
+  for (let mask = 0; mask < combinationCount; mask++) {
+    const selectedCards: DummyCard[] = [];
+    let totalValue = 0;
+    let totalScore = 0;
+
+    for (let i = 0; i < usableCards.length; i++) {
+      if (mask & (1 << i)) {
+        const card = usableCards[i];
+
+        selectedCards.push(card);
+        totalValue += card.value;
+        totalScore += getMountainRefreshCardScore(card);
+      }
+    }
+
+    if (totalValue > remainingLimit) {
+      continue;
+    }
+
+    const isBetter =
+      totalScore > bestScore ||
+      (
+        totalScore === bestScore &&
+        totalValue > bestTotalValue
+      ) ||
+      (
+        totalScore === bestScore &&
+        totalValue === bestTotalValue &&
+        selectedCards.length > bestCards.length
+      );
+
+    if (isBetter) {
+      bestCards = selectedCards;
+      bestScore = totalScore;
+      bestTotalValue = totalValue;
+    }
+  }
+
+  return [
+  ...prioritizedSpecialCards,
+  ...bestCards,
+];
+}
+
 export function refreshFromDiscard(
   rider: DummyRiderState,
-  limit: 24 | 25
+  limit: 24 | 25,
+  stageType: SoloStageType
 ): DummyCard[] {
-  const selectedCards: DummyCard[] = [];
+  let selectedCards: DummyCard[] = [];
 
+if (stageType === 'mountain') {
+
+  selectedCards = findBestMountainRefreshCards(
+  rider.discard,
+  limit,
+  rider.specialRiderId
+);
+
+} else {
   const sortedDiscard = [...rider.discard].sort(
     (a, b) => b.value - a.value
   );
@@ -718,6 +1246,7 @@ export function refreshFromDiscard(
       totalValue += card.value;
     }
   }
+}
 
   rider.discard = rider.discard.filter(
     (card) => !selectedCards.some((selected) => selected.id === card.id)
@@ -745,6 +1274,9 @@ defensiveTwoPlayed: rider.defensiveTwoPlayed,
 recoveryDrawsRemaining: rider.recoveryDrawsRemaining,
 lastFatigueRound: rider.lastFatigueRound,
 defensiveStrategyEnded: rider.defensiveStrategyEnded,
+superSprinteurPowerCardsByPhase: [
+  ...(rider.superSprinteurPowerCardsByPhase ?? [0, 0, 0]),
+] as [number, number, number],
   };
 }
 
@@ -765,6 +1297,9 @@ rider.defensiveTwoPlayed = snapshot.defensiveTwoPlayed;
 rider.recoveryDrawsRemaining = snapshot.recoveryDrawsRemaining;
 rider.lastFatigueRound = snapshot.lastFatigueRound;
 rider.defensiveStrategyEnded = snapshot.defensiveStrategyEnded;
+rider.superSprinteurPowerCardsByPhase = [
+  ...(snapshot.superSprinteurPowerCardsByPhase ?? [0, 0, 0]),
+] as [number, number, number];
 }
 export function prepareRiderForNextStage(
   rider: DummyRiderState
@@ -788,6 +1323,7 @@ rider.defensiveTwoPlayed = false;
 rider.recoveryDrawsRemaining = 0;
 rider.defensiveStrategyEnded = false;
 rider.lastFatigueRound = undefined;
+rider.superSprinteurPowerCardsByPhase = [0, 0, 0];
 }
 
 export function setFatigueCardsForStageResult(

@@ -40,6 +40,8 @@ import {
   type DummyScenario,
 type WindScenario,
 getDrawCount,
+RiderType,
+updateTeamTimeTrialGap,
 } from '@/lib/solo/dummyDeckEngine';
 
 import {
@@ -259,14 +261,45 @@ function showActionMessage(message: string) {
 
   const drawCount = getDrawCount(windScenario);
 
-  const result = playDummyRound(
+  const isFirstTeamTimeTrialRider =
+  soloStage.raceType === 'team-time-trial' &&
+  !teamState.playedCards?.sprinteur &&
+  !teamState.playedCards?.rouleur;
+
+const result = playDummyRound(
   riderState,
   scenario,
   soloStage.round,
   drawCount,
   refreshAlreadyUsed,
-  soloStage.stageType
+  soloStage.stageType,
+  soloStage.raceType,
+  teamState.teamTimeTrialGap ?? 0,
+  params.riderKey as RiderType,
+  isFirstTeamTimeTrialRider
 );
+
+if (
+  soloStage.raceType === 'team-time-trial' &&
+  result.effectiveMovement !== undefined
+) {
+  teamState.teamTimeTrialGap = updateTeamTimeTrialGap(
+    teamState.teamTimeTrialGap ?? 0,
+    params.riderKey as RiderType,
+    result.effectiveMovement
+  );
+}
+
+if (
+  soloStage.raceType === 'team-time-trial' &&
+  result.canProvideSlipstream !== undefined
+) {
+  teamState.teamTimeTrialCanProvideSlipstream ??= {};
+
+  teamState.teamTimeTrialCanProvideSlipstream[
+    params.riderKey as RiderType
+  ] = result.canProvideSlipstream;
+}
 
 teamState.playedCards ??= {};
 
@@ -618,7 +651,11 @@ async function refresh(limit: 24 | 25) {
 
   setUndoSnapshot(cloneDummyRiderState(riderState));
 
-  refreshFromDiscard(riderState, limit);
+  refreshFromDiscard(
+    riderState,
+    limit,
+    soloStage.stageType
+  );
 
   if (playedCardKey && teamState) {
     teamState.refreshUsed ??= {};

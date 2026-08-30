@@ -46,6 +46,20 @@ export default function ReviewStageEntryScreen() {
     const editedEntry =
       editEntryIndex !== null ? gameResults.entries[editEntryIndex] : null;
 
+    if (editEntryIndex === null) {
+  const alreadySaved = gameResults.entries.some(
+    (entry: any) =>
+      entry.entryType === gameState.currentEntryType &&
+      entry.stageNumber === gameState.currentStage
+  );
+
+  if (alreadySaved) {
+    router.dismissAll();
+    router.replace('/(tabs)');
+    return;
+  }
+}
+
     const playersToSave = JSON.parse(JSON.stringify(stageDraft.players));
 
     let tieBreakOrder = 0;
@@ -89,9 +103,10 @@ if (
       }
     }
 
-    await saveGame();
+await saveGame();
 await updateActiveSavedGame();
 
+router.dismissAll();
 router.replace('/(tabs)');
   }
   

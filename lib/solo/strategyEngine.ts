@@ -157,45 +157,64 @@ function applyStartPositionModifier(
   }
 
   if (playerCount === 3) {
-    if (teamTourPosition === 3) {
-      aggressiveChange = 10;
-      defensiveChange = -10;
-    }
-  } else if (playerCount === 4) {
-    if (teamTourPosition === 3) {
-      aggressiveChange = 10;
-      defensiveChange = -10;
-    }
-
-    if (teamTourPosition === 4) {
-      aggressiveChange = 20;
-      defensiveChange = -15;
-      balancedChange = -5;
-    }
-  } else {
-    // 5-6 players
-    if (teamTourPosition === 4) {
-      aggressiveChange = 5;
-      defensiveChange = -10;
-      balancedChange = 5;
-    }
-
-    if (teamTourPosition === 5) {
-      aggressiveChange = 10;
-      defensiveChange = -10;
-    }
-
-    if (teamTourPosition >= 6) {
-      aggressiveChange = 20;
-      defensiveChange = -15;
-      balancedChange = -5;
-    }
+  if (teamTourPosition === 3) {
+    aggressiveChange = -10;
+    defensiveChange = 10;
   }
+} else if (playerCount === 4) {
+  if (teamTourPosition === 3) {
+    aggressiveChange = -10;
+    defensiveChange = 10;
+  }
+
+  if (teamTourPosition === 4) {
+    aggressiveChange = -20;
+    defensiveChange = 15;
+    balancedChange = 5;
+  }
+} else if (playerCount === 5) {
+  if (teamTourPosition === 3) {
+    aggressiveChange = -5;
+    defensiveChange = 10;
+    balancedChange = -5;
+  }
+
+  if (teamTourPosition === 4) {
+    aggressiveChange = -10;
+    defensiveChange = 10;
+  }
+
+  if (teamTourPosition === 5) {
+    aggressiveChange = -20;
+    defensiveChange = 15;
+    balancedChange = 5;
+  }
+} else if (playerCount === 6) {
+  if (teamTourPosition === 4) {
+    aggressiveChange = -5;
+    defensiveChange = 10;
+    balancedChange = -5;
+  }
+
+  if (teamTourPosition === 5) {
+    aggressiveChange = -10;
+    defensiveChange = 10;
+  }
+
+  if (teamTourPosition === 6) {
+    aggressiveChange = -20;
+    defensiveChange = 15;
+    balancedChange = 5;
+  }
+}
 
   // Start position should have a smaller effect
   // on a mountain stage.
   if (stageType === 'mountain') {
-    aggressiveChange = Math.min(aggressiveChange, 10);
+    aggressiveChange = Math.max(
+  -10,
+  Math.min(aggressiveChange, 10)
+);
 
     next.aggressive += aggressiveChange;
     next.defensive += defensiveChange;
@@ -210,6 +229,34 @@ function applyStartPositionModifier(
 
   return next;
 }
+
+function canUseDefensiveStrategy(
+  teamTourPosition: number,
+  playerCount: number
+): boolean {
+  if (playerCount === 2) {
+    return false;
+  }
+
+  if (playerCount === 3) {
+    return teamTourPosition === 3;
+  }
+
+  if (playerCount === 4) {
+    return teamTourPosition >= 3;
+  }
+
+  if (playerCount === 5) {
+    return teamTourPosition >= 3;
+  }
+
+  if (playerCount === 6) {
+    return teamTourPosition >= 4;
+  }
+
+  return false;
+}
+
 function isLateTour(
   currentStage: number,
   totalStages: number
@@ -348,6 +395,15 @@ export function getStrategyWeights(
     weights.mountain = 0;
   }
 
+  if (
+  !canUseDefensiveStrategy(
+    input.teamTourPosition,
+    input.playerCount
+  )
+) {
+  weights.defensive = 0;
+}
+
   return weights;
 }
 
@@ -463,8 +519,14 @@ export function assignStrategiesForStage(
   winningBid?.riderKey === 'sprinteur'
 );
 
-      teamState.sprinteur.strategy =
-        chooseRiderStrategy(input);
+      const strategy = chooseRiderStrategy(input);
+
+teamState.sprinteur.strategy =
+  soloStage.raceType === 'time-trial'
+    ? strategy === 'mountain'
+      ? 'mountain'
+      : 'balanced'
+    : strategy;
     }
 
     if (teamState.rouleur) {
@@ -477,9 +539,14 @@ export function assignStrategiesForStage(
   ).length,
   winningBid?.riderKey === 'rouleur'
 );
+const strategy = chooseRiderStrategy(input);
 
-      teamState.rouleur.strategy =
-        chooseRiderStrategy(input);
+teamState.rouleur.strategy =
+  soloStage.raceType === 'time-trial'
+    ? strategy === 'mountain'
+      ? 'mountain'
+      : 'balanced'
+    : strategy;
     }
   });
 }
