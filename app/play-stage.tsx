@@ -30,6 +30,8 @@ import {
   selectBreakawayBidCard,
   selectBreakawayRider,
   startBreakaway,
+  getBreakawayTargetRange,
+chooseWeightedBreakawayTarget,
 } from '@/lib/solo/breakawayEngine';
 
 const riderImages: Record<string, any> = {
@@ -304,10 +306,37 @@ if (playerIndex === -1) {
   continue;
 }
 
-const target = getBreakawayTarget(
+const targetRange = getBreakawayTargetRange(
   playerIndex,
   soloStage.stageType
 );
+
+const fatigueCards =
+  riderState.setAside.filter(
+    (card) => card.type === 'fatigue'
+  ).length +
+  riderState.discard.filter(
+    (card) => card.type === 'fatigue'
+  ).length +
+  riderState.deck.filter(
+    (card) => card.type === 'fatigue'
+  ).length;
+
+const target = chooseWeightedBreakawayTarget(
+  targetRange,
+  fatigueCards,
+  soloStage.stageType
+);
+
+bid.target = target;
+
+console.log('BREAKAWAY TARGET', {
+  playerIndex,
+  targetRange,
+  fatigueCards,
+  stageType: soloStage.stageType,
+  target,
+});
 
 const selectedCard =
   chooseAIBreakawayBid1Card(
@@ -373,10 +402,12 @@ if (playerIndex === -1) {
   continue;
 }
 
-const target = getBreakawayTarget(
-  playerIndex,
-  soloStage.stageType
-);
+const target =
+  bid.target ??
+  getBreakawayTarget(
+    playerIndex,
+    soloStage.stageType
+  );
 
 const selectedCard =
   chooseAIBreakawayBid2Card(

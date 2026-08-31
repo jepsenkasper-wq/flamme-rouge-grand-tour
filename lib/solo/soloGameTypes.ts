@@ -52,6 +52,7 @@ export type BreakawayBidState = {
   bid2CardId?: string;
   bid2Value?: number;
   totalBid: number;
+  target?: number;
 };
 
 export type BreakawayState = {

@@ -712,14 +712,15 @@ const scenarioOptions: {
   { label: 'Ascent / Close to Ascent', value: 'climb' },
   { label: 'Descent', value: 'descent' },
 
-  ...(soloStage.stageType === 'mountain'
-    ? [
-        {
-          label: 'Open Valley',
-          value: 'open-valley' as DummyScenario,
-        },
-      ]
-    : []),
+ ...(soloStage.stageType === 'mountain' ||
+soloStage.stageType === 'hilly'
+  ? [
+      {
+        label: 'Open Valley',
+        value: 'open-valley' as DummyScenario,
+      },
+    ]
+  : []),
 
   { label: 'Supply Zone', value: 'supply-zone' },
   { label: 'Sprint', value: 'sprint' },
@@ -975,9 +976,10 @@ const scenarioOptions: {
         'Descent\n' +
 'Use when the rider is on a descent.\n\n' +
 
-(soloStage.stageType === 'mountain'
+(soloStage.stageType === 'mountain' ||
+soloStage.stageType === 'hilly'
   ? 'Open Valley\n' +
-    'Use when the rider enters an open section between climbs where there is room to make good use of a high movement card.\n\n'
+    'Use when the rider enters an open section where there is room to make good use of a high movement card.\n\n'
   : '') +
 
 'Supply Zone\n' +

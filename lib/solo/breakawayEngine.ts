@@ -263,6 +263,60 @@ export function getBreakawayTarget(
   return target;
 }
 
+export function getBreakawayTargetRange(
+  playerIndex: number,
+  stageType: SoloStageType
+): [number, number, number] {
+  const target = getBreakawayTarget(
+    playerIndex,
+    stageType
+  );
+
+  return [
+    target - 1,
+    target,
+    target + 1,
+  ];
+}
+
+export function chooseWeightedBreakawayTarget(
+  targets: [number, number, number],
+  fatigueCards: number,
+  stageType: SoloStageType
+): number {
+  const weights = [1, 1, 1];
+
+  // Mange fatigue-kort → større chance for lavt target
+  if (fatigueCards >= 3) {
+    weights[0] += 2;
+  }
+
+  // Ingen fatigue → større chance for højt target
+  if (fatigueCards === 0) {
+    weights[2] += 2;
+  }
+
+  // Mountain → lidt større chance for højt target
+  if (stageType === 'mountain') {
+    weights[2] += 1;
+  }
+
+  const totalWeight =
+    weights[0] + weights[1] + weights[2];
+
+  let roll = Math.random() * totalWeight;
+
+  for (let i = 0; i < targets.length; i++) {
+    if (roll < weights[i]) {
+      return targets[i];
+    }
+
+    roll -= weights[i];
+  }
+
+  return targets[1];
+}
+
 export function chooseBreakawayRiderByFatigue(
   sprinteur: DummyRiderState,
   rouleur: DummyRiderState
