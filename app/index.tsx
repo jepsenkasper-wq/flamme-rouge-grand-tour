@@ -70,16 +70,16 @@ const isTablet = width >= 700;
             </Pressable>
           </Link>
 
-          <Link href="/follow-game" asChild>
-            <Pressable style={styles.button}>
-              <Users
-  size={30}
-  color="#7A1D12"
-  strokeWidth={2.2}
-/>
-              <Text style={styles.buttonText}>FOLLOW GAME</Text>
-            </Pressable>
-          </Link>
+          <Link href="/social-play" asChild>
+  <Pressable style={styles.button}>
+    <Users
+      size={30}
+      color="#7A1D12"
+      strokeWidth={2.2}
+    />
+    <Text style={styles.buttonText}>SOCIAL PLAY</Text>
+  </Pressable>
+</Link>
         </View>
       </View>
     </ImageBackground>

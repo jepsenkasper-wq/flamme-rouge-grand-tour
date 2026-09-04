@@ -37,6 +37,7 @@ export default function CompanionModeScreen() {
           Everything included in Normal Companion, with support for Dummy Teams, AI Teams and App-assisted card drawing for solo play and automated opponents.
         </Text>
       </Pressable>
+
     </View>
   );
 }
