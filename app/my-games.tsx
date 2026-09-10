@@ -15,12 +15,17 @@ import {
   deleteSavedGameById,
   getSavedGames,
   openSavedGame,
+  openSavedLiveGame,
   refreshFollowedGame,
 } from '@/lib/storage';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 import type { SavedGame } from '@/lib/savedGameTypes';
+
+import {
+  fetchLiveStageState,
+} from '@/lib/live/liveGames';
 
 export default function MyGamesScreen() {
   const [games, setGames] = useState<SavedGame[]>([]);
@@ -77,7 +82,26 @@ export default function MyGamesScreen() {
           <Pressable
   key={game.id}
   style={styles.card}
- onPress={async () => {
+onPress={async () => {
+  if (game.gameMode === 'live') {
+  const didOpen = await openSavedLiveGame(game);
+
+  if (didOpen && game.liveGameId) {
+    const stageState =
+      await fetchLiveStageState(
+        game.liveGameId
+      );
+
+    if (stageState) {
+      router.replace('/live-play-stage');
+    } else {
+      router.replace('/(tabs)');
+    }
+  }
+
+  return;
+}
+
   let gameToOpen = game;
 
   if (game.role === 'follower') {

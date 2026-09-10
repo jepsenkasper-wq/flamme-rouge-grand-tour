@@ -9,14 +9,21 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   const insets = useSafeAreaInsets();
 
-  useFocusEffect(
+useFocusEffect(
   useCallback(() => {
+    const liveSession = getActiveLiveGameSession();
+
+    if (liveSession) {
+      return;
+    }
+
     loadGame();
   }, [])
 );

@@ -32,6 +32,17 @@ import {
 import { subscribeToRemoteGame } from '@/lib/remoteGames';
 import { TourReviewContent } from '@/app/tour-review';
 
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
+import {
+  subscribeToLivePresence,
+  unsubscribeFromLivePresence,
+  initializeLiveStageState,
+  subscribeToLiveStageState,
+  fetchLiveStageState,
+unsubscribeFromLiveStageState,
+} from '@/lib/live/liveGames';
+
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
   White: require('@/assets/images/riders/rider-white.png'),
@@ -44,6 +55,57 @@ const riderImages: Record<string, any> = {
 
 export default function HomeScreen() {
   const [, setRefreshVersion] = useState(0);
+
+    const [onlinePlayerIds, setOnlinePlayerIds] =
+  useState<string[]>([]);
+
+  useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (!liveSession) {
+    return;
+  }
+
+  const channel = subscribeToLivePresence(
+    liveSession.gameId,
+    liveSession.playerId,
+    (playerIds) => {
+      setOnlinePlayerIds(playerIds);
+    }
+  );
+
+  return () => {
+    void unsubscribeFromLivePresence(
+      channel
+    );
+  };
+}, []);
+
+useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (!liveSession) {
+    return;
+  }
+
+  const channel = subscribeToLiveStageState(
+    liveSession.gameId,
+    () => {
+      if (!liveSession.isAdmin) {
+        router.replace('/live-play-stage');
+      }
+    }
+  );
+
+  return () => {
+    void unsubscribeFromLiveStageState(
+      channel
+    );
+  };
+}, []);
+
 
 useFocusEffect(
   useCallback(() => {
@@ -58,6 +120,7 @@ useFocusEffect(
   function getRiderImage(playerName: string) {
   const playerIndex = playerNames.findIndex((name) => name === playerName);
   const playerColor = playerColors[playerIndex];
+
 
   return riderImages[playerColor];
 }
@@ -100,12 +163,16 @@ useEffect(() => {
 
   setupRealtimeTest();
 
+  
+
   return () => {
     if (channel) {
       channel.unsubscribe();
     }
   };
 }, []);
+
+
 
 function getRiderImageFromRiderName(riderName?: string) {
   if (!riderName) {
@@ -128,6 +195,23 @@ const mountainLeader = calculateMountainClassification()[0];
 const sprintLeader = calculateSprintClassification()[0];
 const teamLeader = calculateTeamClassification()[0];
 
+const liveSession = getActiveLiveGameSession();
+
+const isLiveGame = Boolean(liveSession);
+
+const livePlayerCount =
+  createGameDraft.playerNames.length;
+
+const liveOnlineCount =
+  onlinePlayerIds.length;
+
+const allLivePlayersOnline =
+  isLiveGame &&
+  livePlayerCount > 0 &&
+  liveOnlineCount >= livePlayerCount;
+
+const isLiveAdmin =
+  liveSession?.isAdmin ?? false;
 
 
 const isDummyGame =
@@ -400,11 +484,77 @@ const entryTitle =
   </View>
 </View>
 
+ {getActiveLiveGameSession() && (
+  <Text style={styles.livePresenceText}>
+    Players online: {onlinePlayerIds.length}/
+    {createGameDraft.playerNames.length}
+  </Text>
+)}
+
 
       {!isFollower && (
   <Pressable
-    style={styles.button}
-    onPress={() => {
+    disabled={
+  isLiveGame &&
+  isLiveAdmin &&
+  !allLivePlayersOnline
+}
+    style={[
+      styles.button,
+     isLiveGame &&
+  isLiveAdmin &&
+  !allLivePlayersOnline &&
+  styles.buttonDisabled,
+    ]}
+    onPress={async () => {
+
+if (isLiveGame) {
+  if (!liveSession) {
+    return;
+  }
+
+  try {
+    const existingStageState =
+      await fetchLiveStageState(
+        liveSession.gameId
+      );
+
+    // Stage already exists:
+    // everyone may resume it.
+    if (existingStageState) {
+      router.push('/live-play-stage');
+      return;
+    }
+
+    // Only admin may start a new stage.
+    if (
+      !isLiveAdmin ||
+      !allLivePlayersOnline
+    ) {
+      return;
+    }
+
+    await initializeLiveStageState(
+      liveSession.gameId,
+      gameState.currentStage
+    );
+
+    router.push('/live-play-stage');
+  } catch (error) {
+    console.error(
+      'OPEN LIVE STAGE ERROR',
+      error
+    );
+
+    Alert.alert(
+      'Could not open stage',
+      'Please try again.'
+    );
+  }
+
+  return;
+}
+
   if (canEndTour) {
     Alert.alert(
       'End Tour?',
@@ -435,6 +585,7 @@ const entryTitle =
     return;
   }
 
+
   if (isDummyGame) {
     router.push('/play-stage');
     return;
@@ -449,9 +600,13 @@ const entryTitle =
 router.push('/enter-stage');
 }}
   >
-    <Text style={styles.buttonText}>
-      {buttonTitle}
-    </Text>
+   <Text style={styles.buttonText}>
+  {isLiveGame
+    ? isLiveAdmin
+      ? `Play Stage ${gameState.currentStage} · ${liveOnlineCount}/${livePlayerCount} players ready`
+      : `${liveOnlineCount}/${livePlayerCount} players ready`
+    : buttonTitle}
+</Text>
   </Pressable>
 )}
     </ScrollView>
@@ -917,5 +1072,15 @@ headerBackground: {
   paddingTop: 0,
   paddingBottom: 10,
   marginBottom: -90,
+},
+livePresenceText: {
+  fontSize: 14,
+  fontWeight: '800',
+  color: Colors.brown,
+  textAlign: 'center',
+  marginBottom: 10,
+},
+buttonDisabled: {
+  opacity: 0.4,
 },
 });

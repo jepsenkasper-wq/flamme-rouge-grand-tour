@@ -16,5 +16,11 @@ export type SavedGame = {
   adminKey?: string;
   soloStageState?: SoloStageState | null;
   stageDraft?: any;
+
+  gameMode?: 'local' | 'live';
+
+liveGameId?: string;
+livePlayerId?: string;
+liveIsAdmin?: boolean;
   
 };

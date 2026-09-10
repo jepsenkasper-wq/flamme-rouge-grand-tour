@@ -20,6 +20,8 @@ import {
   fetchLivePlayers,
 } from '@/lib/live/liveGames';
 
+import { saveLivePlayerIdentity } from '@/lib/livePlayerIdentity';
+
 export default function LiveJoinGameScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [playerName, setPlayerName] = useState('');
@@ -89,6 +91,16 @@ export default function LiveJoinGameScreen() {
   cleanName,
   false
 );
+
+if (!player.playerToken) {
+  throw new Error('Live player token is missing.');
+}
+
+await saveLivePlayerIdentity({
+  gameId: game.id,
+  playerId: player.id,
+  playerToken: player.playerToken,
+});
 
 router.replace({
   pathname: '/live-lobby',

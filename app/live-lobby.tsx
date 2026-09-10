@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   Pressable,
   StyleSheet,
   Text,
@@ -13,11 +14,15 @@ import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import {
   fetchLivePlayers,
+  fetchLiveTeams,
   subscribeToLivePlayers,
   unsubscribeFromLivePlayers,
+  subscribeToLiveGame,
+  unsubscribeFromLiveGame,
   updateLiveGamePhase,
   type LivePlayer,
   type LiveGame,
+  type LiveTeam,
 } from '@/lib/live/liveGames';
 import { supabase } from '@/lib/supabase';
 
@@ -50,18 +55,24 @@ export default function LiveLobbyScreen() {
   const [game, setGame] = useState<LiveGame | null>(null);
   const [players, setPlayers] = useState<LivePlayer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState<LiveTeam[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-    let channel: ReturnType<typeof subscribeToLivePlayers> | null = null;
+   let isMounted = true;
+
+let playersChannel:
+  ReturnType<typeof subscribeToLivePlayers> | null = null;
+
+let gameChannel:
+  ReturnType<typeof subscribeToLiveGame> | null = null;
 
     async function loadLobby() {
       try {
         const { data, error } = await supabase
           .from('live_games')
           .select(
-            'id, join_code, game_name, player_count, stage_count, rest_day_count, rest_day_stages, phase'
-          )
+  'id, join_code, game_name, player_count, stage_count, rest_day_count, rest_day_stages, phase, draft_order, draft_round, draft_pick_index, draft_started, special_rider_mode'
+)
           .eq('id', gameId)
           .single();
 
@@ -78,17 +89,28 @@ export default function LiveLobbyScreen() {
           restDayCount: Number(data.rest_day_count),
           restDayStages: data.rest_day_stages ?? [],
           phase: data.phase,
+          draftOrder: data.draft_order ?? [],
+draftRound: Number(data.draft_round ?? 1),
+draftPickIndex: Number(data.draft_pick_index ?? 0),
+draftStarted: Boolean(data.draft_started),
+          specialRiderMode:
+  data.special_rider_mode ?? null,
         };
 
-        const initialPlayers = await fetchLivePlayers(gameId);
+        const [initialPlayers, initialTeams] =
+  await Promise.all([
+    fetchLivePlayers(gameId),
+    fetchLiveTeams(gameId),
+  ]);
 
-        if (isMounted) {
-          setGame(liveGame);
-          setPlayers(initialPlayers);
-          setLoading(false);
-        }
+       if (isMounted) {
+  setGame(liveGame);
+  setPlayers(initialPlayers);
+  setTeams(initialTeams);
+  setLoading(false);
+}
 
-        channel = subscribeToLivePlayers(
+        playersChannel = subscribeToLivePlayers(
           gameId,
           async () => {
             const updatedPlayers =
@@ -99,7 +121,59 @@ export default function LiveLobbyScreen() {
             }
           }
         );
-      } catch (error) {
+
+        gameChannel = subscribeToLiveGame(
+  gameId,
+  async () => {
+    const { data, error } = await supabase
+      .from('live_games')
+      .select(
+  'id, join_code, game_name, player_count, stage_count, rest_day_count, rest_day_stages, phase, draft_order, draft_round, draft_pick_index, draft_started, special_rider_mode'
+)
+      .eq('id', gameId)
+      .single();
+
+    if (error) {
+      console.error('LIVE GAME REFRESH ERROR', error);
+      return;
+    }
+
+    if (!isMounted) {
+      return;
+    }
+
+    const updatedGame: LiveGame = {
+      id: data.id,
+      joinCode: data.join_code,
+      gameName: data.game_name,
+      playerCount: Number(data.player_count),
+      stageCount: Number(data.stage_count),
+      restDayCount: Number(data.rest_day_count),
+      restDayStages: data.rest_day_stages ?? [],
+      phase: data.phase,
+      draftOrder: data.draft_order ?? [],
+draftRound: Number(data.draft_round ?? 1),
+draftPickIndex: Number(data.draft_pick_index ?? 0),
+draftStarted: Boolean(data.draft_started),
+          specialRiderMode:
+  data.special_rider_mode ?? null,
+        };
+
+    setGame(updatedGame);
+
+    if (updatedGame.phase === 'special-riders') {
+      router.replace({
+        pathname: '/live-special-riders',
+        params: {
+          gameId,
+          playerId,
+        },
+      });
+    }
+  }
+);
+
+           } catch (error) {
         console.error('LIVE LOBBY ERROR', error);
 
         Alert.alert(
@@ -116,9 +190,13 @@ export default function LiveLobbyScreen() {
     return () => {
       isMounted = false;
 
-      if (channel) {
-        void unsubscribeFromLivePlayers(channel);
-      }
+     if (playersChannel) {
+  void unsubscribeFromLivePlayers(playersChannel);
+}
+
+if (gameChannel) {
+  void unsubscribeFromLiveGame(gameChannel);
+}
     };
   }, [gameId]);
 
@@ -144,10 +222,13 @@ const isAdmin = currentPlayer?.isAdmin ?? false;
     );
   }
 
-  return (
-    <View style={styles.screen}>
-      <BackgroundWatermark />
+ return (
+  <View style={styles.screen}>
+    <BackgroundWatermark />
 
+    <ScrollView
+      contentContainerStyle={styles.content}
+    >
       <Text style={styles.title}>
         {game.gameName}
       </Text>
@@ -241,17 +322,72 @@ const isAdmin = currentPlayer?.isAdmin ?? false;
           </View>
         ))}
       </View>
+      {teams.some(
+  (team) => team.teamType !== 'human'
+) && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Dummy Players
+    </Text>
+
+    <View style={styles.card}>
+      {teams
+        .filter(
+          (team) =>
+            team.teamType !== 'human'
+        )
+        .map((team) => (
+          <View
+            key={team.id}
+            style={styles.playerRow}
+          >
+            <View style={styles.playerNameRow}>
+              <Text
+                style={[
+                  styles.playerStar,
+                  {
+                    color: getPlayerColor(
+                      team.color
+                    ),
+                  },
+                ]}
+              >
+                ★
+              </Text>
+
+              <Text style={styles.playerName}>
+                {team.name}
+              </Text>
+            </View>
+
+            <Text style={styles.adminLabel}>
+              {team.teamType === 'normal-ai'
+                ? 'Normal AI'
+                : team.teamType === 'muscle'
+                ? 'Muscle'
+                : 'Peloton'}
+            </Text>
+          </View>
+        ))}
+    </View>
+  </>
+)}
+</ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-    padding: 24,
-    paddingTop: 50,
-  },
+screen: {
+  flex: 1,
+  backgroundColor: Colors.paper,
+},
+
+content: {
+  padding: 24,
+  paddingTop: 50,
+  paddingBottom: 50,
+},
 
   loading: {
     flex: 1,
@@ -370,5 +506,12 @@ waitingText: {
   fontWeight: '800',
   color: Colors.brown,
   textAlign: 'center',
+},
+sectionTitle: {
+  fontSize: 18,
+  fontWeight: '900',
+  color: Colors.brown,
+  marginTop: 24,
+  marginBottom: 10,
 },
 });

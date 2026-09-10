@@ -18,6 +18,20 @@ import {
 } from './solo/activeSoloStage';
 import { stageDraft } from '@/lib/stageDraft';
 
+import {
+  applyLiveGameData,
+  fetchLiveGame,
+  fetchLivePlayers,
+} from './live/liveGames';
+
+import {
+  setActiveLiveGameSession,
+} from './live/activeLiveGame';
+
+import {
+  getLivePlayerIdentity,
+} from './livePlayerIdentity';
+
 const ACTIVE_GAME_KEY = 'flamme-rouge-active-game';
 const SAVED_GAMES_KEY = 'flamme-rouge-games';
 
@@ -388,4 +402,128 @@ export async function importSavedGame(importedGame: SavedGame) {
   );
 
   return importedCopy;
+}
+
+export async function saveLiveGameToLibrary(
+  liveGameId: string,
+  livePlayerId: string,
+  liveIsAdmin: boolean
+) {
+  const games = await getSavedGames();
+
+  const localId = `live-${liveGameId}`;
+
+  const existingGame = games.find(
+    (game) => game.id === localId
+  );
+
+  const savedGame: SavedGame = {
+    id: localId,
+    name:
+      createGameDraft.gameName ||
+      'Unnamed Live Game',
+    createdAt:
+      existingGame?.createdAt ??
+      new Date().toISOString(),
+
+    createGameDraft: JSON.parse(
+      JSON.stringify(createGameDraft)
+    ),
+
+    gameResults: JSON.parse(
+      JSON.stringify(gameResults)
+    ),
+
+    gameState: JSON.parse(
+      JSON.stringify(gameState)
+    ),
+
+    soloStageState: null,
+
+    role: 'admin',
+
+    gameMode: 'live',
+    liveGameId,
+    livePlayerId,
+    liveIsAdmin,
+  };
+
+  const updatedGames = existingGame
+    ? games.map((game) =>
+        game.id === localId
+          ? savedGame
+          : game
+      )
+    : [...games, savedGame];
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(updatedGames)
+  );
+
+  activeGameId = savedGame.id;
+
+  await AsyncStorage.setItem(
+    ACTIVE_GAME_KEY,
+    savedGame.id
+  );
+
+  return savedGame;
+}
+
+export async function openSavedLiveGame(
+  savedGame: SavedGame
+) {
+  if (
+    savedGame.gameMode !== 'live' ||
+    !savedGame.liveGameId
+  ) {
+    return false;
+  }
+
+  const identity = await getLivePlayerIdentity(
+    savedGame.liveGameId
+  );
+
+  if (!identity) {
+    return false;
+  }
+
+  const liveGame = await fetchLiveGame(
+    savedGame.liveGameId
+  );
+
+  if (!liveGame.gameData) {
+    return false;
+  }
+
+  const players = await fetchLivePlayers(
+    savedGame.liveGameId
+  );
+
+  const currentPlayer = players.find(
+    (player) =>
+      player.id === identity.playerId
+  );
+
+  if (!currentPlayer) {
+    return false;
+  }
+
+  applyLiveGameData(liveGame.gameData);
+
+  setActiveLiveGameSession({
+    gameId: savedGame.liveGameId,
+    playerId: identity.playerId,
+    isAdmin: currentPlayer.isAdmin,
+  });
+
+  activeGameId = savedGame.id;
+
+  await AsyncStorage.setItem(
+    ACTIVE_GAME_KEY,
+    savedGame.id
+  );
+
+  return true;
 }

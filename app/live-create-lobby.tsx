@@ -12,9 +12,13 @@ import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import { liveGameDraft } from '@/lib/live/liveGameDraft';
 import {
+  createLiveDummyTeam,
   createLiveGame,
   createLivePlayer,
 } from '@/lib/live/liveGames';
+
+import { saveLivePlayerIdentity } from '@/lib/livePlayerIdentity';
+
 
 type CreatedLiveGame = {
   liveGameId: string;
@@ -37,6 +41,25 @@ export default function LiveCreateLobbyScreen() {
         liveGameDraft.adminName,
         true
       );
+
+      if (!adminPlayer.playerToken) {
+  throw new Error('Live player token is missing.');
+}
+
+await saveLivePlayerIdentity({
+  gameId: createdGame.liveGameId,
+  playerId: adminPlayer.id,
+  playerToken: adminPlayer.playerToken,
+});
+
+for (const team of liveGameDraft.aiTeams) {
+  await createLiveDummyTeam(
+    createdGame.liveGameId,
+    adminPlayer.id,
+    adminPlayer.playerToken,
+    team
+  );
+}
 
       if (!isMounted) {
         return;

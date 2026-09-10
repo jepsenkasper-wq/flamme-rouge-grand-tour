@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -25,6 +26,8 @@ export default function LiveCreateGameScreen() {
   const [restDays, setRestDays] = useState('2');
 
   const [adminName, setAdminName] = useState('');
+  const [dummyPlayers, setDummyPlayers] =
+  useState('0');
 
   useEffect(() => {
     resetLiveGameDraft();
@@ -32,17 +35,19 @@ export default function LiveCreateGameScreen() {
 
   return (
     <TouchableWithoutFeedback
-      onPress={Keyboard.dismiss}
-      accessible={false}
+  onPress={Keyboard.dismiss}
+  accessible={false}
+>
+  <View style={styles.screen}>
+    <BackgroundWatermark />
+
+    <KeyboardAwareScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      enableOnAndroid
+      extraScrollHeight={120}
+      keyboardShouldPersistTaps="handled"
     >
-      <KeyboardAwareScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        enableOnAndroid
-        extraScrollHeight={120}
-        keyboardShouldPersistTaps="handled"
-      >
-        <BackgroundWatermark />
 
         <Text style={styles.title}>Create Live Game</Text>
 
@@ -64,7 +69,9 @@ export default function LiveCreateGameScreen() {
   placeholder="Player name"
 />
 
-        <Text style={styles.label}>Players</Text>
+        <Text style={styles.label}>
+  Human Players
+</Text>
         <TextInput
           style={styles.input}
           value={players}
@@ -72,6 +79,18 @@ export default function LiveCreateGameScreen() {
           keyboardType="number-pad"
           maxLength={1}
         />
+
+        <Text style={styles.label}>
+  Dummy Players
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={dummyPlayers}
+  onChangeText={setDummyPlayers}
+  keyboardType="number-pad"
+  maxLength={1}
+/>
 
         <Text style={styles.label}>Stages</Text>
         <TextInput
@@ -97,18 +116,31 @@ export default function LiveCreateGameScreen() {
             const playerCount = Number(players);
             const stageCount = Number(stages);
             const restDayCount = Number(restDays);
+            const dummyPlayerCount =
+  Number(dummyPlayers);
 
             if (
-              !playerCount ||
-              playerCount < 2 ||
-              playerCount > 6
-            ) {
-              Alert.alert(
-                'Invalid number of players',
-                'Please choose between 2 and 6 players.'
-              );
-              return;
-            }
+  !playerCount ||
+  playerCount < 2 ||
+  playerCount > 6
+) {
+  Alert.alert(
+    'Invalid number of human players',
+    'Please choose between 2 and 6 human players.'
+  );
+  return;
+}
+
+if (
+  dummyPlayerCount < 0 ||
+  playerCount + dummyPlayerCount > 6
+) {
+  Alert.alert(
+    'Invalid number of dummy players',
+    'The total number of teams cannot exceed 6.'
+  );
+  return;
+}
 
             if (!stageCount || stageCount < 1) {
               Alert.alert(
@@ -139,14 +171,21 @@ export default function LiveCreateGameScreen() {
             liveGameDraft.stages = stages;
             liveGameDraft.restDays = restDays;
             liveGameDraft.adminName = adminName.trim();
+            liveGameDraft.dummyPlayers =
+  dummyPlayers;
 
-            router.push('/live-rest-days');
+            if (dummyPlayerCount > 0) {
+  router.push('/live-dummy-players');
+} else {
+  router.push('/live-rest-days');
+}
           }}
         >
           <Text style={styles.buttonText}>Next</Text>
         </Pressable>
       </KeyboardAwareScrollView>
-    </TouchableWithoutFeedback>
+  </View>
+</TouchableWithoutFeedback>
   );
 }
 
@@ -155,6 +194,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
   },
+
+  scroll: {
+  flex: 1,
+},
 
   content: {
     padding: 24,
