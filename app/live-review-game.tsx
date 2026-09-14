@@ -28,6 +28,7 @@ import {
   type LiveGame,
   type LivePlayer,
   type LiveTeam,
+  initializeLiveTeamRiders,
 } from '@/lib/live/liveGames';
 import { specialRiders } from '@/lib/solo/specialRiders';
 import { useNavigation } from '@react-navigation/native';
@@ -471,14 +472,21 @@ useEffect(() => {
             style={styles.button}
            onPress={async () => {
   try {
-    for (const player of players) {
-      await initializeLivePlayerRiders(
-        gameId,
-        player.id,
-        player.sprinteurSpecialRiderId ?? undefined,
-        player.rouleurSpecialRiderId ?? undefined
-      );
-    }
+    for (const team of teams) {
+  const ownerPlayer =
+    team.teamType === 'human'
+      ? players.find(
+          (player) =>
+            player.id === team.ownerPlayerId
+        )
+      : undefined;
+
+  await initializeLiveTeamRiders(
+    gameId,
+    team,
+    ownerPlayer
+  );
+}
 
     await initializeLiveGameData(gameId);
 

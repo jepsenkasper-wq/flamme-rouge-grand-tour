@@ -200,7 +200,8 @@ const liveSession = getActiveLiveGameSession();
 const isLiveGame = Boolean(liveSession);
 
 const livePlayerCount =
-  createGameDraft.playerNames.length;
+  createGameDraft.playerNames.length -
+  createGameDraft.dummyTeams.length;
 
 const liveOnlineCount =
   onlinePlayerIds.length;
@@ -486,8 +487,8 @@ const entryTitle =
 
  {getActiveLiveGameSession() && (
   <Text style={styles.livePresenceText}>
-    Players online: {onlinePlayerIds.length}/
-    {createGameDraft.playerNames.length}
+    Human players online: {onlinePlayerIds.length}/
+    {livePlayerCount}
   </Text>
 )}
 

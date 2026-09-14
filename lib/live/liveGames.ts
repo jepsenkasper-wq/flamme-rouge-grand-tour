@@ -12,8 +12,28 @@ import { gameResults } from '@/lib/gameResults';
 import {
   createDummyRider,
   DummyCard,
+  DummyRiderState,
   type RiderType,
 } from '@/lib/solo/dummyDeckEngine';
+import {
+  chooseAIBreakawayBid1Card,
+  getBreakawayTarget,
+  chooseBreakawayRiderByFatigue,
+  chooseWeightedBreakawayTarget,
+  getBreakawayTargetRange,
+  chooseAIBreakawayBid2Card,
+} from '@/lib/solo/breakawayEngine';
+import { SoloRiderStrategy } from '../solo/soloGameTypes';
+
+import {
+  createMuscleTeam,
+  MuscleTeamState,
+} from '@/lib/solo/muscleDeckEngine';
+
+import {
+  createPelotonTeam,
+  PelotonTeamState,
+} from '@/lib/solo/peletonDeckEngine';
 
 export function generateLiveJoinCode() {
   const number = Math.floor(1000 + Math.random() * 9000);
@@ -554,31 +574,75 @@ export async function initializeLiveGameData(
   gameId: string
 ): Promise<LiveGameData> {
   const game = await fetchLiveGame(gameId);
-  const players = await fetchLivePlayers(gameId);
+
+  const [players, teams] = await Promise.all([
+    fetchLivePlayers(gameId),
+    fetchLiveTeams(gameId),
+  ]);
+
+  const getTeamSprinteurSpecialRiderId = (
+    team: LiveTeam
+  ) => {
+    if (team.teamType === 'human') {
+      const ownerPlayer = players.find(
+        (player) =>
+          player.id === team.ownerPlayerId
+      );
+
+      return (
+        ownerPlayer?.sprinteurSpecialRiderId ?? ''
+      );
+    }
+
+    return team.sprinteurSpecialRiderId ?? '';
+  };
+
+  const getTeamRouleurSpecialRiderId = (
+    team: LiveTeam
+  ) => {
+    if (team.teamType === 'human') {
+      const ownerPlayer = players.find(
+        (player) =>
+          player.id === team.ownerPlayerId
+      );
+
+      return (
+        ownerPlayer?.rouleurSpecialRiderId ?? ''
+      );
+    }
+
+    return team.rouleurSpecialRiderId ?? '';
+  };
 
   const liveGameData: LiveGameData = {
     setup: {
       gameName: game.gameName,
-      players: String(game.playerCount),
+      players: String(teams.length),
       stages: String(game.stageCount),
       restDays: String(game.restDayCount),
 
-      playerNames: players.map(
-        (player) => player.name
+      playerNames: teams.map(
+        (team) => team.name
       ),
 
-      playerColors: players.map(
-        (player) => player.color ?? ''
+      playerColors: teams.map(
+        (team) => team.color ?? ''
       ),
 
-      playerRouleurSpecialRiders: players.map(
-        (player) =>
-          player.rouleurSpecialRiderId ?? ''
+      teamIds: teams.map(
+  (team) => team.id
+),
+
+teamTypes: teams.map(
+  (team) => team.teamType
+),
+
+      playerRouleurSpecialRiders: teams.map(
+        getTeamRouleurSpecialRiderId
       ),
 
-      playerSprinteurSpecialRiders: players.map(
-        (player) =>
-          player.sprinteurSpecialRiderId ?? ''
+      playerSprinteurSpecialRiders: teams.map(
+        getTeamSprinteurSpecialRiderId
       ),
 
       restDayStages: game.restDayStages,
@@ -629,8 +693,30 @@ export function applyLiveGameData(
   createGameDraft.stages = setup.stages;
   createGameDraft.restDays = setup.restDays;
 
-  createGameDraft.companionMode = 'normal';
-  createGameDraft.dummyTeams = [];
+  const hasDummyTeams = setup.teamTypes.some(
+  (teamType) => teamType !== 'human'
+);
+
+createGameDraft.companionMode =
+  hasDummyTeams ? 'dummy' : 'normal';
+
+createGameDraft.dummyTeams = setup.teamTypes
+  .map((teamType, index) => ({
+    id: setup.teamIds[index],
+    name: setup.playerNames[index],
+    color: setup.playerColors[index],
+    teamType,
+    sprinteurSpecialRiderId:
+  (setup.playerSprinteurSpecialRiders[index] ||
+    undefined) as SpecialRiderId | undefined,
+
+rouleurSpecialRiderId:
+  (setup.playerRouleurSpecialRiders[index] ||
+    undefined) as SpecialRiderId | undefined,
+  }))
+  .filter(
+    (team) => team.teamType !== 'human'
+  );
 
   createGameDraft.playerNames = [
     ...setup.playerNames,
@@ -775,6 +861,14 @@ export type LiveGameData = {
     playerSprinteurSpecialRiders: string[];
 
     restDayStages: string[];
+
+    teamIds: string[];
+teamTypes: (
+  | 'human'
+  | 'normal-ai'
+  | 'muscle'
+  | 'peloton'
+)[];
 
     scoringRules: {
       yellow: number[];
@@ -1084,16 +1178,17 @@ export type LiveBreakawayState = {
   bids: LiveBreakawayBid[];
   winnerIds: string[];
 };
+
 export async function selectLiveBreakawayRider(
   gameId: string,
-  playerId: string,
+  teamId: string,
   riderKey: 'sprinteur' | 'rouleur'
 ) {
   const { error } = await supabase.rpc(
     'select_live_breakaway_rider',
     {
       p_game_id: gameId,
-      p_player_id: playerId,
+      p_team_id: teamId,
       p_rider_key: riderKey,
     }
   );
@@ -1131,9 +1226,9 @@ export async function startLiveBreakawayBid1(
   }
 }
 
-export async function initializeLiveRiderState(
+   export async function initializeLiveRiderState(
   gameId: string,
-  playerId: string,
+  teamId: string,
   riderKey: RiderType,
   specialRiderId?: SpecialRiderId
 ) {
@@ -1146,7 +1241,7 @@ export async function initializeLiveRiderState(
     'initialize_live_rider_state',
     {
       p_game_id: gameId,
-      p_player_id: playerId,
+      p_team_id: teamId,
       p_rider_key: riderKey,
       p_deck: riderState.deck,
       p_special_rider_id:
@@ -1157,6 +1252,90 @@ export async function initializeLiveRiderState(
   if (error) {
     throw error;
   }
+}
+
+export async function initializeLiveRiderStateFromDeck(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  deck: DummyCard[]
+) {
+  const { error } = await supabase.rpc(
+    'initialize_live_rider_state',
+    {
+      p_game_id: gameId,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_deck: deck,
+      p_special_rider_id: null,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function initializeLiveTeamRiders(
+  gameId: string,
+  team: LiveTeam,
+  ownerPlayer?: LivePlayer
+) {
+  if (team.teamType === 'peloton') {
+  const pelotonTeam = createPelotonTeam();
+
+  await initializeLivePelotonState(
+    gameId,
+    team.id,
+    pelotonTeam.deck
+  );
+
+  return;
+}
+
+  if (team.teamType === 'muscle') {
+    const muscleTeam = createMuscleTeam();
+
+    await initializeLiveRiderStateFromDeck(
+      gameId,
+      team.id,
+      'sprinteur',
+      muscleTeam.sprinteur.deck
+    );
+
+    await initializeLiveRiderStateFromDeck(
+      gameId,
+      team.id,
+      'rouleur',
+      muscleTeam.rouleur.deck
+    );
+
+    return;
+  }
+
+  const sprinteurSpecialRiderId =
+    team.teamType === 'human'
+      ? ownerPlayer?.sprinteurSpecialRiderId
+      : team.sprinteurSpecialRiderId;
+
+  const rouleurSpecialRiderId =
+    team.teamType === 'human'
+      ? ownerPlayer?.rouleurSpecialRiderId
+      : team.rouleurSpecialRiderId;
+
+  await initializeLiveRiderState(
+    gameId,
+    team.id,
+    'sprinteur',
+    sprinteurSpecialRiderId
+  );
+
+  await initializeLiveRiderState(
+    gameId,
+    team.id,
+    'rouleur',
+    rouleurSpecialRiderId
+  );
 }
 
 export async function initializeLivePlayerRiders(
@@ -1179,6 +1358,8 @@ export async function initializeLivePlayerRiders(
     rouleurSpecialRiderId
   );
 }
+
+
 
 export async function drawLiveBreakawayHand(
   gameId: string
@@ -1208,6 +1389,167 @@ export async function drawLiveBreakawayHand(
 
   return (data ?? []) as DummyCard[];
 }
+
+export async function drawLiveRoundHand(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur',
+  drawCount: number
+): Promise<DummyCard[]> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { data, error } = await supabase.rpc(
+    'draw_live_round_hand',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_draw_count: drawCount,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DummyCard[];
+}
+
+export async function submitLiveRoundCard(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur',
+  cardId: string
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'submit_live_round_card',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_card_id: cardId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function addLiveRoundFatigue(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur'
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'add_live_round_fatigue',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function removeLiveRoundFatigue(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur'
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'remove_live_round_fatigue',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function refreshLiveRoundRider(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur',
+  limit: 24 | 25
+): Promise<DummyCard[]> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { data, error } = await supabase.rpc(
+    'refresh_live_round_rider',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_limit: limit,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DummyCard[];
+}
+
 export async function submitLiveBreakawayBid1(
   gameId: string,
   cardId: string
@@ -1552,5 +1894,834 @@ export async function assignRandomSpecialRidersToLiveAI(
       rouleur.id,
       (useCounts.get(rouleur.id) ?? 0) + 1
     );
+  }
+}
+
+export async function fetchLiveAIRiderStates(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string
+): Promise<{
+  sprinteur: DummyRiderState;
+  rouleur: DummyRiderState;
+}> {
+  const { data, error } = await supabase.rpc(
+    'fetch_live_ai_rider_states',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token: adminPlayerToken,
+      p_team_id: teamId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+const rows = (data ?? []) as {
+  rider_key: RiderType;
+  deck: DummyCard[];
+  set_aside: DummyCard[];
+  discard: DummyCard[];
+  pending_hand: DummyCard[];
+  special_rider_id: SpecialRiderId | null;
+  round: number;
+  last_played_value: number | null;
+
+  strategy: SoloRiderStrategy | null;
+  strategy_normal_draws: number;
+  defensive_two_played: boolean;
+  recovery_draws_remaining: number;
+  last_fatigue_round: number | null;
+  defensive_strategy_ended: boolean;
+  super_sprinteur_power_cards_by_phase:
+    | [number, number, number]
+    | null;
+}[];
+
+  const sprinteurRow = rows.find(
+    (row) => row.rider_key === 'sprinteur'
+  );
+
+  const rouleurRow = rows.find(
+    (row) => row.rider_key === 'rouleur'
+  );
+
+  if (!sprinteurRow || !rouleurRow) {
+    throw new Error(
+      'AI rider states are incomplete.'
+    );
+  }
+
+  return {
+    sprinteur: {
+  deck: sprinteurRow.deck,
+  setAside: sprinteurRow.set_aside,
+  discard: sprinteurRow.discard,
+  pendingHand: sprinteurRow.pending_hand,
+  specialRiderId:
+    sprinteurRow.special_rider_id ?? undefined,
+  round: sprinteurRow.round,
+  lastPlayedValue:
+    sprinteurRow.last_played_value ?? undefined,
+
+  strategy:
+    sprinteurRow.strategy ?? undefined,
+  strategyNormalDraws:
+    sprinteurRow.strategy_normal_draws,
+  defensiveTwoPlayed:
+    sprinteurRow.defensive_two_played,
+  recoveryDrawsRemaining:
+    sprinteurRow.recovery_draws_remaining,
+  lastFatigueRound:
+    sprinteurRow.last_fatigue_round ?? undefined,
+  defensiveStrategyEnded:
+    sprinteurRow.defensive_strategy_ended,
+  superSprinteurPowerCardsByPhase:
+    sprinteurRow.super_sprinteur_power_cards_by_phase ??
+    undefined,
+},
+
+    rouleur: {
+  deck: rouleurRow.deck,
+  setAside: rouleurRow.set_aside,
+  discard: rouleurRow.discard,
+  pendingHand: rouleurRow.pending_hand,
+  specialRiderId:
+    rouleurRow.special_rider_id ?? undefined,
+  round: rouleurRow.round,
+  lastPlayedValue:
+    rouleurRow.last_played_value ?? undefined,
+
+  strategy:
+    rouleurRow.strategy ?? undefined,
+  strategyNormalDraws:
+    rouleurRow.strategy_normal_draws,
+  defensiveTwoPlayed:
+    rouleurRow.defensive_two_played,
+  recoveryDrawsRemaining:
+    rouleurRow.recovery_draws_remaining,
+  lastFatigueRound:
+    rouleurRow.last_fatigue_round ?? undefined,
+  defensiveStrategyEnded:
+    rouleurRow.defensive_strategy_ended,
+  superSprinteurPowerCardsByPhase:
+    rouleurRow.super_sprinteur_power_cards_by_phase ??
+    undefined,
+},
+  };
+}
+
+export async function autoSelectLiveAIBreakawayRiders(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string
+) {
+  const [teams, stageState] = await Promise.all([
+    fetchLiveTeams(gameId),
+    fetchLiveStageState(gameId),
+  ]);
+
+  if (!stageState) {
+    throw new Error(
+      'Live stage state not found.'
+    );
+  }
+
+  const normalAITeams = teams.filter(
+    (team) => team.teamType === 'normal-ai'
+  );
+
+  for (const team of normalAITeams) {
+    const alreadySelected =
+      stageState.breakaway.bids.some(
+        (bid) => bid.teamId === team.id
+      );
+
+    if (alreadySelected) {
+      continue;
+    }
+
+    const riderStates =
+      await fetchLiveAIRiderStates(
+        gameId,
+        adminPlayerId,
+        adminPlayerToken,
+        team.id
+      );
+
+    const riderKey =
+      chooseBreakawayRiderByFatigue(
+        riderStates.sprinteur,
+        riderStates.rouleur
+      );
+
+    await selectLiveBreakawayRider(
+      gameId,
+      team.id,
+      riderKey
+    );
+  }
+}
+
+export async function drawLiveAIBreakawayHand(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string
+): Promise<DummyCard[]> {
+  const { data, error } = await supabase.rpc(
+    'draw_live_ai_breakaway_hand',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token:
+        adminPlayerToken,
+      p_team_id: teamId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DummyCard[];
+}
+
+export async function submitLiveAIBreakawayBid1(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string,
+  cardId: string
+) {
+  const { error } = await supabase.rpc(
+    'submit_live_ai_breakaway_bid1',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token:
+        adminPlayerToken,
+      p_team_id: teamId,
+      p_card_id: cardId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function autoSubmitLiveAIBreakawayBid1(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string
+) {
+  const [teams, stageState] =
+    await Promise.all([
+      fetchLiveTeams(gameId),
+      fetchLiveStageState(gameId),
+    ]);
+
+  if (!stageState) {
+    throw new Error(
+      'Live stage state not found.'
+    );
+  }
+
+  if (
+    stageState.breakaway.phase !== 'bid-1'
+  ) {
+    return;
+  }
+
+  const normalAITeams = teams.filter(
+    (team) => team.teamType === 'normal-ai'
+  );
+
+  for (const team of normalAITeams) {
+    const bid =
+      stageState.breakaway.bids.find(
+        (item) => item.teamId === team.id
+      );
+
+    if (
+      !bid ||
+      bid.bid1Submitted
+    ) {
+      continue;
+    }
+
+    const cards =
+      await drawLiveAIBreakawayHand(
+        gameId,
+        adminPlayerId,
+        adminPlayerToken,
+        team.id
+      );
+
+    const playerIndex = teams.findIndex(
+  (item) => item.id === team.id
+);
+
+if (playerIndex === -1) {
+  throw new Error(
+    'AI team index not found.'
+  );
+}
+
+const riderStates =
+  await fetchLiveAIRiderStates(
+    gameId,
+    adminPlayerId,
+    adminPlayerToken,
+    team.id
+  );
+
+const selectedRider =
+  bid.riderKey === 'sprinteur'
+    ? riderStates.sprinteur
+    : riderStates.rouleur;
+
+const fatigueCards =
+  selectedRider.deck.filter(
+    (card) => card.type === 'fatigue'
+  ).length;
+
+const targetRange =
+  getBreakawayTargetRange(
+    playerIndex,
+    stageState.stageType
+  );
+
+const target =
+  chooseWeightedBreakawayTarget(
+    targetRange,
+    fatigueCards,
+    stageState.stageType
+  );
+
+const selectedCard =
+  chooseAIBreakawayBid1Card(
+    cards,
+    target
+  );
+
+    await submitLiveAIBreakawayBid1(
+      gameId,
+      adminPlayerId,
+      adminPlayerToken,
+      team.id,
+      selectedCard.id
+    );
+  }
+}
+
+export async function submitLiveAIBreakawayBid2(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string,
+  cardId: string
+) {
+  const { error } = await supabase.rpc(
+    'submit_live_ai_breakaway_bid2',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token:
+        adminPlayerToken,
+      p_team_id: teamId,
+      p_card_id: cardId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+export async function autoSubmitLiveAIBreakawayBid2(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string
+) {
+  const [teams, stageState] =
+    await Promise.all([
+      fetchLiveTeams(gameId),
+      fetchLiveStageState(gameId),
+    ]);
+
+  if (!stageState) {
+    throw new Error(
+      'Live stage state not found.'
+    );
+  }
+
+  if (
+    stageState.breakaway.phase !== 'bid-2'
+  ) {
+    return;
+  }
+
+  const normalAITeams = teams.filter(
+    (team) => team.teamType === 'normal-ai'
+  );
+
+  for (const team of normalAITeams) {
+    const bid =
+      stageState.breakaway.bids.find(
+        (item) => item.teamId === team.id
+      );
+
+    if (
+      !bid ||
+      bid.bid2Submitted
+    ) {
+      continue;
+    }
+
+    const cards =
+      await drawLiveAIBreakawayHand(
+        gameId,
+        adminPlayerId,
+        adminPlayerToken,
+        team.id
+      );
+
+    const playerIndex = teams.findIndex(
+      (item) => item.id === team.id
+    );
+
+    if (playerIndex === -1) {
+      throw new Error(
+        'AI team index not found.'
+      );
+    }
+
+    const riderStates =
+      await fetchLiveAIRiderStates(
+        gameId,
+        adminPlayerId,
+        adminPlayerToken,
+        team.id
+      );
+
+    const selectedRider =
+      bid.riderKey === 'sprinteur'
+        ? riderStates.sprinteur
+        : riderStates.rouleur;
+
+    const fatigueCards =
+      selectedRider.deck.filter(
+        (card) => card.type === 'fatigue'
+      ).length;
+
+    const targetRange =
+      getBreakawayTargetRange(
+        playerIndex,
+        stageState.stageType
+      );
+
+    const target =
+      chooseWeightedBreakawayTarget(
+        targetRange,
+        fatigueCards,
+        stageState.stageType
+      );
+
+    const bid1Value =
+      bid.bid1Value ?? 0;
+
+    const selectedCard =
+      chooseAIBreakawayBid2Card(
+        cards,
+        target,
+        bid1Value
+      );
+
+    await submitLiveAIBreakawayBid2(
+      gameId,
+      adminPlayerId,
+      adminPlayerToken,
+      team.id,
+      selectedCard.id
+    );
+  }
+}
+
+export async function startLiveRoundDraw(
+  gameId: string
+) {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'start_live_round_draw',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function submitLiveAIRoundCard(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  riderState: DummyRiderState,
+  selectedCard: DummyCard
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'submit_live_ai_round_card',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_rider_state: riderState,
+      p_selected_card: selectedCard,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function undoLiveAIRoundCard(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  riderState: DummyRiderState
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'undo_live_ai_round_card',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_rider_state: riderState,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateLiveAIRiderState(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  riderState: DummyRiderState,
+  markRefreshed = false
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'update_live_ai_rider_state',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_rider_state: riderState,
+      p_mark_refreshed: markRefreshed,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function fetchLiveMuscleRiderStates(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string
+): Promise<MuscleTeamState> {
+  const { data, error } = await supabase.rpc(
+    'fetch_live_muscle_rider_states',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token: adminPlayerToken,
+      p_team_id: teamId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data ?? []) as {
+    rider_key: RiderType;
+    deck: DummyCard[];
+    discard: DummyCard[];
+    round: number;
+  }[];
+
+  const sprinteur = rows.find(
+    (row) => row.rider_key === 'sprinteur'
+  );
+
+  const rouleur = rows.find(
+    (row) => row.rider_key === 'rouleur'
+  );
+
+  if (!sprinteur || !rouleur) {
+    throw new Error(
+      'Muscle rider state not found.'
+    );
+  }
+
+  return {
+    sprinteur: {
+      deck: sprinteur.deck ?? [],
+      discard: sprinteur.discard ?? [],
+      round: sprinteur.round ?? 0,
+    },
+    rouleur: {
+      deck: rouleur.deck ?? [],
+      discard: rouleur.discard ?? [],
+      round: rouleur.round ?? 0,
+    },
+  };
+}
+
+export async function submitLiveMuscleRoundCard(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  riderState: MuscleTeamState[RiderType],
+  selectedCard: DummyCard
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'submit_live_muscle_round_card',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_rider_state: riderState,
+      p_selected_card: selectedCard,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateLiveMuscleRiderState(
+  gameId: string,
+  teamId: string,
+  riderKey: RiderType,
+  riderState: MuscleTeamState[RiderType],
+  markRefreshed = false
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'update_live_muscle_rider_state',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_rider_state: riderState,
+      p_mark_refreshed: markRefreshed,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function initializeLivePelotonState(
+  gameId: string,
+  teamId: string,
+  deck: DummyCard[]
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    'initialize_live_peloton_state',
+    {
+      p_game_id: gameId,
+      p_team_id: teamId,
+      p_deck: deck,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function fetchLivePelotonState(
+  gameId: string,
+  adminPlayerId: string,
+  adminPlayerToken: string,
+  teamId: string
+): Promise<PelotonTeamState> {
+  const { data, error } = await supabase.rpc(
+    'fetch_live_peloton_state',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: adminPlayerId,
+      p_admin_player_token: adminPlayerToken,
+      p_team_id: teamId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const row = data?.[0];
+
+  if (!row) {
+    throw new Error(
+      'Peloton state not found.'
+    );
+  }
+
+  return {
+    deck: row.deck ?? [],
+    discard: row.discard ?? [],
+    round: row.round ?? 0,
+  };
+}
+
+export async function submitLivePelotonRoundCard(
+  gameId: string,
+  teamId: string,
+  pelotonState: PelotonTeamState,
+  selectedCard: DummyCard
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'submit_live_peloton_round_card',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_peloton_state: pelotonState,
+      p_selected_card: selectedCard,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateLivePelotonState(
+  gameId: string,
+  teamId: string,
+  pelotonState: PelotonTeamState,
+  markRefreshed = false
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'update_live_peloton_state',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+      p_team_id: teamId,
+      p_peloton_state: pelotonState,
+      p_mark_refreshed: markRefreshed,
+    }
+  );
+
+  if (error) {
+    throw error;
   }
 }

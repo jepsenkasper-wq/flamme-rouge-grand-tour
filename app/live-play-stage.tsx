@@ -27,6 +27,12 @@ import {
   resolveLiveBreakaway,
   getLiveBreakawayPendingHand,
   fetchLivePlayers,
+  autoSelectLiveAIBreakawayRiders,
+  fetchLiveTeams,
+  autoSubmitLiveAIBreakawayBid1,
+  autoSubmitLiveAIBreakawayBid2,
+  startLiveRoundDraw,
+LiveTeam,
   type LiveStageState,
   LivePlayer,
 } from '@/lib/live/liveGames';
@@ -37,6 +43,7 @@ import type {
 
 import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 import { createGameDraft } from '@/lib/createGameDraft';
+import { getLivePlayerIdentity } from '@/lib/livePlayerIdentity';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -55,6 +62,9 @@ export default function LivePlayStageScreen() {
 
 const [players, setPlayers] =
   useState<LivePlayer[]>([]);
+
+  const [teams, setTeams] =
+  useState<LiveTeam[]>([]);
 
 
   const [loading, setLoading] =
@@ -91,27 +101,49 @@ const [selectedBreakawayWinnerIds, setSelectedBreakawayWinnerIds] =
 
     async function loadStageState() {
       try {
- const [state, livePlayers, pendingHand] =
-  await Promise.all([
-    fetchLiveStageState(
-      liveSession!.gameId
-    ),
-    fetchLivePlayers(
-      liveSession!.gameId
-    ),
-    getLiveBreakawayPendingHand(
-      liveSession!.gameId
-    ),
-  ]);
+const [
+  state,
+  livePlayers,
+  liveTeams,
+  pendingHand,
+] = await Promise.all([
+  fetchLiveStageState(
+    liveSession!.gameId
+  ),
+  fetchLivePlayers(
+    liveSession!.gameId
+  ),
+  fetchLiveTeams(
+    liveSession!.gameId
+  ),
+  getLiveBreakawayPendingHand(
+    liveSession!.gameId
+  ),
+]);
 
 if (active) {
   setStageState(state);
+  console.log(
+  'LIVE BREAKAWAY STATE',
+  JSON.stringify(
+    state?.breakaway,
+    null,
+    2
+  )
+);
   setPlayers(livePlayers);
+  setTeams(liveTeams);
 
-  const myBid = state?.breakaway.bids.find(
-    (bid) =>
-      bid.teamId === liveSession!.playerId
-  );
+ const myLiveTeam = liveTeams.find(
+  (team) =>
+    team.teamType === 'human' &&
+    team.ownerPlayerId === liveSession!.playerId
+);
+
+const myBid = state?.breakaway.bids.find(
+  (bid) =>
+    bid.teamId === myLiveTeam?.id
+);
 
   if (
     state?.breakaway.phase === 'bid-1' &&
@@ -160,6 +192,219 @@ if (active) {
     };
   }, []);
 
+useEffect(() => {
+  if (
+    !liveSession ||
+    !liveSession.isAdmin ||
+    !stageState ||
+    stageState.breakaway.phase !==
+      'rider-selection'
+  ) {
+    return;
+  }
+
+  const humanTeamIds = teams
+    .filter(
+      (team) => team.teamType === 'human'
+    )
+    .map((team) => team.id);
+
+  const hasHumanSelection =
+    stageState.breakaway.bids.some(
+      (bid) =>
+        humanTeamIds.includes(bid.teamId)
+    );
+
+  const hasUnselectedAI = teams.some(
+    (team) =>
+      team.teamType === 'normal-ai' &&
+      !stageState.breakaway.bids.some(
+        (bid) => bid.teamId === team.id
+      )
+  );
+
+  if (
+    !hasHumanSelection ||
+    !hasUnselectedAI
+  ) {
+    return;
+  }
+
+  void (async () => {
+    try {
+      const identity =
+        await getLivePlayerIdentity(
+          liveSession.gameId
+        );
+
+      if (!identity) {
+        throw new Error(
+          'Live player identity not found.'
+        );
+      }
+
+      await autoSelectLiveAIBreakawayRiders(
+        liveSession.gameId,
+        identity.playerId,
+        identity.playerToken
+      );
+    } catch (error) {
+      console.error(
+        'AUTO SELECT LIVE AI BREAKAWAY RIDER ERROR',
+        error
+      );
+    }
+  })();
+}, [
+  stageState,
+  teams,
+  liveSession,
+]);
+
+useEffect(() => {
+  if (
+    !liveSession ||
+    !liveSession.isAdmin ||
+    !stageState ||
+    stageState.breakaway.phase !== 'bid-1'
+  ) {
+    return;
+  }
+
+  const humanTeams = teams.filter(
+    (team) => team.teamType === 'human'
+  );
+
+  const allHumansSubmitted =
+    humanTeams.every((team) => {
+      const bid =
+        stageState.breakaway.bids.find(
+          (item) => item.teamId === team.id
+        );
+
+      return bid?.bid1Submitted === true;
+    });
+
+  const hasUnsubmittedAI = teams.some(
+    (team) =>
+      team.teamType === 'normal-ai' &&
+      stageState.breakaway.bids.some(
+        (bid) =>
+          bid.teamId === team.id &&
+          !bid.bid1Submitted
+      )
+  );
+
+  if (
+    !allHumansSubmitted ||
+    !hasUnsubmittedAI
+  ) {
+    return;
+  }
+
+  void (async () => {
+    try {
+      const identity =
+        await getLivePlayerIdentity(
+          liveSession.gameId
+        );
+
+      if (!identity) {
+        throw new Error(
+          'Live player identity not found.'
+        );
+      }
+
+      await autoSubmitLiveAIBreakawayBid1(
+        liveSession.gameId,
+        identity.playerId,
+        identity.playerToken
+      );
+    } catch (error) {
+      console.error(
+        'AUTO SUBMIT LIVE AI BREAKAWAY BID 1 ERROR',
+        error
+      );
+    }
+  })();
+}, [
+  stageState,
+  teams,
+  liveSession,
+]);
+
+useEffect(() => {
+  if (
+    !liveSession ||
+    !liveSession.isAdmin ||
+    !stageState ||
+    stageState.breakaway.phase !== 'bid-2'
+  ) {
+    return;
+  }
+
+  const humanTeams = teams.filter(
+    (team) => team.teamType === 'human'
+  );
+
+  const allHumansSubmitted =
+    humanTeams.every((team) => {
+      const bid =
+        stageState.breakaway.bids.find(
+          (item) => item.teamId === team.id
+        );
+
+      return bid?.bid2Submitted === true;
+    });
+
+  const hasUnsubmittedAI = teams.some(
+    (team) =>
+      team.teamType === 'normal-ai' &&
+      stageState.breakaway.bids.some(
+        (bid) =>
+          bid.teamId === team.id &&
+          !bid.bid2Submitted
+      )
+  );
+
+  if (
+    !allHumansSubmitted ||
+    !hasUnsubmittedAI
+  ) {
+    return;
+  }
+
+  void (async () => {
+    try {
+      const identity =
+        await getLivePlayerIdentity(
+          liveSession.gameId
+        );
+
+      if (!identity) {
+        throw new Error(
+          'Live player identity not found.'
+        );
+      }
+
+      await autoSubmitLiveAIBreakawayBid2(
+        liveSession.gameId,
+        identity.playerId,
+        identity.playerToken
+      );
+    } catch (error) {
+      console.error(
+        'AUTO SUBMIT LIVE AI BREAKAWAY BID 2 ERROR',
+        error
+      );
+    }
+  })();
+}, [
+  stageState,
+  teams,
+  liveSession,
+]);
+
   if (loading) {
     return (
       <View style={styles.screen}>
@@ -182,10 +427,16 @@ if (active) {
     );
   }
 
-  const myBreakawayBid =
+  const myTeam = teams.find(
+  (team) =>
+    team.teamType === 'human' &&
+    team.ownerPlayerId === liveSession.playerId
+);
+
+const myBreakawayBid =
   stageState.breakaway.bids.find(
     (bid) =>
-      bid.teamId === liveSession.playerId
+      bid.teamId === myTeam?.id
   );
 
 const myBreakawayRider =
@@ -194,11 +445,78 @@ const myBreakawayRider =
 const selectedRiderCount =
   stageState.breakaway.bids.length;
 
+const breakawayTeams = teams.filter(
+  (team) =>
+    team.teamType === 'human' ||
+    team.teamType === 'normal-ai'
+);
+
 const requiredRiderCount =
-  createGameDraft.playerNames.length;
+  breakawayTeams.length;
 
 const allRidersSelected =
   selectedRiderCount >= requiredRiderCount;
+
+type LiveDrawListItem = {
+  id: string;
+  teamId: string;
+  teamName: string;
+  color?: string;
+  teamType:
+    | 'human'
+    | 'normal-ai'
+    | 'muscle'
+    | 'peloton';
+  riderKey?: 'sprinteur' | 'rouleur';
+  riderLabel: string;
+  canOpen: boolean;
+};
+
+const liveDrawList: LiveDrawListItem[] =
+  teams.flatMap((team): LiveDrawListItem[] => {
+    const canOpen =
+      team.teamType === 'human'
+        ? team.ownerPlayerId ===
+          liveSession?.playerId
+        : liveSession?.isAdmin === true;
+
+    if (team.teamType === 'peloton') {
+      return [
+        {
+          id: `${team.id}-peloton`,
+          teamId: team.id,
+          teamName: team.name,
+          color: team.color,
+          teamType: team.teamType,
+          riderLabel: 'Peloton',
+          canOpen,
+        },
+      ];
+    }
+
+    return [
+      {
+        id: `${team.id}-sprinteur`,
+        teamId: team.id,
+        teamName: team.name,
+        color: team.color,
+        teamType: team.teamType,
+        riderKey: 'sprinteur',
+        riderLabel: 'Sprinteur',
+        canOpen,
+      },
+      {
+        id: `${team.id}-rouleur`,
+        teamId: team.id,
+        teamName: team.name,
+        color: team.color,
+        teamType: team.teamType,
+        riderKey: 'rouleur',
+        riderLabel: 'Rouleur',
+        canOpen,
+      },
+    ];
+  });
 
   return (
   <View style={styles.screen}>
@@ -241,10 +559,10 @@ const allRidersSelected =
         Stage {stageState.stageNumber}
       </Text>
 
-      <View style={styles.card}>
-        {stageState.breakaway.phase ===
+      {stageState.breakaway.phase ===
   'rider-selection' && (
-  <>
+  <View style={styles.card}>
+
   <Text style={styles.sectionTitle}>
     Race Type
   </Text>
@@ -426,13 +744,17 @@ const allRidersSelected =
                 styles.optionButtonActive,
             ]}
             onPress={async () => {
-              await selectLiveBreakawayRider(
-                liveSession.gameId,
-                liveSession.playerId,
-                option.key as
-                  | 'sprinteur'
-                  | 'rouleur'
-              );
+          if (!myTeam) {
+  return;
+}
+
+await selectLiveBreakawayRider(
+  liveSession.gameId,
+  myTeam.id,
+  option.key as
+    | 'sprinteur'
+    | 'rouleur'
+);
             }}
           >
             <Text
@@ -474,9 +796,8 @@ const allRidersSelected =
     </Text>
   </Pressable>
 )}
-</>
-)}
 </View>
+)}
 
 {stageState.breakaway.phase === 'bid-1' && (
   <View style={styles.card}>
@@ -567,24 +888,27 @@ const allRidersSelected =
   </View>
 )}
 
-{(
-  stageState.breakaway.phase === 'bid-1-results' ||
-  stageState.breakaway.phase === 'bid-2' ||
-  stageState.breakaway.phase === 'bid-2-results'
-) && (
-  <View style={styles.card}>
+{stageState.phase !== 'round-draw' &&
+  (
+    stageState.breakaway.phase === 'bid-1-results' ||
+    stageState.breakaway.phase === 'bid-2' ||
+    stageState.breakaway.phase === 'bid-2-results'
+  ) && (
+    <View style={styles.card}>
     <Text style={styles.sectionTitle}>
-      Breakaway – Bid 1 Results
-    </Text>
+  {stageState.breakaway.phase === 'bid-2-results'
+    ? 'Breakaway – Bid 2 Results'
+    : 'Breakaway – Bid 1 Results'}
+</Text>
 
     {stageState.breakaway.bids.map((bid) => {
-      const player = players.find(
-        (player) => player.id === bid.teamId
-      );
+      const team = teams.find(
+  (team) => team.id === bid.teamId
+);
 
-      if (!player) {
-        return null;
-      }
+if (!team) {
+  return null;
+}
 
       const riderLabel =
         bid.riderKey === 'sprinteur'
@@ -635,14 +959,14 @@ disabled={
 >
           <Image
             source={
-  riderImages[player.color ?? 'Blue']
+  riderImages[team.color ?? 'Blue']
 }
             style={styles.avatar}
           />
 
           <View style={styles.rowInfo}>
             <Text style={styles.rowText}>
-              {player.name} - {riderLabel}
+              {team.name} - {riderLabel}
             </Text>
 
             <Text style={styles.rowSubText}>
@@ -668,6 +992,30 @@ disabled={
     Breakaway confirmed
   </Text>
 )}
+
+{liveSession.isAdmin &&
+  stageState.breakaway.completed &&
+  stageState.phase !== 'round-draw' && (
+    <Pressable
+      style={styles.button}
+      onPress={async () => {
+        try {
+          await startLiveRoundDraw(
+            liveSession.gameId
+          );
+        } catch (error) {
+          console.error(
+            'START LIVE ROUND DRAW ERROR',
+            error
+          );
+        }
+      }}
+    >
+      <Text style={styles.buttonText}>
+        START ROUND
+      </Text>
+    </Pressable>
+  )}
 
     {liveSession.isAdmin &&
   stageState.breakaway.phase ===
@@ -785,6 +1133,94 @@ disabled={
     )}
   </>
 )}
+  </View>
+)}
+
+{stageState.phase === 'round-draw' && (
+  <View style={styles.card}>
+    <Text style={styles.sectionTitle}>
+      Round {stageState.round} – Draw
+    </Text>
+
+    {liveDrawList.map((item) => {
+  const statusKey =
+    item.riderKey
+      ? `${item.teamId}:${item.riderKey}`
+      : item.teamId;
+
+  const drawStatus =
+    stageState.drawStatus?.[statusKey] as
+      | { submitted?: boolean }
+      | undefined;
+
+  const isSubmitted =
+    drawStatus?.submitted === true;
+
+  const canOpen =
+    item.canOpen && !isSubmitted;
+
+  return (
+    <Pressable
+        key={item.id}
+        disabled={!canOpen}
+        style={[
+          styles.row,
+          {
+            opacity: canOpen ? 1 : 0.45,
+          },
+        ]}
+onPress={() => {
+  const canOpenDraw =
+    item.teamType === 'human' ||
+    item.teamType === 'normal-ai' ||
+    item.teamType === 'muscle' ||
+    item.teamType === 'peloton';
+
+  if (!canOpenDraw) {
+    return;
+  }
+
+  if (
+    item.teamType !== 'peloton' &&
+    !item.riderKey
+  ) {
+    return;
+  }
+
+  router.push({
+    pathname: '/live-draw',
+    params: {
+      gameId: liveSession.gameId,
+      teamId: item.teamId,
+      riderKey: item.riderKey ?? '',
+      teamType: item.teamType,
+    },
+  });
+}}
+      >
+        <Image
+          source={
+            riderImages[item.color ?? 'Blue']
+          }
+          style={styles.avatar}
+        />
+
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowText}>
+            {item.teamName} – {item.riderLabel}
+          </Text>
+
+          <Text style={styles.rowSubText}>
+  {isSubmitted
+    ? 'Card selected'
+    : item.canOpen
+    ? 'Ready to draw'
+    : 'Waiting for player'}
+</Text>
+        </View>
+        </Pressable>
+  );
+})}
   </View>
 )}
 
