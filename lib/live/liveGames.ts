@@ -282,6 +282,7 @@ export type LiveStageState = {
   revealedCards: Record<string, unknown>;
   roundReadyPlayerIds: string[];
   stageEndRequested: boolean;
+  allowIncompleteRound: boolean;
 };
 
 export async function initializeLiveStageState(
@@ -333,8 +334,8 @@ export async function fetchLiveStageState(
   const { data, error } = await supabase
     .from('live_stage_state')
     .select(
-      'game_id, stage_number, phase, race_type, stage_type, round, breakaway, draw_status, revealed_cards, round_ready_player_ids, stage_end_requested'
-    )
+  'game_id, stage_number, phase, race_type, stage_type, round, breakaway, draw_status, revealed_cards, round_ready_player_ids, stage_end_requested, allow_incomplete_round'
+)
     .eq('game_id', gameId)
     .maybeSingle();
 
@@ -369,7 +370,118 @@ export async function fetchLiveStageState(
 
     stageEndRequested:
       Boolean(data.stage_end_requested),
+
+    allowIncompleteRound: Boolean(
+  data.allow_incomplete_round
+),
   };
+}
+
+export async function markLiveRoundReady(
+  gameId: string
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'mark_live_round_ready',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function startLiveNextRound(
+  gameId: string
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'start_live_next_round',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function allowLiveIncompleteRound(
+  gameId: string
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'allow_live_incomplete_round',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function revealLiveIncompleteRound(
+  gameId: string
+): Promise<void> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'reveal_live_incomplete_round',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token:
+        identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function updateLiveStageSetup(

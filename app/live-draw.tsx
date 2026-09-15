@@ -316,9 +316,9 @@ const riderShortLabel =
       setDrawnCards([]);
     } catch (error) {
       console.error(
-        'SUBMIT LIVE ROUND CARD ERROR',
-        error
-      );
+  'SUBMIT LIVE ROUND CARD ERROR',
+  JSON.stringify(error, null, 2)
+);
     }
   }
 

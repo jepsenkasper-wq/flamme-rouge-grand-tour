@@ -31,7 +31,11 @@ import {
   fetchLiveTeams,
   autoSubmitLiveAIBreakawayBid1,
   autoSubmitLiveAIBreakawayBid2,
+  markLiveRoundReady,
+  startLiveNextRound,
   startLiveRoundDraw,
+  allowLiveIncompleteRound,
+  revealLiveIncompleteRound,
 LiveTeam,
   type LiveStageState,
   LivePlayer,
@@ -70,6 +74,9 @@ const [players, setPlayers] =
   const [loading, setLoading] =
     useState(true);
 
+  const [isStartingNextRound, setIsStartingNextRound] =
+  useState(false);
+
   const [bid1Hand, setBid1Hand] = useState<
   DummyCard[]
 >([]);  
@@ -98,39 +105,37 @@ const [selectedBreakawayWinnerIds, setSelectedBreakawayWinnerIds] =
     }
 
     let active = true;
+    let loadVersion = 0;
 
     async function loadStageState() {
-      try {
-const [
-  state,
-  livePlayers,
-  liveTeams,
-  pendingHand,
-] = await Promise.all([
-  fetchLiveStageState(
-    liveSession!.gameId
-  ),
-  fetchLivePlayers(
-    liveSession!.gameId
-  ),
-  fetchLiveTeams(
-    liveSession!.gameId
-  ),
-  getLiveBreakawayPendingHand(
-    liveSession!.gameId
-  ),
-]);
+  const currentLoadVersion = ++loadVersion;
 
-if (active) {
+  try {
+    const [
+      state,
+      livePlayers,
+      liveTeams,
+      pendingHand,
+    ] = await Promise.all([
+      fetchLiveStageState(
+        liveSession!.gameId
+      ),
+      fetchLivePlayers(
+        liveSession!.gameId
+      ),
+      fetchLiveTeams(
+        liveSession!.gameId
+      ),
+      getLiveBreakawayPendingHand(
+        liveSession!.gameId
+      ),
+    ]);
+
+    if (
+      active &&
+      currentLoadVersion === loadVersion
+    ) {
   setStageState(state);
-  console.log(
-  'LIVE BREAKAWAY STATE',
-  JSON.stringify(
-    state?.breakaway,
-    null,
-    2
-  )
-);
   setPlayers(livePlayers);
   setTeams(liveTeams);
 
@@ -518,6 +523,20 @@ const liveDrawList: LiveDrawListItem[] =
     ];
   });
 
+  const humanPlayerCount = players.length;
+
+const readyPlayerCount =
+  stageState?.roundReadyPlayerIds.length ?? 0;
+
+const isReadyForNextRound =
+  stageState?.roundReadyPlayerIds.includes(
+    liveSession?.playerId ?? ''
+  ) ?? false;
+
+const allPlayersReady =
+  humanPlayerCount > 0 &&
+  readyPlayerCount === humanPlayerCount;
+
   return (
   <View style={styles.screen}>
     <Stack.Screen
@@ -889,6 +908,7 @@ await selectLiveBreakawayRider(
 )}
 
 {stageState.phase !== 'round-draw' &&
+  stageState.phase !== 'round-reveal' &&
   (
     stageState.breakaway.phase === 'bid-1-results' ||
     stageState.breakaway.phase === 'bid-2' ||
@@ -1221,6 +1241,195 @@ onPress={() => {
         </Pressable>
   );
 })}
+
+{liveSession.isAdmin &&
+  !stageState.allowIncompleteRound && (
+    <Pressable
+      style={styles.button}
+      onPress={async () => {
+        try {
+          await allowLiveIncompleteRound(
+            liveSession.gameId
+          );
+        } catch (error) {
+          console.error(
+            'ALLOW INCOMPLETE ROUND ERROR',
+            error
+          );
+        }
+      }}
+    >
+      <Text style={styles.buttonText}>
+        ALLOW INCOMPLETE ROUND
+      </Text>
+    </Pressable>
+  )}
+  
+  {stageState.allowIncompleteRound && (
+  <Text style={styles.helperText}>
+    Incomplete rounds are allowed for the rest
+    of this stage.
+  </Text>
+)}
+
+{liveSession.isAdmin &&
+  stageState.allowIncompleteRound && (
+    <Pressable
+      style={styles.button}
+      onPress={async () => {
+        try {
+          await revealLiveIncompleteRound(
+            liveSession.gameId
+          );
+        } catch (error) {
+          console.error(
+            'REVEAL INCOMPLETE ROUND ERROR',
+            error
+          );
+        }
+      }}
+    >
+      <Text style={styles.buttonText}>
+        REVEAL ROUND {stageState.round}
+      </Text>
+    </Pressable>
+  )}
+
+  </View>
+)}
+
+{stageState.phase === 'round-reveal' && (
+  <View style={styles.card}>
+    <Text style={styles.sectionTitle}>
+      Round {stageState.round} – Reveal
+    </Text>
+
+    {liveDrawList.map((item) => {
+      const revealKey =
+        item.riderKey
+          ? `${item.teamId}:${item.riderKey}`
+          : item.teamId;
+
+      const revealedCard =
+        stageState.revealedCards?.[
+          revealKey
+        ] as DummyCard | undefined;
+
+      return (
+        <View
+          key={item.id}
+          style={styles.row}
+        >
+          <Image
+            source={
+              riderImages[
+                item.color ?? 'Blue'
+              ]
+            }
+            style={styles.avatar}
+          />
+
+          <View style={styles.rowInfo}>
+            <Text style={styles.rowText}>
+              {item.teamName}
+              {item.riderLabel
+                ? ` – ${item.riderLabel}`
+                : ''}
+            </Text>
+
+            <Text style={styles.rowSubText}>
+              Played Card
+            </Text>
+          </View>
+
+          <Text style={styles.breakawayBidValue}>
+            {revealedCard
+              ? revealedCard.displayValue ??
+                revealedCard.value
+              : '-'}
+          </Text>
+        </View>
+      );
+    })}
+<Text style={styles.readyText}>
+  {readyPlayerCount}/{humanPlayerCount} players ready
+</Text>
+
+{!isReadyForNextRound && (
+  <Pressable
+    style={styles.button}
+    onPress={async () => {
+      try {
+        await markLiveRoundReady(
+          liveSession.gameId
+        );
+      } catch (error) {
+        console.error(
+          'MARK LIVE ROUND READY ERROR',
+          error
+        );
+      }
+    }}
+  >
+    <Text style={styles.buttonText}>
+      READY FOR NEXT ROUND
+    </Text>
+  </Pressable>
+)}
+
+{isReadyForNextRound &&
+  !allPlayersReady && (
+    <Text style={styles.helperText}>
+      You are ready. Waiting for other players...
+    </Text>
+  )}
+
+{allPlayersReady && (
+  <Text style={styles.helperText}>
+    All players are ready.
+  </Text>
+)}
+
+{liveSession.isAdmin &&
+  allPlayersReady && (
+    <Pressable
+      style={[
+        styles.button,
+        isStartingNextRound &&
+          styles.buttonDisabled,
+      ]}
+      disabled={isStartingNextRound}
+      onPress={async () => {
+        if (isStartingNextRound) {
+          return;
+        }
+
+        setIsStartingNextRound(true);
+
+        try {
+  await startLiveNextRound(
+    liveSession.gameId
+  );
+} catch (error) {
+  console.error(
+    'START LIVE NEXT ROUND ERROR',
+    error
+  );
+} finally {
+  setIsStartingNextRound(false);
+}
+      }}
+    >
+      <Text style={styles.buttonText}>
+        {isStartingNextRound
+          ? 'STARTING...'
+          : `START ROUND ${
+              stageState.round + 1
+            }`}
+      </Text>
+    </Pressable>
+  )}
+
   </View>
 )}
 
@@ -1449,5 +1658,8 @@ breakawayBidValue: {
 breakawayWinnerSelected: {
   borderWidth: 3,
   transform: [{ scale: 1.02 }],
+},
+buttonDisabled: {
+  opacity: 0.5,
 },
 });
