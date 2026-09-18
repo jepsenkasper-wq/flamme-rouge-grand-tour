@@ -36,7 +36,9 @@ import {
   startLiveRoundDraw,
   allowLiveIncompleteRound,
   revealLiveIncompleteRound,
+  confirmLiveStageEnd,
 LiveTeam,
+requestLiveStageEnd,
   type LiveStageState,
   LivePlayer,
 } from '@/lib/live/liveGames';
@@ -432,6 +434,71 @@ useEffect(() => {
     );
   }
 
+  const isStageEntryReady =
+  stageState?.stageEntryReadyPlayerIds.includes(
+    liveSession?.playerId ?? ''
+  ) ?? false;
+
+if (
+  stageState?.phase === 'stage-entry' &&
+  liveSession
+) {
+  return (
+    <View style={styles.stageEntryScreen}>
+      <Text style={styles.stageEntryTitle}>
+        STAGE FINISHED
+      </Text>
+
+      <Text style={styles.stageEntryText}>
+        {isStageEntryReady
+          ? 'Waiting for other players...'
+          : 'Stage results are now being entered.'}
+      </Text>
+
+      {!isStageEntryReady && (
+        <Pressable
+          style={styles.button}
+          onPress={() =>
+            router.push('/live-stage-entry')
+          }
+        >
+          <Text style={styles.buttonText}>
+            GO TO STAGE ENTRY
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+if (
+  stageState?.phase === 'stage-overview' &&
+  liveSession
+) {
+  return (
+    <View style={styles.stageEntryScreen}>
+      <Text style={styles.stageEntryTitle}>
+        STAGE FINISHED
+      </Text>
+
+      <Text style={styles.stageEntryText}>
+        Stage results are ready for review.
+      </Text>
+
+      <Pressable
+        style={styles.button}
+        onPress={() =>
+          router.push('/live-stage-overview')
+        }
+      >
+        <Text style={styles.buttonText}>
+          GO TO STAGE OVERVIEW
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
   const myTeam = teams.find(
   (team) =>
     team.teamType === 'human' &&
@@ -536,6 +603,36 @@ const isReadyForNextRound =
 const allPlayersReady =
   humanPlayerCount > 0 &&
   readyPlayerCount === humanPlayerCount;
+
+const stageEndReadyCount =
+  stageState?.stageEndReadyPlayerIds.length ?? 0;
+
+const isStageEndReady =
+  stageState?.stageEndReadyPlayerIds.includes(
+    liveSession?.playerId ?? ''
+  ) ?? false;
+
+const allPlayersStageEndReady =
+  humanPlayerCount > 0 &&
+  stageEndReadyCount === humanPlayerCount;
+
+function getTeamTypeLabel(
+  teamType: string
+) {
+  if (teamType === 'normal-ai') {
+    return 'AI';
+  }
+
+  if (teamType === 'muscle') {
+    return 'Muscle';
+  }
+
+  if (teamType === 'peloton') {
+    return 'Peloton';
+  }
+
+  return '';
+}
 
   return (
   <View style={styles.screen}>
@@ -990,6 +1087,9 @@ disabled={
             </Text>
 
             <Text style={styles.rowSubText}>
+  {getTeamTypeLabel(team.teamType)
+    ? `${getTeamTypeLabel(team.teamType)} · `
+    : ''}
   Bid 1: {bid.bid1Value ?? '-'} • Bid 2:{' '}
   {bid.bid2Value ?? '-'}
 </Text>
@@ -1177,7 +1277,7 @@ disabled={
     drawStatus?.submitted === true;
 
   const canOpen =
-    item.canOpen && !isSubmitted;
+  item.canOpen;
 
   return (
     <Pressable
@@ -1231,8 +1331,11 @@ onPress={() => {
           </Text>
 
           <Text style={styles.rowSubText}>
+  {getTeamTypeLabel(item.teamType)
+    ? `${getTeamTypeLabel(item.teamType)} · `
+    : ''}
   {isSubmitted
-    ? 'Card selected'
+    ? 'Card selected · Open rider'
     : item.canOpen
     ? 'Ready to draw'
     : 'Waiting for player'}
@@ -1316,10 +1419,34 @@ onPress={() => {
         ] as DummyCard | undefined;
 
       return (
-        <View
-          key={item.id}
-          style={styles.row}
-        >
+        <Pressable
+  key={item.id}
+  disabled={!item.canOpen}
+  style={[
+    styles.row,
+    {
+      opacity: item.canOpen ? 1 : 0.45,
+    },
+  ]}
+  onPress={() => {
+    if (
+      item.teamType !== 'peloton' &&
+      !item.riderKey
+    ) {
+      return;
+    }
+
+    router.push({
+      pathname: '/live-draw',
+      params: {
+        gameId: liveSession.gameId,
+        teamId: item.teamId,
+        riderKey: item.riderKey ?? '',
+        teamType: item.teamType,
+      },
+    });
+  }}
+>
           <Image
             source={
               riderImages[
@@ -1338,8 +1465,10 @@ onPress={() => {
             </Text>
 
             <Text style={styles.rowSubText}>
-              Played Card
-            </Text>
+  {getTeamTypeLabel(item.teamType)
+    ? `${getTeamTypeLabel(item.teamType)} · Played Card`
+    : 'Played Card'}
+</Text>
           </View>
 
           <Text style={styles.breakawayBidValue}>
@@ -1348,7 +1477,7 @@ onPress={() => {
                 revealedCard.value
               : '-'}
           </Text>
-        </View>
+        </Pressable>
       );
     })}
 <Text style={styles.readyText}>
@@ -1439,6 +1568,77 @@ onPress={() => {
           ? 'You are the stage administrator.'
           : 'Waiting for the administrator.'}
       </Text>
+
+{stageState.stageEndRequested && (
+  <View style={styles.stageEndCard}>
+    <Text style={styles.stageEndTitle}>
+      END STAGE
+    </Text>
+
+    <Text style={styles.stageEndText}>
+      {stageEndReadyCount}/{humanPlayerCount} players ready to end stage
+    </Text>
+
+    {!isStageEndReady && (
+      <Pressable
+        style={styles.button}
+        onPress={async () => {
+          try {
+            await confirmLiveStageEnd(
+              liveSession.gameId
+            );
+          } catch (error) {
+            console.error(
+              'CONFIRM LIVE STAGE END ERROR',
+              error
+            );
+          }
+        }}
+      >
+        <Text style={styles.buttonText}>
+          CONFIRM END STAGE
+        </Text>
+      </Pressable>
+    )}
+
+    {isStageEndReady &&
+      !allPlayersStageEndReady && (
+        <Text style={styles.stageEndWaitingText}>
+          Waiting for the other players...
+        </Text>
+      )}
+
+    {allPlayersStageEndReady && (
+      <Text style={styles.stageEndWaitingText}>
+        All players are ready to end the stage.
+      </Text>
+    )}
+  </View>
+)}
+
+{liveSession.isAdmin &&
+  !stageState.stageEndRequested && (
+    <Pressable
+      style={styles.endStageButton}
+      onPress={async () => {
+        try {
+          await requestLiveStageEnd(
+            liveSession.gameId
+          );
+        } catch (error) {
+          console.error(
+            'REQUEST LIVE STAGE END ERROR',
+            error
+          );
+        }
+      }}
+    >
+      <Text style={styles.endStageButtonText}>
+        END STAGE
+      </Text>
+    </Pressable>
+  )}
+
       </ScrollView>
     </View>
   );
@@ -1662,4 +1862,70 @@ breakawayWinnerSelected: {
 buttonDisabled: {
   opacity: 0.5,
 },
+endStageButton: {
+  marginTop: 32,
+  marginBottom: 16,
+  paddingVertical: 14,
+  borderWidth: 1,
+  borderColor: Colors.red,
+  borderRadius: 14,
+  alignItems: 'center',
+},
+
+endStageButtonText: {
+  color: Colors.red,
+  fontWeight: '900',
+},
+
+stageEndCard: {
+  marginTop: 32,
+  padding: 16,
+  backgroundColor: Colors.card,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 14,
+},
+
+stageEndTitle: {
+  fontFamily: 'BebasNeue',
+  fontSize: 24,
+  color: Colors.brown,
+  textAlign: 'center',
+},
+
+stageEndText: {
+  color: Colors.brown,
+  textAlign: 'center',
+  marginBottom: 12,
+},
+
+stageEndWaitingText: {
+  color: Colors.brown,
+  textAlign: 'center',
+  marginTop: 8,
+},
+
+stageEntryScreen: {
+  flex: 1,
+  backgroundColor: Colors.paper,
+  padding: 24,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+stageEntryTitle: {
+  fontFamily: 'BebasNeue',
+  fontSize: 32,
+  color: Colors.brown,
+  letterSpacing: 1,
+  textAlign: 'center',
+},
+
+stageEntryText: {
+  color: Colors.brown,
+  textAlign: 'center',
+  marginTop: 8,
+  marginBottom: 24,
+},
+
 });

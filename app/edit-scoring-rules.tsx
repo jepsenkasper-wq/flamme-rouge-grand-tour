@@ -16,6 +16,14 @@ import { saveGame, updateActiveSavedGame } from '@/lib/storage';
 import { getClassificationBonusRules } from '@/lib/classifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+import {
+  applyLiveGameData,
+  fetchLiveGame,
+  updateLiveGameSettings,
+} from '@/lib/live/liveGames';
+
 export default function EditScoringRulesScreen() {
   const defaultRules = getClassificationBonusRules(
     Number(createGameDraft.stages || 21)
@@ -23,21 +31,33 @@ export default function EditScoringRulesScreen() {
 
   const rules = createGameDraft.scoringRules || defaultRules;
 
-  const [yellow, setYellow] = useState(
-    rules.yellow.map(String)
+  const liveSession = getActiveLiveGameSession();
+
+const toFiveValues = (values: number[]) =>
+  Array.from(
+    { length: 5 },
+    (_, index) => String(values[index] ?? 0)
   );
 
-  const [sprint, setSprint] = useState(
-    rules.sprint.map(String)
-  );
+const [yellow, setYellow] = useState(
+  toFiveValues(rules.yellow)
+);
 
-  const [mountain, setMountain] = useState(
-    rules.mountain.map(String)
-  );
+const [sprint, setSprint] = useState(
+  toFiveValues(rules.sprint)
+);
 
-  const [team, setTeam] = useState(
-    rules.team.map(String)
-  );
+const [mountain, setMountain] = useState(
+  toFiveValues(rules.mountain)
+);
+
+const [team, setTeam] = useState(
+  toFiveValues(rules.team)
+);
+
+const [bonusAwardMode, setBonusAwardMode] = useState<
+  'each-stage' | 'final-stage'
+>(createGameDraft.bonusAwardMode);
 
   const insets = useSafeAreaInsets();
 
@@ -53,10 +73,57 @@ export default function EditScoringRulesScreen() {
 >
       <Text style={styles.title}>Bonus Rules</Text>
 <Text style={styles.subtitle}>
-  Bonus Tour Points are awarded after each stage.
+  Choose when classification Bonus Tour Points are awarded.
 </Text>
 
    <View style={styles.card}>
+    <Text style={styles.ruleTitle}>
+  Award Bonus Tour Points
+</Text>
+
+<View style={styles.optionRow}>
+  <Pressable
+    style={[
+      styles.optionButton,
+      bonusAwardMode === 'each-stage' &&
+        styles.optionButtonActive,
+    ]}
+    onPress={() =>
+      setBonusAwardMode('each-stage')
+    }
+  >
+    <Text
+      style={[
+        styles.optionText,
+        bonusAwardMode === 'each-stage' &&
+          styles.optionTextActive,
+      ]}
+    >
+      After each stage
+    </Text>
+  </Pressable>
+
+  <Pressable
+    style={[
+      styles.optionButton,
+      bonusAwardMode === 'final-stage' &&
+        styles.optionButtonActive,
+    ]}
+    onPress={() =>
+      setBonusAwardMode('final-stage')
+    }
+  >
+    <Text
+      style={[
+        styles.optionText,
+        bonusAwardMode === 'final-stage' &&
+          styles.optionTextActive,
+      ]}
+    >
+      After final stage
+    </Text>
+  </Pressable>
+</View>
   <ScoringInputRow title="GC Bonus" values={yellow} setValues={setYellow} />
 <ScoringInputRow title="Sprint Bonus" values={sprint} setValues={setSprint} />
 <ScoringInputRow title="Mountain Bonus" values={mountain} setValues={setMountain} />
@@ -64,20 +131,69 @@ export default function EditScoringRulesScreen() {
 
   <Pressable
   style={styles.button}
-  onPress={() => {
-    createGameDraft.scoringRules = {
-      yellow: yellow.map((value) => Number(value || 0)),
-      sprint: sprint.map((value) => Number(value || 0)),
-      mountain: mountain.map((value) => Number(value || 0)),
-      team: team.map((value) => Number(value || 0)),
+  onPress={async () => {
+    const newScoringRules = {
+      yellow: yellow.map((value) =>
+        Number(value || 0)
+      ),
+      sprint: sprint.map((value) =>
+        Number(value || 0)
+      ),
+      mountain: mountain.map((value) =>
+        Number(value || 0)
+      ),
+      team: team.map((value) =>
+        Number(value || 0)
+      ),
     };
+
+    if (liveSession) {
+      await updateLiveGameSettings(
+        liveSession.gameId,
+        {
+          gameName:
+            createGameDraft.gameName,
+          stages:
+            createGameDraft.stages,
+          restDayStages: [
+            ...createGameDraft.restDayStages,
+          ],
+          scoringRules:
+            newScoringRules,
+          bonusAwardMode,
+        }
+      );
+
+      const updatedGame =
+        await fetchLiveGame(
+          liveSession.gameId
+        );
+
+      if (updatedGame.gameData) {
+        applyLiveGameData(
+          updatedGame.gameData
+        );
+      }
+
+      router.back();
+      return;
+    }
+
+    createGameDraft.scoringRules =
+      newScoringRules;
+
+    createGameDraft.bonusAwardMode =
+      bonusAwardMode;
 
     saveGame();
     updateActiveSavedGame();
 
     router.back();
-  }}>
-  <Text style={styles.buttonText}>Save</Text>
+  }}
+>
+  <Text style={styles.buttonText}>
+    Save
+  </Text>
 </Pressable>
 
 </View>
@@ -237,5 +353,37 @@ placeLabel: {
 content: {
   padding: 24,
   paddingTop: 20,
+},
+optionRow: {
+  flexDirection: 'row',
+  gap: 10,
+  marginBottom: 24,
+},
+
+optionButton: {
+  flex: 1,
+  backgroundColor: Colors.white,
+  borderWidth: 1,
+  borderColor: Colors.border,
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 10,
+  alignItems: 'center',
+},
+
+optionButtonActive: {
+  backgroundColor: Colors.red,
+  borderColor: Colors.red,
+},
+
+optionText: {
+  fontSize: 14,
+  fontWeight: '800',
+  color: Colors.brown,
+  textAlign: 'center',
+},
+
+optionTextActive: {
+  color: Colors.white,
 },
 });

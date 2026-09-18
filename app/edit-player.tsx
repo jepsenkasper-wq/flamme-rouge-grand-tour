@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
 import {
   Image, Alert, Pressable,
   StyleSheet,
@@ -16,6 +15,20 @@ import { gameResults } from '@/lib/gameResults';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import type { SpecialRiderId } from '@/lib/solo/specialRiders';
 import { resetActiveSoloStageState } from '@/lib/solo/activeSoloStage';
+
+import { useEffect, useState } from 'react';
+
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+import {
+  applyLiveGameData,
+  fetchLiveGame,
+  updateLiveTeamSettings,
+  replaceLiveRiderDeck,
+  resetLiveTeamRiderState,
+initializeLiveTeamRiders,
+removeLiveTeamFromTour,
+fetchLiveTeams,
+} from '@/lib/live/liveGames';
 
 const TEAM_TYPES = [
   { label: 'Human', value: 'human' },
@@ -60,6 +73,19 @@ export default function EditPlayerScreen() {
   const params = useLocalSearchParams();
   const playerIndex = Number(params.playerIndex ?? 0);
 
+  const liveSession = getActiveLiveGameSession();
+
+  const [isLiveAdminTeam, setIsLiveAdminTeam] =
+  useState(false);
+
+const [liveTeamType, setLiveTeamType] = useState<
+  'human' | 'normal-ai' | 'muscle' | 'peloton' | null
+>(null);
+
+const [liveTeamTypes, setLiveTeamTypes] = useState<
+  ('human' | 'normal-ai' | 'muscle' | 'peloton')[]
+>([]);
+
   const playerName =
     createGameDraft.playerNames[playerIndex] || `Player ${playerIndex + 1}`;
 
@@ -82,6 +108,17 @@ const [drawMode, setDrawMode] = useState(
   dummyTeam?.drawMode ?? 'card-draw'
 );
 
+const [originalLiveTeamType, setOriginalLiveTeamType] =
+  useState<
+    'human' | 'normal-ai' | 'muscle' | 'peloton' | null
+  >(null);
+
+const [originalSprinteurSpecialRiderId, setOriginalSprinteurSpecialRiderId] =
+  useState<SpecialRiderId | undefined>(undefined);
+
+const [originalRouleurSpecialRiderId, setOriginalRouleurSpecialRiderId] =
+  useState<SpecialRiderId | undefined>(undefined);
+
 const [sprinteurSpecialRiderId, setSprinteurSpecialRiderId] =
   useState<SpecialRiderId | undefined>(
     isDummyGame
@@ -99,6 +136,170 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
           | SpecialRiderId
           | undefined)
   );
+
+  useEffect(() => {
+  if (!liveSession) return;
+
+  async function loadLiveTeamType() {
+    try {
+      const liveGame = await fetchLiveGame(
+        liveSession!.gameId
+      );
+
+      const liveTeams = await fetchLiveTeams(
+  liveSession!.gameId
+);
+
+      const gameData = liveGame.gameData;
+
+if (!gameData) return;
+
+setLiveTeamTypes(gameData.setup.teamTypes);
+
+const type =
+  gameData.setup.teamTypes[playerIndex];
+
+if (type) {
+  setLiveTeamType(type);
+  setOriginalLiveTeamType(type);
+  setTeamType(type);
+
+  if (type === 'human') {
+    setDrawMode('app-draw');
+  }
+}
+
+const teamId =
+  gameData.setup.teamIds[playerIndex];
+
+const liveTeam = liveTeams.find(
+  (team) => team.id === teamId
+);
+
+setIsLiveAdminTeam(
+  liveTeam?.ownerPlayerId ===
+    liveSession!.playerId
+);
+
+const liveSprinteurSpecialRiderId =
+  gameData.setup.playerSprinteurSpecialRiders[
+    playerIndex
+  ];
+
+const liveRouleurSpecialRiderId =
+  gameData.setup.playerRouleurSpecialRiders[
+    playerIndex
+  ];
+
+setSprinteurSpecialRiderId(
+  (liveSprinteurSpecialRiderId || undefined) as
+    SpecialRiderId | undefined
+);
+
+setRouleurSpecialRiderId(
+  (liveRouleurSpecialRiderId || undefined) as
+    SpecialRiderId | undefined
+);
+
+setOriginalSprinteurSpecialRiderId(
+  (liveSprinteurSpecialRiderId || undefined) as
+    SpecialRiderId | undefined
+);
+
+setOriginalRouleurSpecialRiderId(
+  (liveRouleurSpecialRiderId || undefined) as
+    SpecialRiderId | undefined
+);
+
+    } catch (error) {
+      console.error(
+        'LOAD LIVE TEAM TYPE ERROR',
+        error
+      );
+    }
+  }
+
+  void loadLiveTeamType();
+}, [playerIndex]);
+
+const isLiveHuman =
+  Boolean(liveSession && liveTeamType === 'human');
+
+const isLiveDummy =
+  Boolean(
+    liveSession &&
+    liveTeamType &&
+    liveTeamType !== 'human'
+  );
+
+  const liveHumanCount =
+  liveTeamTypes.filter(
+    (type) => type === 'human'
+  ).length;
+
+const canDeleteLivePlayer =
+  Boolean(
+    liveSession &&
+    !isLiveAdminTeam &&
+    (
+      liveTeamType !== 'human' ||
+      liveHumanCount > 2
+    )
+  );
+
+  const deleteLivePlayer = () => {
+  if (!liveSession) return;
+
+  Alert.alert(
+    'Delete player?',
+    'This will permanently remove the player and their results from the tour.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeLiveTeamFromTour(
+              liveSession.gameId,
+              playerIndex
+            );
+
+            const updatedLiveGame =
+              await fetchLiveGame(
+                liveSession.gameId
+              );
+
+            if (!updatedLiveGame.gameData) {
+              throw new Error(
+                'Updated live game data not found'
+              );
+            }
+
+            applyLiveGameData(
+              updatedLiveGame.gameData
+            );
+
+            router.back();
+          } catch (error) {
+            console.error(
+              'REMOVE LIVE TEAM ERROR',
+              error
+            );
+
+            Alert.alert(
+              'Could not delete player',
+              'The player could not be removed.'
+            );
+          }
+        },
+      },
+    ]
+  );
+};
 
   return (
   <View style={styles.screen}>
@@ -140,25 +341,40 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
     <Text style={styles.label}>Team Type</Text>
 
     <View style={styles.optionRow}>
-      {TEAM_TYPES.map((option) => (
-        <Pressable
-          key={option.value}
-          style={[
-            styles.optionButton,
-            teamType === option.value && styles.optionButtonActive,
-          ]}
-          onPress={() => setTeamType(option.value)}
-        >
-          <Text
-            style={[
-              styles.optionText,
-              teamType === option.value && styles.optionTextActive,
-            ]}
-          >
-            {option.label}
-          </Text>
-        </Pressable>
-      ))}
+      {TEAM_TYPES
+  .filter((option) => {
+    if (isLiveHuman) {
+      return option.value === 'human';
+    }
+
+    if (isLiveDummy) {
+      return option.value !== 'human';
+    }
+
+    return true;
+  })
+  .map((option) => (
+    <Pressable
+      key={option.value}
+      disabled={isLiveHuman}
+      style={[
+        styles.optionButton,
+        teamType === option.value &&
+          styles.optionButtonActive,
+      ]}
+      onPress={() => setTeamType(option.value)}
+    >
+      <Text
+        style={[
+          styles.optionText,
+          teamType === option.value &&
+            styles.optionTextActive,
+        ]}
+      >
+        {option.label}
+      </Text>
+    </Pressable>
+  ))}
     </View>
 
     {teamType === 'human' && (
@@ -251,7 +467,124 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
 
   <Pressable
   style={styles.button}
-  onPress={() => {
+  onPress={async () => {
+    if (liveSession) {
+  try {
+    const liveGame =
+  await fetchLiveGame(liveSession.gameId);
+
+const teamId =
+  liveGame.gameData?.setup.teamIds[playerIndex];
+
+if (!teamId) {
+  throw new Error('Live team ID not found');
+}
+
+const teamTypeChanged =
+  originalLiveTeamType !== null &&
+  teamType !== originalLiveTeamType;
+
+if (
+  !teamTypeChanged &&
+  sprinteurSpecialRiderId !==
+    originalSprinteurSpecialRiderId
+) {
+  await replaceLiveRiderDeck(
+    liveSession.gameId,
+    teamId,
+    'sprinteur',
+    sprinteurSpecialRiderId
+  );
+}
+
+if (
+  !teamTypeChanged &&
+  rouleurSpecialRiderId !==
+    originalRouleurSpecialRiderId
+) {
+  await replaceLiveRiderDeck(
+    liveSession.gameId,
+    teamId,
+    'rouleur',
+    rouleurSpecialRiderId
+  );
+}
+    await updateLiveTeamSettings(
+      liveSession.gameId,
+      playerIndex,
+      {
+        name,
+        color,
+        teamType: isLiveHuman
+          ? 'human'
+          : teamType,
+       sprinteurSpecialRiderId:
+  teamType === 'normal-ai' || isLiveHuman
+    ? sprinteurSpecialRiderId ?? ''
+    : '',
+
+rouleurSpecialRiderId:
+  teamType === 'normal-ai' || isLiveHuman
+    ? rouleurSpecialRiderId ?? ''
+    : '',
+      }
+    );
+
+if (teamTypeChanged) {
+  await resetLiveTeamRiderState(
+    liveSession.gameId,
+    teamId
+  );
+
+  const updatedTeams =
+    await fetchLiveTeams(liveSession.gameId);
+
+  const updatedTeam =
+    updatedTeams.find(
+      (team) => team.id === teamId
+    );
+
+  if (!updatedTeam) {
+    throw new Error(
+      'Updated live team not found'
+    );
+  }
+
+  await initializeLiveTeamRiders(
+    liveSession.gameId,
+    updatedTeam
+  );
+}
+
+    const updatedLiveGame =
+      await fetchLiveGame(liveSession.gameId);
+
+    if (!updatedLiveGame.gameData) {
+      throw new Error(
+        'Updated live game data not found'
+      );
+    }
+
+    applyLiveGameData(
+      updatedLiveGame.gameData
+    );
+
+    router.back();
+    return;
+  } catch (error) {
+    console.error(
+      'UPDATE LIVE TEAM SETTINGS ERROR',
+      error
+    );
+
+    Alert.alert(
+      'Could not save player',
+      'The player changes could not be saved.'
+    );
+
+    return;
+  }
+}
  createGameDraft.playerNames[playerIndex] = name;
 createGameDraft.playerColors[playerIndex] = color;
 
@@ -284,11 +617,20 @@ router.back();
   <Text style={styles.buttonText}>Save</Text>
 </Pressable>
       </View>
-{createGameDraft.playerNames.length > 2 && (
+{(
+  liveSession
+    ? canDeleteLivePlayer
+    : createGameDraft.playerNames.length > 2
+) && (
   <Pressable
     style={styles.deleteButton}
     onPress={() => {
-      if (gameResults.entries.length > 0) {
+  if (liveSession) {
+    deleteLivePlayer();
+    return;
+  }
+
+  if (gameResults.entries.length > 0) {
   Alert.alert(
     'Delete player?',
     'This will remove the player and all stage results for this player.',

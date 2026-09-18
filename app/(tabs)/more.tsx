@@ -19,6 +19,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
 export default function MoreScreen() {
 
   const [activeGameRole, setActiveGameRole] = useState<
@@ -147,6 +149,16 @@ async function enableSharing() {
   }
 }
 
+const liveSession =
+  getActiveLiveGameSession();
+
+const canEditGame =
+  activeGameRole !== 'follower' &&
+  (
+    !liveSession ||
+    liveSession.isAdmin
+  );
+
   return (
     <View style={styles.screen}>
       
@@ -182,7 +194,7 @@ async function enableSharing() {
 />
 */}
 
-        {activeGameRole !== 'follower' && (
+        {canEditGame && (
   <MenuButton
     title="Edit Game"
     onPress={() => router.push('/edit-game')}

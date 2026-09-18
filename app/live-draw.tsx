@@ -940,6 +940,19 @@ const specialRiderId =
     ? ownerPlayer?.rouleurSpecialRiderId
     : team?.rouleurSpecialRiderId;
 
+  const statusKey =
+  params.riderKey
+    ? `${params.teamId}:${params.riderKey}`
+    : params.teamId;
+
+const currentDrawStatus =
+  stageState?.drawStatus?.[statusKey] as
+    | { submitted?: boolean }
+    | undefined;
+
+const hasSubmitted =
+  currentDrawStatus?.submitted === true;
+
   return (
     <ScrollView
       style={styles.screen}
@@ -1030,8 +1043,10 @@ const specialRiderId =
             Choose Card
           </Text>
 
-        {drawnCards.length === 0 && !selectedCard && (
-            <>
+        {!hasSubmitted &&
+  drawnCards.length === 0 &&
+  !selectedCard && (
+    <>
            {isNormalAI && (
   <View style={styles.scenarioSection}>
     <Text style={styles.sectionTitle}>
@@ -1145,7 +1160,9 @@ void drawHand();
   </>
 )}
 
-          {isHuman && drawnCards.length > 0 && (
+          {isHuman &&
+  !hasSubmitted &&
+  drawnCards.length > 0 && (
             <View style={styles.cardRow}>
               {drawnCards.map(
                 (card, index) => (

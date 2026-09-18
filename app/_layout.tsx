@@ -80,6 +80,64 @@ if (!fontsLoaded || !gameLoaded) {
   name="tour-points-overview"
   options={{ title: 'Tour Points' }}
 />
+<Stack.Screen
+  name="live-stage-entry"
+  options={{
+    title: 'Stage Entry',
+    headerLeft: () => (
+      <Pressable
+        onPress={() =>
+          router.replace('/live-play-stage')
+        }
+        hitSlop={12}
+        style={{
+          paddingVertical: 6,
+          paddingRight: 18,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 34,
+            lineHeight: 34,
+            color: '#007AFF',
+            fontWeight: '300',
+          }}
+        >
+          ‹
+        </Text>
+      </Pressable>
+    ),
+  }}
+/>
+<Stack.Screen
+  name="live-stage-overview"
+  options={{
+    title: 'Stage Overview',
+    headerLeft: () => (
+      <Pressable
+        onPress={() =>
+          router.replace('/live-stage-entry')
+        }
+        hitSlop={12}
+        style={{
+          paddingVertical: 6,
+          paddingRight: 18,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 34,
+            lineHeight: 34,
+            color: '#007AFF',
+            fontWeight: '300',
+          }}
+        >
+          ‹
+        </Text>
+      </Pressable>
+    ),
+  }}
+/>
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

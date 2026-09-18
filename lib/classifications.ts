@@ -265,130 +265,224 @@ return teams.sort((a, b) => {
 });
 }
 export function calculateOverallClassification() {
- const bonusRules =
-  createGameDraft.scoringRules ||
-  getClassificationBonusRules(Number(createGameDraft.stages || 21));
+  const bonusRules =
+    createGameDraft.scoringRules ||
+    getClassificationBonusRules(
+      Number(createGameDraft.stages || 21)
+    );
 
+  const yellowClassification =
+    calculateYellowClassification();
+  const mountainClassification =
+    calculateMountainClassification();
+  const sprintClassification =
+    calculateSprintClassification();
+  const teamClassification =
+    calculateTeamClassification();
 
-  const yellowClassification = calculateYellowClassification();
-  const mountainClassification = calculateMountainClassification();
-  const sprintClassification = calculateSprintClassification();
-  const teamClassification = calculateTeamClassification();
+  const players = createGameDraft.playerNames.map(
+    (playerName, playerIndex) => ({
+      playerName:
+        playerName ||
+        `Player ${playerIndex + 1}`,
+      points: 0,
+      tourPoints: 0,
+      bonusPoints: 0,
+    })
+  );
 
-  const players = createGameDraft.playerNames.map((playerName, playerIndex) => ({
-    playerName: playerName || `Player ${playerIndex + 1}`,
-    points: 0,
-    tourPoints: 0,
-    bonusPoints: 0,
-  }));
+  /*
+   * Bonus Tour Points can either be awarded
+   * continuously or only after the final stage.
+   */
+  const totalStages = Number(
+    createGameDraft.stages || 21
+  );
 
+  const completedStages =
+    gameResults.entries.filter(
+      (entry) => entry.entryType !== 'restDay'
+    ).length;
+
+  const shouldAwardBonus =
+    createGameDraft.bonusAwardMode ===
+      'each-stage' ||
+    completedStages >= totalStages;
+
+  /*
+   * Add ordinary Tour Points from all
+   * saved Stage and Rest Day entries.
+   */
   gameResults.entries.forEach((entry) => {
-    entry.players.forEach((player, playerIndex) => {
-      const stageTourPoints =
-        Number(player.sprinteur.tourPoints || 0) +
-        Number(player.rouleur.tourPoints || 0);
+    entry.players.forEach(
+      (player, playerIndex) => {
+        const stageTourPoints =
+          Number(
+            player.sprinteur.tourPoints || 0
+          ) +
+          Number(
+            player.rouleur.tourPoints || 0
+          );
 
-      players[playerIndex].tourPoints += stageTourPoints;
-      players[playerIndex].points += stageTourPoints;
-    });
+        players[playerIndex].tourPoints +=
+          stageTourPoints;
+
+        players[playerIndex].points +=
+          stageTourPoints;
+      }
+    );
   });
 
-    function hasRiderTime(riderName: string) {
-    const [playerName, riderType] = riderName.split(' - ');
+  function hasRiderTime(riderName: string) {
+    const [playerName, riderType] =
+      riderName.split(' - ');
 
     const playerIndex = players.findIndex(
-      (player) => player.playerName === playerName
+      (player) =>
+        player.playerName === playerName
     );
 
     if (playerIndex === -1) return false;
 
-    return gameResults.entries.some((entry) => {
-      if (entry.entryType === 'restDay') return false;
+    return gameResults.entries.some(
+      (entry) => {
+        if (entry.entryType === 'restDay') {
+          return false;
+        }
 
-      const player = entry.players[playerIndex];
-      if (!player) return false;
+        const player =
+          entry.players[playerIndex];
 
-      const rider =
-        riderType === 'Sprinteur'
-          ? player.sprinteur
-          : player.rouleur;
+        if (!player) return false;
 
-      return rider.time !== '';
-    });
+        const rider =
+          riderType === 'Sprinteur'
+            ? player.sprinteur
+            : player.rouleur;
+
+        return rider.time !== '';
+      }
+    );
   }
 
   function hasTeamTime(playerName: string) {
     const playerIndex = players.findIndex(
-      (player) => player.playerName === playerName
+      (player) =>
+        player.playerName === playerName
     );
 
     if (playerIndex === -1) return false;
 
-    return gameResults.entries.some((entry) => {
-      if (entry.entryType === 'restDay') return false;
+    return gameResults.entries.some(
+      (entry) => {
+        if (entry.entryType === 'restDay') {
+          return false;
+        }
 
-      const player = entry.players[playerIndex];
-      if (!player) return false;
+        const player =
+          entry.players[playerIndex];
 
-      return (
-        player.sprinteur.time !== '' ||
-        player.rouleur.time !== ''
-      );
-    });
+        if (!player) return false;
+
+        return (
+          player.sprinteur.time !== '' ||
+          player.rouleur.time !== ''
+        );
+      }
+    );
   }
 
+  /*
+   * Classification bonuses are only added
+   * when the selected award mode allows it.
+   */
+  if (shouldAwardBonus) {
     yellowClassification
-    .filter((rider) => hasRiderTime(rider.riderName))
-    .forEach((rider, index) => {
-      const bonus = bonusRules.yellow[index] || 0;
-      const playerName = rider.riderName.split(' - ')[0];
-      const player = players.find((p) => p.playerName === playerName);
+      .filter((rider) =>
+        hasRiderTime(rider.riderName)
+      )
+      .forEach((rider, index) => {
+        const bonus =
+          bonusRules.yellow[index] || 0;
 
-      if (player) {
-        player.bonusPoints += bonus;
-        player.points += bonus;
-      }
-    });
+        const playerName =
+          rider.riderName.split(' - ')[0];
+
+        const player = players.find(
+          (p) =>
+            p.playerName === playerName
+        );
+
+        if (player) {
+          player.bonusPoints += bonus;
+          player.points += bonus;
+        }
+      });
 
     mountainClassification
-    .filter((rider) => rider.points > 0)
-    .forEach((rider, index) => {
-      const bonus = bonusRules.mountain[index] || 0;
-      const playerName = rider.riderName.split(' - ')[0];
-      const player = players.find((p) => p.playerName === playerName);
+      .filter((rider) => rider.points > 0)
+      .forEach((rider, index) => {
+        const bonus =
+          bonusRules.mountain[index] || 0;
 
-      if (player) {
-        player.bonusPoints += bonus;
-        player.points += bonus;
-      }
-    });
+        const playerName =
+          rider.riderName.split(' - ')[0];
+
+        const player = players.find(
+          (p) =>
+            p.playerName === playerName
+        );
+
+        if (player) {
+          player.bonusPoints += bonus;
+          player.points += bonus;
+        }
+      });
 
     sprintClassification
-    .filter((rider) => rider.points > 0)
-    .forEach((rider, index) => {
-      const bonus = bonusRules.sprint[index] || 0;
-      const playerName = rider.riderName.split(' - ')[0];
-      const player = players.find((p) => p.playerName === playerName);
+      .filter((rider) => rider.points > 0)
+      .forEach((rider, index) => {
+        const bonus =
+          bonusRules.sprint[index] || 0;
 
-      if (player) {
-        player.bonusPoints += bonus;
-        player.points += bonus;
-      }
-    });
+        const playerName =
+          rider.riderName.split(' - ')[0];
+
+        const player = players.find(
+          (p) =>
+            p.playerName === playerName
+        );
+
+        if (player) {
+          player.bonusPoints += bonus;
+          player.points += bonus;
+        }
+      });
 
     teamClassification
-    .filter((team) => hasTeamTime(team.playerName))
-    .forEach((team, index) => {
-      const bonus = bonusRules.team[index] || 0;
-      const player = players.find((p) => p.playerName === team.playerName);
+      .filter((team) =>
+        hasTeamTime(team.playerName)
+      )
+      .forEach((team, index) => {
+        const bonus =
+          bonusRules.team[index] || 0;
 
-      if (player) {
-        player.bonusPoints += bonus;
-        player.points += bonus;
-      }
-    });
+        const player = players.find(
+          (p) =>
+            p.playerName ===
+            team.playerName
+        );
 
-  return players.sort((a, b) => b.points - a.points);
+        if (player) {
+          player.bonusPoints += bonus;
+          player.points += bonus;
+        }
+      });
+  }
+
+  return players.sort(
+    (a, b) => b.points - a.points
+  );
 }
 
 export function getTeamTourPosition(

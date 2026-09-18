@@ -9,26 +9,49 @@ import { stageDraft } from '@/lib/stageDraft';
 import { useEffect, useState } from 'react';
 import { getActiveSavedGame } from '@/lib/storage';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 export default function EnterStageScreen() {
+
+const params = useLocalSearchParams();
+const editEntryIndex =
+  params.editEntryIndex !== undefined ? Number(params.editEntryIndex) : null;
 
 const [isCheckingRole, setIsCheckingRole] = useState(true);
 
 useEffect(() => {
   async function checkRole() {
-    const savedGame = await getActiveSavedGame();
+  const savedGame =
+    await getActiveSavedGame();
 
-    if (savedGame?.role === 'follower') {
-      Alert.alert(
-        'Read only',
-        'Followers cannot edit stages.'
-      );
+  const liveSession =
+    getActiveLiveGameSession();
 
-      router.replace('/(tabs)');
-      return;
-    }
+  if (savedGame?.role === 'follower') {
+    Alert.alert(
+      'Read only',
+      'Followers cannot edit stages.'
+    );
 
-    setIsCheckingRole(false);
+    router.replace('/(tabs)');
+    return;
   }
+
+  if (
+  liveSession &&
+  !liveSession.isAdmin &&
+  editEntryIndex !== null
+) {
+    Alert.alert(
+      'Admin only',
+      'Only the admin can edit previous stages.'
+    );
+
+    router.replace('/(tabs)');
+    return;
+  }
+
+  setIsCheckingRole(false);
+}
 
   checkRole();
 }, []);
@@ -36,10 +59,6 @@ useEffect(() => {
 if (isCheckingRole) {
   return null;
 }
-
-  const params = useLocalSearchParams();
-const editEntryIndex =
-  params.editEntryIndex !== undefined ? Number(params.editEntryIndex) : null;
 
 
   const playerNames = createGameDraft.playerNames;

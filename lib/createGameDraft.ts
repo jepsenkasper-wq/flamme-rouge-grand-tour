@@ -23,6 +23,9 @@ playerSprinteurSpecialRiders: [] as string[],
   mountain: [4, 3, 2, 1],
   team: [3, 2, 1],
 },
+bonusAwardMode: 'each-stage' as
+  | 'each-stage'
+  | 'final-stage',
 
 };
 
@@ -48,4 +51,5 @@ createGameDraft.playerSprinteurSpecialRiders = [];
     mountain: [4, 3, 2, 1],
     team: [3, 2, 1],
   };
+  createGameDraft.bonusAwardMode = 'each-stage';
 }

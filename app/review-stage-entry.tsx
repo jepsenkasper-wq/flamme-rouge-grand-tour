@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Image,  
   Pressable,
@@ -21,6 +22,23 @@ import {
   prepareActiveSoloStageForNextStage,
 } from '@/lib/solo/activeSoloStage';
 
+import {
+ completeLiveRestDay,
+fetchLiveGame,
+applyLiveGameData,
+publishLiveRestDayReview,
+approveLiveRestDayReview,
+subscribeToLiveGame,
+unsubscribeFromLiveGame,
+fetchLivePlayers,
+updateLiveGameResultEntry,
+type LiveGameData,
+} from '@/lib/live/liveGames';
+
+import {
+  getActiveLiveGameSession,
+} from '@/lib/live/activeLiveGame';
+
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
   White: require('@/assets/images/riders/rider-white.png'),
@@ -32,6 +50,7 @@ const riderImages: Record<string, any> = {
 
 export default function ReviewStageEntryScreen() {
   const params = useLocalSearchParams();
+
   const editEntryIndex =
     params.editEntryIndex !== undefined
       ? Number(params.editEntryIndex)
@@ -41,6 +60,102 @@ export default function ReviewStageEntryScreen() {
       const contentStyle = {
   paddingBottom: 40 + insets.bottom,
 };
+
+ const [liveRestDayReview, setLiveRestDayReview] =
+  useState<LiveGameData['results']['restDayReview']>(
+    null
+  );
+
+useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (!liveSession) {
+    return;
+  }
+
+  async function loadLiveRestDayReview() {
+    try {
+      const liveGame =
+        await fetchLiveGame(
+          liveSession!.gameId
+        );
+
+      setLiveRestDayReview(
+        liveGame.gameData?.results
+          .restDayReview ?? null
+      );
+    } catch (error) {
+      console.error(
+        'LOAD LIVE REST DAY REVIEW ERROR',
+        error
+      );
+    }
+  }
+
+  void loadLiveRestDayReview();
+}, []);
+
+useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (!liveSession) {
+    return;
+  }
+
+  const channel = subscribeToLiveGame(
+    liveSession.gameId,
+    async () => {
+      try {
+        const updatedLiveGame =
+          await fetchLiveGame(
+            liveSession.gameId
+          );
+
+        if (!updatedLiveGame.gameData) {
+          return;
+        }
+
+        const restDayReview =
+          updatedLiveGame.gameData.results
+            .restDayReview;
+
+        // Rest Day is still being reviewed.
+        if (restDayReview) {
+          setLiveRestDayReview(
+            restDayReview
+          );
+          return;
+        }
+
+        // Rest Day has been completed.
+        if (
+          updatedLiveGame.gameData.state
+            .currentEntryType === 'stage'
+        ) {
+          applyLiveGameData(
+            updatedLiveGame.gameData
+          );
+
+          router.dismissAll();
+          router.replace('/(tabs)');
+        }
+      } catch (error) {
+        console.error(
+          'LIVE REST DAY SYNC ERROR',
+          error
+        );
+      }
+    }
+  );
+
+  return () => {
+    void unsubscribeFromLiveGame(
+      channel
+    );
+  };
+}, []);
 
   async function saveStage() {
     const editedEntry =
@@ -74,6 +189,119 @@ export default function ReviewStageEntryScreen() {
       stageNumber: editedEntry?.stageNumber || gameState.currentStage,
       players: playersToSave,
     };
+
+    const liveSession =
+  getActiveLiveGameSession();
+
+if (
+  liveSession &&
+  editEntryIndex === null &&
+  entryToSave.entryType === 'restDay'
+) {
+  await publishLiveRestDayReview(
+    liveSession.gameId,
+    entryToSave.stageNumber,
+    playersToSave
+  );
+
+  await approveLiveRestDayReview(
+    liveSession.gameId
+  );
+
+  const updatedLiveGame =
+    await fetchLiveGame(
+      liveSession.gameId
+    );
+
+  if (!updatedLiveGame.gameData) {
+    throw new Error(
+      'Updated live game data not found'
+    );
+  }
+
+  applyLiveGameData(
+    updatedLiveGame.gameData
+  );
+
+  setLiveRestDayReview(
+    updatedLiveGame.gameData.results
+      .restDayReview
+  );
+
+  const updatedReview =
+  updatedLiveGame.gameData.results
+    .restDayReview;
+
+if (updatedReview) {
+  const livePlayers =
+    await fetchLivePlayers(
+      liveSession.gameId
+    );
+
+  const allPlayersReady =
+    updatedReview.readyPlayerIds.length ===
+    livePlayers.length;
+
+  if (allPlayersReady) {
+    await completeLiveRestDay(
+      liveSession.gameId,
+      updatedReview.stageNumber,
+      updatedReview.players
+    );
+
+    const completedLiveGame =
+      await fetchLiveGame(
+        liveSession.gameId
+      );
+
+    if (!completedLiveGame.gameData) {
+      throw new Error(
+        'Completed live game data not found'
+      );
+    }
+
+    applyLiveGameData(
+      completedLiveGame.gameData
+    );
+
+    router.dismissAll();
+    router.replace('/(tabs)');
+    return;
+  }
+}
+
+  return;
+}
+
+if (
+  liveSession &&
+  editEntryIndex !== null
+) {
+  await updateLiveGameResultEntry(
+    liveSession.gameId,
+    editEntryIndex,
+    entryToSave
+  );
+
+  const updatedLiveGame =
+    await fetchLiveGame(
+      liveSession.gameId
+    );
+
+  if (!updatedLiveGame.gameData) {
+    throw new Error(
+      'Updated live game data not found'
+    );
+  }
+
+  applyLiveGameData(
+    updatedLiveGame.gameData
+  );
+
+  router.dismissAll();
+  router.replace('/(tabs)');
+  return;
+}
 
     if (editEntryIndex !== null) {
       gameResults.updateEntry(editEntryIndex, entryToSave);
@@ -109,7 +337,110 @@ await updateActiveSavedGame();
 router.dismissAll();
 router.replace('/(tabs)');
   }
+
+async function approveRestDay() {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (
+    !liveSession ||
+    !liveRestDayReview
+  ) {
+    return;
+  }
+
+  try {
+    await approveLiveRestDayReview(
+      liveSession.gameId
+    );
+
+    const [
+      updatedLiveGame,
+      livePlayers,
+    ] = await Promise.all([
+      fetchLiveGame(
+        liveSession.gameId
+      ),
+      fetchLivePlayers(
+        liveSession.gameId
+      ),
+    ]);
+
+    if (!updatedLiveGame.gameData) {
+      throw new Error(
+        'Updated live game data not found'
+      );
+    }
+
+    const updatedReview =
+      updatedLiveGame.gameData.results
+        .restDayReview;
+
+    setLiveRestDayReview(
+      updatedReview
+    );
+
+    if (!updatedReview) {
+      return;
+    }
+
+    const allPlayersReady =
+      updatedReview.readyPlayerIds.length ===
+      livePlayers.length;
+
+    if (allPlayersReady) {
+      await completeLiveRestDay(
+        liveSession.gameId,
+        updatedReview.stageNumber,
+        updatedReview.players
+      );
+
+      const completedLiveGame =
+        await fetchLiveGame(
+          liveSession.gameId
+        );
+
+      if (!completedLiveGame.gameData) {
+        throw new Error(
+          'Completed live game data not found'
+        );
+      }
+
+      applyLiveGameData(
+        completedLiveGame.gameData
+      );
+
+      router.dismissAll();
+      router.replace('/(tabs)');
+    }
+  } catch (error) {
+    console.error(
+      'APPROVE LIVE REST DAY ERROR',
+      error
+    );
+  }
+}
   
+const liveSession =
+  getActiveLiveGameSession();
+
+const isLiveRestDayReviewer =
+  Boolean(
+    liveSession &&
+    !liveSession.isAdmin &&
+    liveRestDayReview
+  );
+
+const reviewPlayers =
+  isLiveRestDayReviewer &&
+  liveRestDayReview
+    ? liveRestDayReview.players
+    : stageDraft.players;
+
+const hasApprovedRestDay =
+  liveRestDayReview?.readyPlayerIds.includes(
+    liveSession?.playerId ?? ''
+  ) ?? false;
   
 return (
     <View style={styles.screen}>
@@ -120,7 +451,7 @@ return (
       <Text style={styles.title}>Review Stage</Text>
 
       {createGameDraft.playerNames.map((playerName, playerIndex) => {
-        const player = stageDraft.players[playerIndex];
+        const player = reviewPlayers[playerIndex];
 
         if (!player) {
           return null;
@@ -184,17 +515,58 @@ const riderImage = riderImages[playerColor];
       })}
 
       <View style={styles.buttons}>
-        <Pressable
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.secondaryButtonText}>Back</Text>
-        </Pressable>
+  {isLiveRestDayReviewer ? (
+    hasApprovedRestDay ? (
+      <Text style={styles.reviewValue}>
+        Waiting for other players...
+      </Text>
+    ) : (
+      <Pressable
+        style={styles.button}
+        onPress={approveRestDay}
+      >
+        <Text style={styles.buttonText}>
+          Approve Rest Day
+        </Text>
+      </Pressable>
+    )
+  ) : (
+    <>
+  <Pressable
+    style={[
+      styles.button,
+      styles.secondaryButton,
+    ]}
+    onPress={() => router.back()}
+  >
+    <Text
+      style={styles.secondaryButtonText}
+    >
+      Back
+    </Text>
+  </Pressable>
 
-        <Pressable style={styles.button} onPress={saveStage}>
-          <Text style={styles.buttonText}>Save Stage</Text>
-        </Pressable>
-      </View>
+  {liveSession &&
+  liveRestDayReview &&
+  hasApprovedRestDay ? (
+    <View style={styles.button}>
+      <Text style={styles.buttonText}>
+        Waiting for other players...
+      </Text>
+    </View>
+  ) : (
+    <Pressable
+      style={styles.button}
+      onPress={saveStage}
+    >
+      <Text style={styles.buttonText}>
+        Save Stage
+      </Text>
+    </Pressable>
+  )}
+</>
+  )}
+</View>
     </ScrollView>
     </View>
   );

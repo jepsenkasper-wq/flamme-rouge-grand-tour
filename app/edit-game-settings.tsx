@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Image,
   Alert,
@@ -9,6 +9,14 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import {
+  applyLiveGameData,
+  fetchLiveGame,
+  updateLiveGameSettings,
+} from '@/lib/live/liveGames';
+
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
@@ -44,6 +52,33 @@ const [restDays, setRestDays] = useState(
 );
 
 const [, setRefreshVersion] = useState(0);
+
+const [isCheckingAccess, setIsCheckingAccess] =
+  useState(true);
+
+useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (
+    liveSession &&
+    !liveSession.isAdmin
+  ) {
+    Alert.alert(
+      'Admin only',
+      'Only the admin can edit game settings.'
+    );
+
+    router.replace('/(tabs)');
+    return;
+  }
+
+  setIsCheckingAccess(false);
+}, []);
+
+if (isCheckingAccess) {
+  return null;
+}
 
   return (
     <View style={styles.screen}>
@@ -120,16 +155,18 @@ const [, setRefreshVersion] = useState(0);
 <Pressable
   style={styles.secondaryButton}
   onPress={() => {
-    const updatedRestDays = [...restDays, restDayStage]
-      .filter((stage, index, array) => array.indexOf(stage) === index)
-      .sort((a, b) => a - b);
+  const updatedRestDays = [
+    ...restDays,
+    restDayStage,
+  ]
+    .filter(
+      (stage, index, array) =>
+        array.indexOf(stage) === index
+    )
+    .sort((a, b) => a - b);
 
-    setRestDays(updatedRestDays);
-    createGameDraft.restDayStages = updatedRestDays.map(String);
-
-    saveGame();
-    updateActiveSavedGame();
-  }}>
+  setRestDays(updatedRestDays);
+}}>
   <Text style={styles.secondaryButtonText}>
     Add Rest Day
   </Text>
@@ -154,19 +191,64 @@ const [, setRefreshVersion] = useState(0);
   const oldCategory = getStageCategory(oldStages);
   const newCategory = getStageCategory(stages);
 
-  const saveSettings = (resetScoringRules: boolean) => {
-    createGameDraft.gameName = gameName;
-    createGameDraft.stages = String(stages);
+  const saveSettings = async (
+  resetScoringRules: boolean
+) => {
+    const newScoringRules =
+  resetScoringRules
+    ? getClassificationBonusRules(stages)
+    : createGameDraft.scoringRules;
 
-    if (resetScoringRules) {
-      createGameDraft.scoringRules =
-        getClassificationBonusRules(stages);
+const updatedRestDayStages =
+  restDays.map(String);
+
+const liveSession =
+  getActiveLiveGameSession();
+
+if (liveSession) {
+  await updateLiveGameSettings(
+    liveSession.gameId,
+    {
+      gameName,
+      stages: String(stages),
+      restDayStages:
+        updatedRestDayStages,
+      scoringRules:
+        newScoringRules,
     }
+  );
 
-    saveGame();
-    updateActiveSavedGame();
+  const updatedLiveGame =
+    await fetchLiveGame(
+      liveSession.gameId
+    );
 
-    router.back();
+  if (!updatedLiveGame.gameData) {
+    throw new Error(
+      'Updated live game data not found'
+    );
+  }
+
+  applyLiveGameData(
+    updatedLiveGame.gameData
+  );
+
+  router.back();
+  return;
+}
+
+createGameDraft.gameName = gameName;
+createGameDraft.stages =
+  String(stages);
+createGameDraft.restDayStages =
+  updatedRestDayStages;
+createGameDraft.scoringRules =
+  newScoringRules;
+
+await saveGame();
+await updateActiveSavedGame();
+
+router.back();
   };
 
   if (oldCategory !== newCategory) {

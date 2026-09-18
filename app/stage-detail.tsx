@@ -12,6 +12,10 @@ import {
 } from '@/lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+import {
+  updateLiveGameResultEntry,
+} from '@/lib/live/liveGames';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -30,6 +34,16 @@ export default function StageDetailScreen() {
 const [tieVersion, setTieVersion] = useState(0);
 
 const [isFollower, setIsFollower] = useState(false);
+
+const liveSession =
+  getActiveLiveGameSession();
+
+const canEditStage =
+  !isFollower &&
+  (
+    !liveSession ||
+    liveSession.isAdmin
+  );
 
 const insets = useSafeAreaInsets();
 
@@ -125,7 +139,7 @@ function hasSameTimeNeighbor(index: number) {
   );
 }
 
-function moveTieBreaker(
+async function moveTieBreaker(
   riderToMove: (typeof riderResults)[number],
   direction: 'up' | 'down'
 ) {
@@ -153,10 +167,28 @@ function moveTieBreaker(
     entry.players[rider.playerIndex][rider.riderType].tieBreakOrder = order;
   });
 
-saveGame();
-updateActiveSavedGame();
+if (liveSession) {
+  try {
+    await updateLiveGameResultEntry(
+      liveSession.gameId,
+      entryIndex,
+      entry
+    );
+  } catch (error) {
+    console.error(
+      'LIVE TIE BREAK UPDATE ERROR',
+      error
+    );
+    return;
+  }
+} else {
+  await saveGame();
+  await updateActiveSavedGame();
+}
 
-setTieVersion((version) => version + 1);
+setTieVersion(
+  (version) => version + 1
+);
 }
 
 function getRiderImage(playerIndex: number) {
@@ -258,7 +290,7 @@ function getRiderImage(playerIndex: number) {
   </Text>
 
   <View style={styles.tieColumn}>
-  {!isFollower && hasSameTimeNeighbor(index) && (
+  {canEditStage && hasSameTimeNeighbor(index) && (
     <View style={styles.tieButtons}>
       <Pressable
         style={styles.tiePressable}
@@ -283,15 +315,25 @@ function getRiderImage(playerIndex: number) {
 
 {!isFollower && (
   <Pressable
-    style={styles.button}
+    disabled={!canEditStage}
+    style={[
+      styles.button,
+      !canEditStage &&
+        styles.disabledEditButton,
+    ]}
     onPress={() =>
       router.push({
         pathname: '/enter-stage',
-        params: { editEntryIndex: String(entryIndex) },
+        params: {
+          editEntryIndex:
+            String(entryIndex),
+        },
       })
     }
   >
-    <Text style={styles.buttonText}>Edit Stage</Text>
+    <Text style={styles.buttonText}>
+      Edit Stage
+    </Text>
   </Pressable>
 )}
 
@@ -498,5 +540,8 @@ stageNavTitle: {
 
 disabledNavButton: {
   opacity: 0.3,
+},
+disabledEditButton: {
+  opacity: 0.4,
 },
 });

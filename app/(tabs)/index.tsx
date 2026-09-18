@@ -41,6 +41,11 @@ import {
   subscribeToLiveStageState,
   fetchLiveStageState,
 unsubscribeFromLiveStageState,
+subscribeToLiveGame,
+unsubscribeFromLiveGame,
+fetchLiveGame,
+endLiveTour,
+applyLiveGameData,
 } from '@/lib/live/liveGames';
 
 const riderImages: Record<string, any> = {
@@ -92,11 +97,27 @@ useEffect(() => {
 
   const channel = subscribeToLiveStageState(
     liveSession.gameId,
-    () => {
-      if (!liveSession.isAdmin) {
-        router.replace('/live-play-stage');
-      }
+    async () => {
+  if (liveSession.isAdmin) {
+    return;
+  }
+
+  try {
+    const stageState =
+      await fetchLiveStageState(
+        liveSession.gameId
+      );
+
+    if (stageState) {
+      router.replace('/live-play-stage');
     }
+  } catch (error) {
+    console.error(
+      'LIVE HOME STAGE STATE SYNC ERROR',
+      error
+    );
+  }
+}
   );
 
   return () => {
@@ -106,10 +127,130 @@ useEffect(() => {
   };
 }, []);
 
+useEffect(() => {
+  const liveSession =
+    getActiveLiveGameSession();
+
+  if (!liveSession) {
+    return;
+  }
+
+  const channel = subscribeToLiveGame(
+    liveSession.gameId,
+    async () => {
+      try {
+        const updatedLiveGame =
+          await fetchLiveGame(
+            liveSession.gameId
+          );
+
+        if (!updatedLiveGame.gameData) {
+          return;
+        }
+
+        applyLiveGameData(
+          updatedLiveGame.gameData
+        );
+
+        const restDayReview =
+  updatedLiveGame.gameData.results
+    .restDayReview;
+
+    console.log(
+  'LIVE REST DAY HOME SYNC',
+  {
+    isAdmin: liveSession.isAdmin,
+    currentEntryType:
+      updatedLiveGame.gameData.state
+        .currentEntryType,
+    restDayReview,
+  }
+);
+
+if (
+  restDayReview &&
+  !liveSession.isAdmin
+) {
+  router.replace('/review-stage-entry');
+  return;
+}
+
+
+        setRefreshVersion(
+          (version) => version + 1
+        );
+
+        console.log(
+          'LIVE GAME DATA SYNCED',
+          {
+            currentStage:
+              updatedLiveGame.gameData.state.currentStage,
+            currentEntryType:
+              updatedLiveGame.gameData.state.currentEntryType,
+          }
+        );
+      } catch (error) {
+        console.error(
+          'LIVE GAME SYNC ERROR',
+          error
+        );
+      }
+    }
+  );
+
+  return () => {
+    void unsubscribeFromLiveGame(
+      channel
+    );
+  };
+}, []);
+
 
 useFocusEffect(
   useCallback(() => {
-    setRefreshVersion((version) => version + 1);
+    setRefreshVersion(
+      (version) => version + 1
+    );
+
+    const liveSession =
+      getActiveLiveGameSession();
+
+    if (
+      !liveSession ||
+      liveSession.isAdmin
+    ) {
+      return;
+    }
+
+    async function checkRestDayReview() {
+      try {
+        const liveGame =
+          await fetchLiveGame(
+            liveSession!.gameId
+          );
+
+        const restDayReview =
+          liveGame.gameData?.results
+            .restDayReview;
+
+        if (restDayReview) {
+          applyLiveGameData(
+            liveGame.gameData!
+          );
+
+          router.replace(
+            '/review-stage-entry'
+          );
+        }
+      } catch (error) {
+        console.error(
+          'LIVE REST DAY REVIEW CHECK ERROR',
+          error
+        );
+      }
+    }
+
+    void checkRestDayReview();
   }, [])
 );
   const playerNames = createGameDraft.playerNames;
@@ -497,17 +638,105 @@ const entryTitle =
   <Pressable
     disabled={
   isLiveGame &&
-  isLiveAdmin &&
-  !allLivePlayersOnline
+  (
+    (
+      gameState.currentEntryType === 'restDay' &&
+      !isLiveAdmin
+    ) ||
+    (
+      gameState.currentEntryType !== 'restDay' &&
+      isLiveAdmin &&
+      !allLivePlayersOnline
+    )
+  )
 }
     style={[
       styles.button,
      isLiveGame &&
-  isLiveAdmin &&
-  !allLivePlayersOnline &&
-  styles.buttonDisabled,
+(
+  (
+    gameState.currentEntryType === 'restDay' &&
+    !isLiveAdmin
+  ) ||
+  (
+    gameState.currentEntryType !== 'restDay' &&
+    isLiveAdmin &&
+    !allLivePlayersOnline
+  )
+) &&
+styles.buttonDisabled,
     ]}
     onPress={async () => {
+
+      if (isLiveGame && canEndTour) {
+  if (!liveSession || !isLiveAdmin) {
+    return;
+  }
+
+  Alert.alert(
+    'End Tour?',
+    'This will complete the Tour and open the final review.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'End Tour',
+        onPress: async () => {
+          try {
+            await endLiveTour(
+              liveSession.gameId
+            );
+
+            const updatedLiveGame =
+              await fetchLiveGame(
+                liveSession.gameId
+              );
+
+            if (!updatedLiveGame.gameData) {
+              throw new Error(
+                'Updated live game data not found'
+              );
+            }
+
+            applyLiveGameData(
+              updatedLiveGame.gameData
+            );
+
+            setRefreshVersion(
+              (version) => version + 1
+            );
+          } catch (error) {
+            console.error(
+              'END LIVE TOUR ERROR',
+              error
+            );
+
+            Alert.alert(
+              'Could not end Tour',
+              'Please try again.'
+            );
+          }
+        },
+      },
+    ]
+  );
+
+  return;
+}
+
+if (
+  isLiveGame &&
+  gameState.currentEntryType === 'restDay'
+) {
+  stageDraft.initialize(
+    createGameDraft.playerNames.length
+  );
+
+  router.push('/enter-stage');
+  return;
+}
 
 if (isLiveGame) {
   if (!liveSession) {
@@ -602,11 +831,13 @@ router.push('/enter-stage');
 }}
   >
    <Text style={styles.buttonText}>
-  {isLiveGame
-    ? isLiveAdmin
-      ? `Play Stage ${gameState.currentStage} · ${liveOnlineCount}/${livePlayerCount} players ready`
-      : `${liveOnlineCount}/${livePlayerCount} players ready`
-    : buttonTitle}
+  {canEndTour
+    ? 'End Tour'
+    : isLiveGame
+      ? gameState.currentEntryType === 'restDay'
+        ? 'Enter Rest Day'
+        : `Play Stage ${gameState.currentStage} · ${liveOnlineCount}/${livePlayerCount} players ready`
+      : buttonTitle}
 </Text>
   </Pressable>
 )}

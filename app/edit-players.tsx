@@ -3,8 +3,12 @@ import { Alert, Image, ScrollView, Pressable, StyleSheet, Text, View } from 'rea
 
 import { Colors } from '@/constants/colors';
 import { createGameDraft } from '@/lib/createGameDraft';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
+import { fetchLiveGame } from '@/lib/live/liveGames';
 
 function formatSpecialRiderName(specialRiderId?: string): string {
   if (!specialRiderId) {
@@ -21,13 +25,45 @@ function formatSpecialRiderName(specialRiderId?: string): string {
 }
 
 export default function EditPlayersScreen() {
- const [, setRefreshVersion] = useState(0);
+ const liveSession =
+  getActiveLiveGameSession();
+
+  const [, setRefreshVersion] = useState(0);
+
+const [liveTeamTypes, setLiveTeamTypes] = useState<
+  ('human' | 'normal-ai' | 'muscle' | 'peloton')[]
+>([]);
 
 useFocusEffect(
   useCallback(() => {
     setRefreshVersion((version) => version + 1);
   }, [])
 );
+
+useEffect(() => {
+  if (!liveSession) return;
+
+  async function loadLiveTeamTypes() {
+    try {
+      const liveGame = await fetchLiveGame(
+        liveSession!.gameId
+      );
+
+      if (!liveGame.gameData) return;
+
+      setLiveTeamTypes(
+        liveGame.gameData.setup.teamTypes
+      );
+    } catch (error) {
+      console.error(
+        'LOAD LIVE TEAM TYPES ERROR',
+        error
+      );
+    }
+  }
+
+  void loadLiveTeamTypes();
+}, [liveSession?.gameId]);
     return (
   <View style={styles.screen}>
     <BackgroundWatermark />
@@ -44,17 +80,29 @@ useFocusEffect(
     ? createGameDraft.dummyTeams[index]
     : undefined;
 
-  const showSpecialRiders =
-    !isDummyGame ||
+  const teamType = liveSession
+  ? liveTeamTypes[index]
+  : dummyTeam?.teamType;
+
+  
+
+  const showSpecialRiders = liveSession
+  ? teamType === 'human' ||
+    teamType === 'normal-ai'
+  : !isDummyGame ||
     dummyTeam?.teamType === 'normal-ai' ||
     (dummyTeam?.teamType === 'human' &&
       dummyTeam?.drawMode === 'app-draw');
 
-  const rouleurSpecialRiderId = isDummyGame
+const rouleurSpecialRiderId = liveSession
+  ? createGameDraft.playerRouleurSpecialRiders?.[index]
+  : isDummyGame
     ? dummyTeam?.rouleurSpecialRiderId
     : createGameDraft.playerRouleurSpecialRiders?.[index];
 
-  const sprinteurSpecialRiderId = isDummyGame
+const sprinteurSpecialRiderId = liveSession
+  ? createGameDraft.playerSprinteurSpecialRiders?.[index]
+  : isDummyGame
     ? dummyTeam?.sprinteurSpecialRiderId
     : createGameDraft.playerSprinteurSpecialRiders?.[index];
 
@@ -74,16 +122,12 @@ useFocusEffect(
           {name || `Player ${index + 1}`}
         </Text>
 
-        {isDummyGame && dummyTeam?.teamType === 'muscle' && (
-  <Text style={styles.specialRiderText}>
-    Muscle Team
-  </Text>
+    {teamType === 'muscle' && (
+  <Text>Muscle Team</Text>
 )}
 
-{isDummyGame && dummyTeam?.teamType === 'peloton' && (
-  <Text style={styles.specialRiderText}>
-    Peloton Team
-  </Text>
+{teamType === 'peloton' && (
+  <Text>Peloton Team</Text>
 )}
 
         {showSpecialRiders && (
@@ -113,29 +157,32 @@ useFocusEffect(
 })}
 
 {createGameDraft.playerNames.length < 6 && (
-  <Pressable
-    style={styles.addButton}
-    onPress={() => {
-  Alert.alert(
-    'Add player?',
-    'Adding a player during an active dummy stage will reset the current stage draw rounds. Do you want to continue?',
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Continue',
-        style: 'destructive',
-        onPress: () => router.push('/add-player'),
-      },
-    ]
-  );
-}}
-  >
-    <Text style={styles.addButtonText}>+ Add Player</Text>
-  </Pressable>
-)}
+    <Pressable
+      style={styles.addButton}
+      onPress={() => {
+        Alert.alert(
+          'Add player?',
+          'Adding a player during an active dummy stage will reset the current stage draw rounds. Do you want to continue?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Continue',
+              style: 'destructive',
+              onPress: () =>
+                router.push('/add-player'),
+            },
+          ]
+        );
+      }}
+    >
+      <Text style={styles.addButtonText}>
+        + Add Player
+      </Text>
+    </Pressable>
+  )}
 
     </ScrollView>
   </View>

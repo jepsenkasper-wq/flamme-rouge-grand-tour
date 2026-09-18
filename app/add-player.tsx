@@ -17,6 +17,16 @@ import BackgroundWatermark from '@/components/BackgroundWatermark';
 import type { SpecialRiderId } from '@/lib/solo/specialRiders';
 import { resetActiveSoloStageState } from '@/lib/solo/activeSoloStage';
 
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
+import {
+  addLiveDummyTeam,
+  applyLiveGameData,
+  fetchLiveGame,
+  fetchLiveTeams,
+  initializeLiveTeamRiders,
+} from '@/lib/live/liveGames';
+
 const TEAM_TYPES = [
   { label: 'Human', value: 'human' },
   { label: 'Normal AI', value: 'normal-ai' },
@@ -56,18 +66,94 @@ const ROULEUR_DECKS: {
 ];
 
 export default function AddPlayerScreen() {
+  const liveSession = getActiveLiveGameSession();
   const [name, setName] = useState('');
   const [color, setColor] = useState('Blue');
 
 const isDummyGame = createGameDraft.companionMode === 'dummy';
 
-const [teamType, setTeamType] = useState<'human' | 'normal-ai' | 'muscle' | 'peloton'>('human');
+const [teamType, setTeamType] = useState<
+  'human' | 'normal-ai' | 'muscle' | 'peloton'
+>(
+  liveSession ? 'normal-ai' : 'human'
+);
 
 const [drawMode, setDrawMode] = useState<'card-draw' | 'app-draw'>('card-draw');
 const [sprinteurSpecialRiderId, setSprinteurSpecialRiderId] =
   useState<SpecialRiderId | undefined>(undefined);
 const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
   useState<SpecialRiderId | undefined>(undefined);
+
+  const addLivePlayer = async () => {
+  if (!liveSession) return;
+
+  if (teamType === 'human') {
+    return;
+  }
+
+  try {
+    const nextPlayerName =
+      name ||
+      `Player ${createGameDraft.playerNames.length + 1}`;
+
+    const newTeamId = await addLiveDummyTeam(
+      liveSession.gameId,
+      {
+        name: nextPlayerName,
+        color,
+        teamType,
+        sprinteurSpecialRiderId:
+          teamType === 'normal-ai'
+            ? sprinteurSpecialRiderId ?? ''
+            : '',
+        rouleurSpecialRiderId:
+          teamType === 'normal-ai'
+            ? rouleurSpecialRiderId ?? ''
+            : '',
+      }
+    );
+
+    const liveTeams = await fetchLiveTeams(
+      liveSession.gameId
+    );
+
+    const newTeam = liveTeams.find(
+      (team) => team.id === newTeamId
+    );
+
+    if (!newTeam) {
+      throw new Error(
+        'New Live Team not found after creation'
+      );
+    }
+
+    await initializeLiveTeamRiders(
+      liveSession.gameId,
+      newTeam
+    );
+
+    const updatedLiveGame = await fetchLiveGame(
+      liveSession.gameId
+    );
+
+    if (!updatedLiveGame.gameData) {
+      throw new Error(
+        'Updated Live Game data not found'
+      );
+    }
+
+    applyLiveGameData(
+      updatedLiveGame.gameData
+    );
+
+    router.back();
+  } catch (error) {
+    console.error(
+      'ADD LIVE DUMMY TEAM ERROR',
+      error
+    );
+  }
+};
 
   return (
   <View style={styles.screen}>
@@ -107,28 +193,38 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
           )}
         </View>
 
-        {isDummyGame && (
+        {(isDummyGame || liveSession) && (
   <>
     <Text style={styles.label}>Team Type</Text>
 
     <View style={styles.optionRow}>
-      {TEAM_TYPES.map((option) => (
-        <Pressable
-          key={option.value}
-          style={[
-            styles.optionButton,
-            teamType === option.value && styles.optionButtonActive,
-          ]}
-          onPress={() => setTeamType(option.value)}>
-          <Text
-            style={[
-              styles.optionText,
-              teamType === option.value && styles.optionTextActive,
-            ]}>
-            {option.label}
-          </Text>
-        </Pressable>
-      ))}
+      {TEAM_TYPES
+  .filter((option) =>
+    liveSession
+      ? option.value !== 'human'
+      : true
+  )
+  .map((option) => (
+    <Pressable
+      key={option.value}
+      style={[
+        styles.optionButton,
+        teamType === option.value &&
+          styles.optionButtonActive,
+      ]}
+      onPress={() => setTeamType(option.value)}
+    >
+      <Text
+        style={[
+          styles.optionText,
+          teamType === option.value &&
+            styles.optionTextActive,
+        ]}
+      >
+        {option.label}
+      </Text>
+    </Pressable>
+  ))}
     </View>
 
     {teamType === 'human' && (
@@ -215,8 +311,13 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
 
         <Pressable
           style={styles.button}
-          onPress={() => {
+          onPress={async () => {
   if (createGameDraft.playerNames.length >= 6) {
+    return;
+  }
+
+  if (liveSession) {
+    await addLivePlayer();
     return;
   }
 
