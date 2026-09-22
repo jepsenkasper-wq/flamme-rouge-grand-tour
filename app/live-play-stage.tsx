@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Pressable,
   ScrollView,
@@ -1565,19 +1566,34 @@ onPress={() => {
 {!isReadyForNextRound && (
   <Pressable
     style={styles.button}
-    onPress={async () => {
-      try {
-        await markLiveRoundReady(
-          liveSession.gameId
-        );
-      } catch (error) {
-        console.error(
-          'MARK LIVE ROUND READY ERROR',
-          error
-        );
-      }
-    }}
-  >
+    onPress={() => {
+  Alert.alert(
+    'Ready for next round?',
+    'Remember to move the riders, add fatigue cards, and note down any points/time results outside the app before continuing',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Confirm',
+        onPress: async () => {
+          try {
+            await markLiveRoundReady(
+              liveSession.gameId
+            );
+          } catch (error) {
+            console.error(
+              'MARK LIVE ROUND READY ERROR',
+              error
+            );
+          }
+        },
+      },
+    ]
+  );
+}}  
+>
     <Text style={styles.buttonText}>
       READY FOR NEXT ROUND
     </Text>

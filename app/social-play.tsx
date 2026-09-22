@@ -38,7 +38,7 @@ export default function SocialPlayScreen() {
         <Text style={styles.cardTitle}>Live Play</Text>
 
         <Text style={styles.cardText}>
-          Create or join a shared game where players use their own devices during the race.
+          Play a shared Grand Tour using your own Flamme Rouge board game. Each player uses their own device to draw cards, follow the race and enter results, while the app keeps the game in sync. You can also add dummy teams to race alongside the human players.
         </Text>
       </Pressable>
     </View>
