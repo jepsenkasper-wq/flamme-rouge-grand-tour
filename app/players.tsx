@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { Colors } from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,8 +31,12 @@ export default function PlayersScreen() {
   );
 
     const [playerColors, setPlayerColors] = useState(
-  Array.from({ length: playerCount }, (_, index) => PLAYER_COLORS[index].name)
-    );
+  Array.from(
+    { length: playerCount },
+    (_, index) =>
+      PLAYER_COLORS[index % PLAYER_COLORS.length].name
+  )
+);
 
   const [playerRouleurSpecialRiders, setPlayerRouleurSpecialRiders] = useState<
   (SpecialRiderId | '')[]
@@ -237,17 +241,35 @@ function updatePlayerSprinteurSpecialRider(
 
      <Pressable
   style={styles.button}
-  onPress={() => {
-  createGameDraft.playerNames = playerNames.map((name, index) =>
+onPress={() => {
+  const finalPlayerNames = playerNames.map((name, index) =>
     name.trim() || `Player ${index + 1}`
   );
 
-  createGameDraft.playerColors = playerColors;
- createGameDraft.playerRouleurSpecialRiders =
-  playerRouleurSpecialRiders;
+  const normalizedNames = finalPlayerNames.map((name) =>
+    name.toLowerCase()
+  );
 
-createGameDraft.playerSprinteurSpecialRiders =
-  playerSprinteurSpecialRiders;
+  const hasDuplicateNames =
+    new Set(normalizedNames).size !== normalizedNames.length;
+
+  if (hasDuplicateNames) {
+    Alert.alert(
+      'Duplicate player names',
+      'Each player must have a unique name.'
+    );
+    return;
+  }
+
+  createGameDraft.playerNames = finalPlayerNames;
+
+  createGameDraft.playerColors = playerColors;
+
+  createGameDraft.playerRouleurSpecialRiders =
+    playerRouleurSpecialRiders;
+
+  createGameDraft.playerSprinteurSpecialRiders =
+    playerSprinteurSpecialRiders;
 
   router.push('/rest-days');
 }}>

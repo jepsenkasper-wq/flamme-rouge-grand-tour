@@ -1,5 +1,6 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import {
+  useCallback,
   useEffect,
   useState,
 } from 'react';
@@ -33,6 +34,7 @@ submitLivePelotonRoundCard,
 updateLivePelotonState,
 updateLiveMuscleRiderState,
 fetchLiveTeams,
+fetchLiveHumanRiderCardInfo,
   type LiveTeam,
   fetchLivePlayers,
   type LivePlayer,
@@ -68,7 +70,17 @@ import {
   refreshPelotonTeam,
 } from '@/lib/solo/peletonDeckEngine';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 type RiderKey = 'sprinteur' | 'rouleur';
+
+type LiveTeamTimeTrialStatus = {
+  gap: number;
+  canProvideSlipstream?: {
+    sprinteur?: boolean;
+    rouleur?: boolean;
+  };
+};
 
 function formatCard(card: DummyCard): string {
   const value =
@@ -143,6 +155,13 @@ const isPeloton =
 
   const [selectedCard, setSelectedCard] =
     useState<DummyCard | null>(null);
+  
+  const [humanCardInfo, setHumanCardInfo] =
+  useState<{
+    deck: DummyCard[];
+    setAside: DummyCard[];
+    discard: DummyCard[];
+  } | null>(null);
 
 const [team, setTeam] =
   useState<LiveTeam | null>(null);
@@ -227,6 +246,48 @@ useEffect(() => {
   params.riderKey,
 ]);
 
+useFocusEffect(
+  useCallback(() => {
+    async function refreshAfterFocus() {
+      try {
+        const state =
+          await fetchLiveStageState(
+            params.gameId
+          );
+
+        if (state) {
+          setStageState(state);
+
+          const statusKey =
+            `${params.teamId}:${params.riderKey}`;
+
+          const drawStatus =
+            state.drawStatus?.[statusKey] as
+              | { refreshed?: boolean }
+              | undefined;
+
+          setHasRefreshed(
+            drawStatus?.refreshed === true
+          );
+        }
+
+        await loadHumanCardInfo();
+      } catch (error) {
+        console.error(
+          'REFRESH LIVE DRAW ON FOCUS ERROR',
+          error
+        );
+      }
+    }
+
+    void refreshAfterFocus();
+  }, [
+    params.gameId,
+    params.teamId,
+    params.riderKey,
+  ])
+);
+
 const [stageState, setStageState] =
   useState<LiveStageState | null>(null);
 
@@ -295,6 +356,7 @@ const riderShortLabel =
 );
 
       setDrawnCards(cards);
+      await loadHumanCardInfo();
     } catch (error) {
       console.error(
         'DRAW LIVE ROUND HAND ERROR',
@@ -302,6 +364,28 @@ const riderShortLabel =
       );
     }
   }
+
+  async function loadHumanCardInfo() {
+  if (!isHuman) {
+    return;
+  }
+
+  try {
+    const cardInfo =
+      await fetchLiveHumanRiderCardInfo(
+        params.gameId,
+        params.teamId,
+        params.riderKey
+      );
+
+    setHumanCardInfo(cardInfo);
+  } catch (error) {
+    console.error(
+      'LOAD LIVE HUMAN CARD INFO ERROR',
+      error
+    );
+  }
+}
 
   async function selectCard(card: DummyCard) {
     try {
@@ -314,6 +398,7 @@ const riderShortLabel =
 
       setSelectedCard(card);
       setDrawnCards([]);
+      await loadHumanCardInfo();
     } catch (error) {
       console.error(
   'SUBMIT LIVE ROUND CARD ERROR',
@@ -322,6 +407,15 @@ const riderShortLabel =
     }
   }
 
+  useEffect(() => {
+  void loadHumanCardInfo();
+}, [
+  params.gameId,
+  params.teamId,
+  params.riderKey,
+  isHuman,
+]);
+
   async function addFatigue() {
     try {
       await addLiveRoundFatigue(
@@ -329,6 +423,8 @@ const riderShortLabel =
         params.teamId,
         params.riderKey
       );
+
+      await loadHumanCardInfo();
 
       showActionMessage(
         'Fatigue card added.'
@@ -348,6 +444,8 @@ const riderShortLabel =
       params.teamId,
       params.riderKey
     );
+
+    await loadHumanCardInfo();
 
     showActionMessage(
       'Fatigue card removed.'
@@ -388,6 +486,7 @@ async function refreshRider(limit: 24 | 25) {
         params.riderKey,
         limit
       );
+      await loadHumanCardInfo();
       setHasRefreshed(true);
 
     if (refreshedCards.length === 0) {
@@ -465,6 +564,38 @@ const drawStatus =
 const refreshUsed =
   drawStatus?.refreshed === true;
 
+const tttStatusKey =
+  `${params.teamId}:team-time-trial`;
+
+const tttStatus =
+  stageState.drawStatus?.[tttStatusKey] as
+    | LiveTeamTimeTrialStatus
+    | undefined;
+
+const teamTimeTrialGap =
+  tttStatus?.gap ?? 0;
+
+const sprinteurStatusKey =
+  `${params.teamId}:sprinteur`;
+
+const rouleurStatusKey =
+  `${params.teamId}:rouleur`;
+
+const sprinteurStatus =
+  stageState.drawStatus?.[sprinteurStatusKey] as
+    | { submitted?: boolean }
+    | undefined;
+
+const rouleurStatus =
+  stageState.drawStatus?.[rouleurStatusKey] as
+    | { submitted?: boolean }
+    | undefined;
+
+const isFirstTeamTimeTrialRider =
+  stageState.raceType === 'team-time-trial' &&
+  sprinteurStatus?.submitted !== true &&
+  rouleurStatus?.submitted !== true;
+
 setAIUndoSnapshot(
   cloneDummyRiderState(riderState)
 );
@@ -476,16 +607,21 @@ const result = playDummyRound(
   drawCount,
   refreshUsed,
   stageState.stageType,
-  stageState.raceType
+  stageState.raceType,
+  teamTimeTrialGap,
+  params.riderKey as RiderType,
+  isFirstTeamTimeTrialRider
 );
 
-    await submitLiveAIRoundCard(
-      params.gameId,
-      params.teamId,
-      params.riderKey,
-      riderState,
-      result.selectedCard
-    );
+   await submitLiveAIRoundCard(
+  params.gameId,
+  params.teamId,
+  params.riderKey,
+  riderState,
+  result.selectedCard,
+  result.effectiveMovement,
+  result.canProvideSlipstream
+);
 
     setSelectedCard(
       result.selectedCard
@@ -954,8 +1090,9 @@ const hasSubmitted =
   currentDrawStatus?.submitted === true;
 
   return (
+  <View style={styles.screen}>
     <ScrollView
-      style={styles.screen}
+      style={styles.scrollView}
       contentContainerStyle={styles.content}
     >
       <Stack.Screen
@@ -1030,6 +1167,33 @@ const hasSubmitted =
   </>
 )}
 
+{isHuman && humanCardInfo && (
+  <>
+    <Text style={styles.deckInfoSmall}>
+      Played Cards:{' '}
+      {humanCardInfo.discard.length > 0
+        ? humanCardInfo.discard
+            .map(formatCard)
+            .join(' · ')
+        : '-'}
+    </Text>
+
+    <Text style={styles.deckInfoSmall}>
+      Set Aside:{' '}
+      {humanCardInfo.setAside.length > 0
+        ? humanCardInfo.setAside
+            .map(formatCard)
+            .join(' · ')
+        : '-'}
+    </Text>
+
+    <Text style={styles.deckInfoSmall}>
+      Remaining Cards in Deck:{' '}
+      {humanCardInfo.deck.length}
+    </Text>
+  </>
+)}
+
   {isMuscle && (
     <Text style={styles.deckInfo}>
       Muscle
@@ -1057,7 +1221,7 @@ const hasSubmitted =
       {(
         [
   ['normal', 'Normal'],
-  ['climb', 'Ascent'],
+  ['climb', 'Ascent/Close to ascent'],
   ['descent', 'Descent'],
 
   ...(
@@ -1280,7 +1444,16 @@ onPress={() => {
   return;
 }
 
-  void refreshRider(24);
+  router.push({
+  pathname: '/manual-refresh',
+  params: {
+    mode: 'live',
+    gameId: params.gameId,
+    teamId: params.teamId,
+    riderKey: params.riderKey,
+    limit: '24',
+  },
+});
 }}
 >
   <Text style={styles.secondaryButtonText}>
@@ -1310,7 +1483,16 @@ onPress={() => {
     return;
   }
 
-  void refreshRider(25);
+  router.push({
+    pathname: '/manual-refresh',
+    params: {
+      mode: 'live',
+      gameId: params.gameId,
+      teamId: params.teamId,
+      riderKey: params.riderKey,
+      limit: '25',
+    },
+  });
 }}
 >
   <Text style={styles.secondaryButtonText}>
@@ -1332,8 +1514,14 @@ onPress={() => {
             </Text>
                </Pressable>
         </View>
-    </ScrollView>
-  );
+        </ScrollView>
+
+    <LiveChatBubble
+  gameId={String(params.gameId ?? '')}
+  screenKey="live-draw"
+/>
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -1341,6 +1529,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.paper,
   },
+
+  scrollView: {
+  flex: 1,
+},
 
   content: {
     padding: 16,

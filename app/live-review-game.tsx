@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import {
@@ -81,11 +83,16 @@ export default function LiveReviewGameScreen() {
   const unsubscribe = navigation.addListener(
     'beforeRemove',
     (event) => {
+
     
         if (allowNavigationRef.current) {
   return;
 }
-      if (!game || !isAdmin) {
+      if (
+  !game ||
+  !isAdmin ||
+  game.phase !== 'review'
+) {
   return;
 }
 
@@ -113,6 +120,7 @@ async function handleAdminBack() {
 
             return;
           }
+ 
 
           await resetLiveSpecialRiderSetup(
             gameId
@@ -523,6 +531,11 @@ useEffect(() => {
           </Pressable>
         )}
       </ScrollView>
+
+      <LiveChatBubble
+        gameId={gameId}
+        screenKey="live-review-game"
+      />
     </View>
   );
 }

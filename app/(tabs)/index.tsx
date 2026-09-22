@@ -48,6 +48,8 @@ endLiveTour,
 applyLiveGameData,
 } from '@/lib/live/liveGames';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
   White: require('@/assets/images/riders/rider-white.png'),
@@ -63,6 +65,9 @@ export default function HomeScreen() {
 
     const [onlinePlayerIds, setOnlinePlayerIds] =
   useState<string[]>([]);
+
+  const [hasActiveLiveStage, setHasActiveLiveStage] =
+  useState(false);
 
   useEffect(() => {
   const liveSession =
@@ -95,22 +100,35 @@ useEffect(() => {
     return;
   }
 
+  void fetchLiveStageState(
+  liveSession.gameId
+).then((stageState) => {
+  setHasActiveLiveStage(!!stageState);
+}).catch((error) => {
+  console.error(
+    'LOAD LIVE STAGE STATE ERROR',
+    error
+  );
+});
+
   const channel = subscribeToLiveStageState(
     liveSession.gameId,
     async () => {
-  if (liveSession.isAdmin) {
-    return;
+try {
+  const stageState =
+    await fetchLiveStageState(
+      liveSession.gameId
+    );
+
+  setHasActiveLiveStage(!!stageState);
+
+  if (
+    stageState &&
+    !liveSession.isAdmin
+  ) {
+    router.replace('/live-play-stage');
   }
 
-  try {
-    const stageState =
-      await fetchLiveStageState(
-        liveSession.gameId
-      );
-
-    if (stageState) {
-      router.replace('/live-play-stage');
-    }
   } catch (error) {
     console.error(
       'LIVE HOME STAGE STATE SYNC ERROR',
@@ -253,6 +271,7 @@ useFocusEffect(
     void checkRestDayReview();
   }, [])
 );
+
   const playerNames = createGameDraft.playerNames;
   const playerColors = createGameDraft.playerColors;
   const overallClassification = calculateOverallClassification();
@@ -390,11 +409,12 @@ const entryTitle =
       ? `Rest Day after Stage ${gameState.currentStage}`
       : `Stage ${gameState.currentStage} of ${totalStages}`;
 
-  return (
-  <ScrollView
-    style={styles.screen}
-    contentContainerStyle={styles.content}
-  >
+ return (
+  <View style={styles.screen}>
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.content}
+    >
 
       <View style={styles.header}>
   <ImageBackground
@@ -645,8 +665,9 @@ const entryTitle =
     ) ||
     (
       gameState.currentEntryType !== 'restDay' &&
-      isLiveAdmin &&
-      !allLivePlayersOnline
+isLiveAdmin &&
+!hasActiveLiveStage &&
+!allLivePlayersOnline
     )
   )
 }
@@ -660,8 +681,9 @@ const entryTitle =
   ) ||
   (
     gameState.currentEntryType !== 'restDay' &&
-    isLiveAdmin &&
-    !allLivePlayersOnline
+isLiveAdmin &&
+!hasActiveLiveStage &&
+!allLivePlayersOnline
   )
 ) &&
 styles.buttonDisabled,
@@ -841,8 +863,16 @@ router.push('/enter-stage');
 </Text>
   </Pressable>
 )}
-    </ScrollView>
-  );
+        </ScrollView>
+
+    {liveSession && (
+      <LiveChatBubble
+        gameId={liveSession.gameId}
+        screenKey="home"
+      />
+    )}
+  </View>
+);
 }
 
 function formatRiderNameShort(name?: string) {
@@ -856,6 +886,10 @@ const styles = StyleSheet.create({
 screen: {
   flex: 1,
   backgroundColor: Colors.paper,
+},
+
+scrollView: {
+  flex: 1,
 },
 
 header: {

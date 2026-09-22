@@ -23,9 +23,18 @@ import BackgroundWatermark from '@/components/BackgroundWatermark';
 
 import type { SavedGame } from '@/lib/savedGameTypes';
 
+import { deleteRemoteGame } from '@/lib/remoteGames';
+
 import {
   fetchLiveStageState,
+  deleteLiveGame,
 } from '@/lib/live/liveGames';
+
+import {
+  clearLivePlayerIdentity,
+  getLivePlayerIdentity,
+} from '@/lib/livePlayerIdentity';
+
 
 export default function MyGamesScreen() {
   const [games, setGames] = useState<SavedGame[]>([]);
@@ -40,9 +49,16 @@ export default function MyGamesScreen() {
   }, []);
   
     async function handleDeleteGame(game: SavedGame) {
+  const isLiveAdmin =
+    game.gameMode === 'live' &&
+    game.liveIsAdmin === true &&
+    !!game.liveGameId;
+
   Alert.alert(
-    'Delete game',
-    `Are you sure you want to delete "${game.name}"?`,
+    isLiveAdmin ? 'Delete Live Game' : 'Delete game',
+    isLiveAdmin
+      ? `Are you sure you want to permanently delete "${game.name}"? This will delete the game for all players, including its chat messages and images. This cannot be undone.`
+      : `Are you sure you want to delete "${game.name}"?`,
     [
       {
         text: 'Cancel',
@@ -51,15 +67,59 @@ export default function MyGamesScreen() {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          const remainingGames = await deleteSavedGameById(game.id);
-          setGames(remainingGames);
-        },
+       onPress: async () => {
+  try {
+    if (isLiveAdmin && game.liveGameId) {
+      const identity =
+        await getLivePlayerIdentity(
+          game.liveGameId
+        );
+
+      if (!identity) {
+        Alert.alert(
+          'Could not delete game',
+          'The Live Game identity could not be found.'
+        );
+        return;
+      }
+
+      await deleteLiveGame(
+        game.liveGameId,
+        identity.playerId,
+        identity.playerToken
+      );
+
+      await clearLivePlayerIdentity(
+        game.liveGameId
+      );
+    } else if (
+      game.role === 'admin' &&
+      game.remoteId &&
+      game.adminKey
+    ) {
+      await deleteRemoteGame(game);
+    }
+
+    const remainingGames =
+      await deleteSavedGameById(game.id);
+
+    setGames(remainingGames);
+  } catch (error) {
+    console.error(
+      'DELETE GAME ERROR',
+      error
+    );
+
+    Alert.alert(
+      'Could not delete game',
+      'The game could not be deleted. Please try again.'
+    );
+  }
+},
       },
     ]
   );
 }
-
 
 
   return (

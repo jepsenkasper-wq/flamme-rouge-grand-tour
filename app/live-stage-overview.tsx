@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Image,
@@ -23,6 +23,7 @@ import {
   buildLiveStagePlayers,
   subscribeToLiveStageState,
 unsubscribeFromLiveStageState,
+unfinishLiveStageEntry,
 completeLiveStage,
   type LivePlayer,
   type LiveGameData,
@@ -31,6 +32,8 @@ completeLiveStage,
   type LiveStageState,
 } from '@/lib/live/liveGames';
 import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
+import LiveChatBubble from '@/components/LiveChatBubble';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -132,9 +135,15 @@ setLoading(false);
         // Stage state still exists:
         // update the local overview state.
         if (updatedStageState) {
-          setStageState(updatedStageState);
-          return;
-        }
+  setStageState(updatedStageState);
+
+  if (updatedStageState.phase === 'stage-entry') {
+    router.replace('/live-stage-entry');
+    return;
+  }
+
+  return;
+}
 
         // Stage state has been deleted:
         // the stage has been completed.
@@ -303,9 +312,55 @@ const hasSaved =
     liveSession?.playerId ?? ''
   ) ?? false;
 
+async function handleBackToStageEntry() {
+  if (!liveSession) {
+    return;
+  }
+
+  try {
+    await unfinishLiveStageEntry(
+      liveSession.gameId
+    );
+
+    router.replace('/live-stage-entry');
+  } catch (error) {
+    console.error(
+      'RETURN TO LIVE STAGE ENTRY ERROR',
+      error
+    );
+  }
+}
+
   return (
-    <View style={styles.screen}>
-      <BackgroundWatermark />
+  <View style={styles.screen}>
+    <Stack.Screen
+      options={{
+        title: 'Stage Overview',
+        headerLeft: () => (
+          <Pressable
+            onPress={handleBackToStageEntry}
+            hitSlop={12}
+            style={{
+              paddingVertical: 6,
+              paddingRight: 18,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 34,
+                lineHeight: 34,
+                color: '#007AFF',
+                fontWeight: '300',
+              }}
+            >
+              ‹
+            </Text>
+          </Pressable>
+        ),
+      }}
+    />
+
+    <BackgroundWatermark />
 
       <ScrollView
         contentContainerStyle={[
@@ -406,14 +461,12 @@ const hasSaved =
 
         <View style={styles.buttons}>
           <Pressable
-            style={[
-              styles.button,
-              styles.secondaryButton,
-            ]}
-            onPress={() =>
-  router.push('/live-stage-entry')
-}
-          >
+  style={[
+    styles.button,
+    styles.secondaryButton,
+  ]}
+  onPress={handleBackToStageEntry}
+>
             <Text style={styles.secondaryButtonText}>
               Back
             </Text>
@@ -445,6 +498,12 @@ const hasSaved =
 </View>
         </View>
       </ScrollView>
+        {liveSession && (
+        <LiveChatBubble
+          gameId={liveSession.gameId}
+          screenKey="live-review"
+        />
+      )}
     </View>
   );
 }

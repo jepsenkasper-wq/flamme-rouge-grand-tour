@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import {
@@ -372,7 +374,14 @@ const isAdmin = currentPlayer?.isAdmin ?? false;
     </View>
   </>
 )}
-</ScrollView>
+      </ScrollView>
+
+      {players.length >= game.playerCount && (
+        <LiveChatBubble
+          gameId={game.id}
+          screenKey="live-lobby"
+        />
+      )}
     </View>
   );
 }

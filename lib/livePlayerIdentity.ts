@@ -69,3 +69,46 @@ export async function clearLivePlayerIdentity(
     JSON.stringify(identities)
   );
 }
+
+const LIVE_CHAT_LAST_SEEN_KEY =
+  'flamme-rouge-live-chat-last-seen';
+
+export async function getLiveChatLastSeen(
+  gameId: string
+): Promise<string | null> {
+  const stored = await AsyncStorage.getItem(
+    LIVE_CHAT_LAST_SEEN_KEY
+  );
+
+  if (!stored) {
+    return null;
+  }
+
+  const parsed = JSON.parse(stored);
+
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  return parsed[gameId] ?? null;
+}
+
+export async function setLiveChatLastSeen(
+  gameId: string,
+  timestamp: string
+) {
+  const stored = await AsyncStorage.getItem(
+    LIVE_CHAT_LAST_SEEN_KEY
+  );
+
+  const parsed = stored
+    ? JSON.parse(stored)
+    : {};
+
+  parsed[gameId] = timestamp;
+
+  await AsyncStorage.setItem(
+    LIVE_CHAT_LAST_SEEN_KEY,
+    JSON.stringify(parsed)
+  );
+}

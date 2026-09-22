@@ -24,6 +24,10 @@ updateLiveStageResultField,
 fetchLiveStageEntryRiderStates,
 initializeLiveStageResultFatigue,
 finishLiveStageEntry,
+subscribeToLiveStageState,
+unsubscribeFromLiveStageState,
+unfinishLiveStageEntry,
+type LiveStageState,
 type LiveStageResult,
   type LivePlayer,
   type LiveTeam,
@@ -33,6 +37,8 @@ import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 import {
   getFatigueCardsForStageResult,
 } from '@/lib/solo/dummyDeckEngine';
+
+import LiveChatBubble from '@/components/LiveChatBubble';
 
 function getPlayerColor(colorName: string) {
   switch (colorName) {
@@ -130,6 +136,9 @@ const [players, setPlayers] =
 const [teamIndex, setTeamIndex] =
   useState(0);
 
+const [stageState, setStageState] =
+  useState<LiveStageState | null>(null);
+
 const [selectedRider, setSelectedRider] =
   useState<'sprinteur' | 'rouleur'>(
     'rouleur'
@@ -207,6 +216,7 @@ setStageNumber(
 );
 setResults(liveResults);
 setLoading(false);
+setStageState(liveStageState);
         }
       } catch (error) {
         console.error(
@@ -226,6 +236,46 @@ setLoading(false);
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+  if (!liveSession) {
+    return;
+  }
+
+  const channel = subscribeToLiveStageState(
+    liveSession.gameId,
+    async () => {
+      try {
+        const updatedStageState =
+          await fetchLiveStageState(
+            liveSession.gameId
+          );
+
+          setStageState(updatedStageState);
+
+        if (
+          updatedStageState?.phase ===
+          'stage-overview'
+        ) {
+          router.replace(
+            '/live-stage-overview'
+          );
+        }
+      } catch (error) {
+        console.error(
+          'LIVE STAGE ENTRY SYNC ERROR',
+          error
+        );
+      }
+    }
+  );
+
+  return () => {
+    void unsubscribeFromLiveStageState(
+      channel
+    );
+  };
+}, []);
 
   if (loading) {
     return (
@@ -421,10 +471,33 @@ async function handleFinishStage() {
       await finishLiveStageEntry(
         liveSession.gameId
       );
+
+      const updatedStageState =
+        await fetchLiveStageState(
+          liveSession.gameId
+        );
+
+        setStageState(updatedStageState);
+
+      if (
+        updatedStageState?.phase ===
+        'stage-overview'
+      ) {
+        router.replace(
+          '/live-stage-overview'
+        );
+      }
+
+      return;
     }
 
-    if (stageState?.phase === 'stage-overview') {
-      router.replace('/live-stage-overview');
+    if (
+      stageState?.phase ===
+      'stage-overview'
+    ) {
+      router.replace(
+        '/live-stage-overview'
+      );
       return;
     }
 
@@ -437,14 +510,23 @@ async function handleFinishStage() {
   }
 }
 
-  return (
+const hasFinishedStageEntry =
+  stageState?.stageEntryReadyPlayerIds.includes(
+    liveSession?.playerId ?? ''
+  ) ?? false;
+
+const stageEntryReadyCount =
+  stageState?.stageEntryReadyPlayerIds.length ?? 0;
+
+return (
+  <View style={styles.screen}>
     <KeyboardAwareScrollView
-  style={styles.screen}
-  contentContainerStyle={styles.content}
-  keyboardShouldPersistTaps="handled"
-  enableOnAndroid
-  extraScrollHeight={150}
->
+      style={styles.scrollView}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid
+      extraScrollHeight={150}
+    >
       <Text style={styles.title}>
         STAGE ENTRY
       </Text>
@@ -738,21 +820,43 @@ async function handleFinishStage() {
     </Text>
   </Pressable>
 ) : (
-  <Pressable
-    style={styles.button}
-    onPress={handleFinishStage}
-  >
-    <Text style={styles.buttonText}>
-      FINISH STAGE
-    </Text>
-  </Pressable>
+  <View style={{ flex: 1 }}>
+    <Pressable
+      style={[
+        styles.button,
+        hasFinishedStageEntry &&
+          styles.disabledButton,
+      ]}
+      disabled={hasFinishedStageEntry}
+      onPress={handleFinishStage}
+    >
+      <Text style={styles.buttonText}>
+        {hasFinishedStageEntry
+          ? 'STAGE FINISHED'
+          : 'FINISH STAGE'}
+      </Text>
+    </Pressable>
+
+    {hasFinishedStageEntry && (
+      <Text style={styles.saveStatus}>
+        Waiting for other players ·{' '}
+        {stageEntryReadyCount}/{players.length} ready
+      </Text>
+    )}
+  </View>
 )}
     </View>
   </>
 )}
 
-    </KeyboardAwareScrollView>
-  );
+        </KeyboardAwareScrollView>
+
+    <LiveChatBubble
+      gameId={liveSession.gameId}
+      screenKey="live-stage-entry"
+    />
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -762,6 +866,10 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 2,
   },
+
+  scrollView: {
+  flex: 1,
+},
 
   title: {
     fontFamily: 'BebasNeue',
@@ -944,6 +1052,14 @@ fatigueLabelRow: {
   flexDirection: 'row',
   alignItems: 'center',
   gap: 5,
+},
+
+saveStatus: {
+  marginTop: 6,
+  textAlign: 'center',
+  fontSize: 12,
+  fontWeight: '700',
+  color: Colors.brown,
 },
 
 });

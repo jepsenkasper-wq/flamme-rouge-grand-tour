@@ -1,4 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
@@ -8,7 +12,11 @@ import {
   saveGame,
   updateActiveSavedGame,
 } from '@/lib/storage';
-import { useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { Alert, Image, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   updateSoloFatigueTransfer,
@@ -182,6 +190,12 @@ const refreshAlreadyUsed =
 
 const muscleTeamState = teamState?.muscleTeam;
 const pelotonTeamState = teamState?.pelotonTeam;
+
+useFocusEffect(
+  useCallback(() => {
+    forceUpdate((value) => value + 1);
+  }, [])
+);
 
 useEffect(() => {
   if (!isBreakawayBid || !riderState) {
@@ -779,6 +793,30 @@ soloStage.stageType === 'hilly'
     <Text style={styles.deckInfoSmall}>
       * = Special Rider card
     </Text>
+
+    {drawMode === 'human-app' && riderState && (
+  <>
+    <Text style={styles.deckInfoSmall}>
+      Played Cards:{' '}
+      {riderState.discard.length > 0
+        ? riderState.discard.map(formatCard).join(' · ')
+        : '-'}
+    </Text>
+
+    <Text style={styles.deckInfoSmall}>
+      Set Aside:{' '}
+      {riderState.setAside.length > 0
+        ? riderState.setAside.map(formatCard).join(' · ')
+        : '-'}
+    </Text>
+
+    <Text style={styles.deckInfoSmall}>
+      Remaining Cards in Deck: {riderState.deck.length}
+    </Text>
+  </>
+)}
+
+
   </>
 )}
 
@@ -907,6 +945,7 @@ soloStage.stageType === 'hilly'
       </Pressable>
     </View>
 
+{drawMode === 'human-app' && (
    <View style={styles.actionRow}>
   <Pressable
     style={[
@@ -914,7 +953,16 @@ soloStage.stageType === 'hilly'
       refreshAlreadyUsed && styles.primaryButtonDisabled,
     ]}
     disabled={refreshAlreadyUsed}
-    onPress={() => refresh(24)}
+    onPress={() =>
+  router.push({
+    pathname: '/manual-refresh',
+    params: {
+      teamId: params.teamId,
+      riderKey: params.riderKey,
+      limit: '24',
+    },
+  })
+}
   >
     <Text style={styles.secondaryButtonText}>Refresh 24</Text>
   </Pressable>
@@ -925,11 +973,21 @@ soloStage.stageType === 'hilly'
       refreshAlreadyUsed && styles.primaryButtonDisabled,
     ]}
     disabled={refreshAlreadyUsed}
-    onPress={() => refresh(25)}
+    onPress={() =>
+  router.push({
+    pathname: '/manual-refresh',
+    params: {
+      teamId: params.teamId,
+      riderKey: params.riderKey,
+      limit: '25',
+    },
+  })
+}
   >
     <Text style={styles.secondaryButtonText}>Refresh 25</Text>
   </Pressable>
 </View>
+)}
 
     {actionMessage !== '' && (
   <Text style={styles.actionMessage}>

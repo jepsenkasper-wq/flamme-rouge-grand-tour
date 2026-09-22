@@ -1257,6 +1257,23 @@ if (stageType === 'mountain') {
   return selectedCards;
 }
 
+export function refreshSelectedCardsFromDiscard(
+  rider: DummyRiderState,
+  selectedCardIds: string[]
+): DummyCard[] {
+  const selectedCards = rider.discard.filter(
+    (card) => selectedCardIds.includes(card.id)
+  );
+
+  rider.discard = rider.discard.filter(
+    (card) => !selectedCardIds.includes(card.id)
+  );
+
+  rider.deck.push(...selectedCards);
+
+  return selectedCards;
+}
+
 export function cloneDummyRiderState(
   rider: DummyRiderState
 ): DummyRiderState {

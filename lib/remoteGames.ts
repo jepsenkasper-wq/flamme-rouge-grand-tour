@@ -76,6 +76,25 @@ export async function updateRemoteGame(savedGame: SavedGame) {
     throw error;
   }
 }
+
+export async function deleteRemoteGame(
+  savedGame: SavedGame
+) {
+  if (!savedGame.remoteId || !savedGame.adminKey) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('id', savedGame.remoteId)
+    .eq('admin_key', savedGame.adminKey);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export function subscribeToRemoteGame(
   remoteId: string,
   onChange: () => void

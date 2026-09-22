@@ -9,6 +9,13 @@ import {
   View,
 } from 'react-native';
 
+import {
+  specialRiders,
+  type SpecialRiderId,
+} from '@/lib/solo/specialRiders';
+
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 import { router, Stack } from 'expo-router';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
@@ -133,6 +140,8 @@ const [selectedBreakawayWinnerIds, setSelectedBreakawayWinnerIds] =
       ),
     ]);
 
+
+
     if (
       active &&
       currentLoadVersion === loadVersion
@@ -153,18 +162,20 @@ const myBid = state?.breakaway.bids.find(
 );
 
   if (
-    state?.breakaway.phase === 'bid-1' &&
-    !myBid?.bid1Submitted
-  ) {
-    setBid1Hand(pendingHand);
-  }
+  state?.breakaway.phase === 'bid-1' &&
+  !myBid?.bid1Submitted &&
+  pendingHand.length > 0
+) {
+  setBid1Hand(pendingHand);
+}
 
   if (
-    state?.breakaway.phase === 'bid-2' &&
-    !myBid?.bid2Submitted
-  ) {
-    setBid2Hand(pendingHand);
-  }
+  state?.breakaway.phase === 'bid-2' &&
+  !myBid?.bid2Submitted &&
+  pendingHand.length > 0
+) {
+  setBid2Hand(pendingHand);
+}
 
   setLoading(false);
 }
@@ -541,11 +552,20 @@ type LiveDrawListItem = {
     | 'peloton';
   riderKey?: 'sprinteur' | 'rouleur';
   riderLabel: string;
+  specialRiderId?: SpecialRiderId;
   canOpen: boolean;
 };
 
 const liveDrawList: LiveDrawListItem[] =
   teams.flatMap((team): LiveDrawListItem[] => {
+  
+    const ownerPlayer =
+  team.teamType === 'human'
+    ? players.find(
+        (player) =>
+          player.id === team.ownerPlayerId
+      )
+    : undefined;
     const canOpen =
       team.teamType === 'human'
         ? team.ownerPlayerId ===
@@ -575,7 +595,12 @@ const liveDrawList: LiveDrawListItem[] =
         teamType: team.teamType,
         riderKey: 'sprinteur',
         riderLabel: 'Sprinteur',
+        specialRiderId:
+  team.teamType === 'human'
+    ? ownerPlayer?.sprinteurSpecialRiderId
+    : team.sprinteurSpecialRiderId,
         canOpen,
+        
       },
       {
         id: `${team.id}-rouleur`,
@@ -585,6 +610,10 @@ const liveDrawList: LiveDrawListItem[] =
         teamType: team.teamType,
         riderKey: 'rouleur',
         riderLabel: 'Rouleur',
+        specialRiderId:
+  team.teamType === 'human'
+    ? ownerPlayer?.rouleurSpecialRiderId
+    : team.rouleurSpecialRiderId,
         canOpen,
       },
     ];
@@ -675,8 +704,10 @@ function getTeamTypeLabel(
         Stage {stageState.stageNumber}
       </Text>
 
-      {stageState.breakaway.phase ===
-  'rider-selection' && (
+      {stageState.phase !== 'round-draw' &&
+  stageState.phase !== 'round-reveal' &&
+  stageState.breakaway.phase ===
+    'rider-selection' && (
   <View style={styles.card}>
 
   <Text style={styles.sectionTitle}>
@@ -707,14 +738,18 @@ function getTeamTypeLabel(
               styles.optionButtonDisabled,
           ]}
           onPress={async () => {
-            await updateLiveStageSetup(
-              liveSession.gameId,
-              {
-                raceType:
-                  option.key as LiveStageState['raceType'],
-              }
-            );
-          }}
+  await updateLiveStageSetup(
+    liveSession.gameId,
+    {
+      raceType:
+        option.key as LiveStageState['raceType'],
+
+      ...(option.key !== 'normal'
+        ? { breakawayMode: 'none' }
+        : {}),
+    }
+  );
+}}
         >
           <Text
             style={[
@@ -779,7 +814,8 @@ function getTeamTypeLabel(
       );
     })}
   </View>
-
+{stageState.raceType === 'normal' && (
+  <>
 <Text style={styles.sectionTitle}>
   Breakaway
 </Text>
@@ -888,12 +924,19 @@ await selectLiveBreakawayRider(
     </View>
   </View>
 )}
+ </>
+)}
 
-<Text style={styles.readyText}>
-  {selectedRiderCount}/{requiredRiderCount} riders selected
-</Text>
+{stageState.raceType === 'normal' &&
+  stageState.breakaway.mode === 'one' && (
+    <Text style={styles.readyText}>
+      {selectedRiderCount}/{requiredRiderCount} riders selected
+    </Text>
+)}
 
-{liveSession.isAdmin && (
+{liveSession.isAdmin &&
+  stageState.raceType === 'normal' &&
+  stageState.breakaway.mode === 'one' && (
   <Pressable
     disabled={!allRidersSelected}
     style={[
@@ -912,6 +955,31 @@ await selectLiveBreakawayRider(
     </Text>
   </Pressable>
 )}
+{liveSession.isAdmin &&
+  (
+    stageState.raceType !== 'normal' ||
+    stageState.breakaway.mode === 'none'
+  ) && (
+    <Pressable
+      style={styles.continueButton}
+      onPress={async () => {
+        try {
+          await startLiveRoundDraw(
+            liveSession.gameId
+          );
+        } catch (error) {
+          console.error(
+            'START LIVE ROUND DRAW ERROR',
+            error
+          );
+        }
+      }}
+    >
+      <Text style={styles.continueButtonText}>
+        Start Stage
+      </Text>
+    </Pressable>
+  )}
 </View>
 )}
 
@@ -1418,6 +1486,11 @@ onPress={() => {
           revealKey
         ] as DummyCard | undefined;
 
+      const specialRider =
+  item.specialRiderId
+    ? specialRiders[item.specialRiderId]
+    : undefined;
+
       return (
         <Pressable
   key={item.id}
@@ -1458,25 +1531,30 @@ onPress={() => {
 
           <View style={styles.rowInfo}>
             <Text style={styles.rowText}>
-              {item.teamName}
-              {item.riderLabel
-                ? ` – ${item.riderLabel}`
-                : ''}
-            </Text>
+  {item.teamName}
+  {item.riderLabel
+    ? ` – ${item.riderLabel}`
+    : ''}
+</Text>
 
             <Text style={styles.rowSubText}>
-  {getTeamTypeLabel(item.teamType)
-    ? `${getTeamTypeLabel(item.teamType)} · Played Card`
-    : 'Played Card'}
+  {[
+    getTeamTypeLabel(item.teamType),
+    specialRider?.name,
+    'Played Card',
+  ]
+    .filter(Boolean)
+    .join(' · ')}
 </Text>
           </View>
 
           <Text style={styles.breakawayBidValue}>
-            {revealedCard
-              ? revealedCard.displayValue ??
-                revealedCard.value
-              : '-'}
-          </Text>
+  {revealedCard
+    ? revealedCard.isSpecial
+      ? `${revealedCard.value}*`
+      : revealedCard.displayValue ?? revealedCard.value
+    : '-'}
+</Text>
         </Pressable>
       );
     })}
@@ -1640,6 +1718,10 @@ onPress={() => {
   )}
 
       </ScrollView>
+       <LiveChatBubble
+      gameId={liveSession.gameId}
+      screenKey="live-stage"
+    />
     </View>
   );
 }

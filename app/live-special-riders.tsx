@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import {
@@ -541,6 +543,12 @@ const rouleurSpecialRiders =
 )}
 
 </ScrollView>
+
+<LiveChatBubble
+  gameId={gameId}
+  screenKey="live-special-riders"
+/>
+
 </View>
 );
 }

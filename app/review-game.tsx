@@ -11,6 +11,8 @@ import { saveGameToLibrary } from '@/lib/storage';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { clearActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
 function formatSpecialRiderName(
   specialRiderId?: string
 ): string {
@@ -159,19 +161,22 @@ const contentStyle = {
 
     <Pressable
   style={styles.button}
-onPress={async () => {
-  gameResults.entries = [];
+  onPress={async () => {
+    gameResults.entries = [];
 
-  gameState.currentStage = 1;
-  gameState.currentEntryType = 'stage';
+    gameState.currentStage = 1;
+    gameState.currentEntryType = 'stage';
 
-  stageDraft.initialize(createGameDraft.playerNames.length);
+    stageDraft.initialize(createGameDraft.playerNames.length);
 
-  await saveGameToLibrary();
-  await saveGame();
+    await saveGameToLibrary();
+    await saveGame();
 
-  router.replace('/(tabs)');
-}}>
+    clearActiveLiveGameSession();
+
+    router.replace('/(tabs)');
+  }}
+>
   <Text style={styles.buttonText}>Create Game</Text>
 </Pressable>
 

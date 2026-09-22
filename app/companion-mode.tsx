@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
@@ -28,9 +28,19 @@ export default function CompanionModeScreen() {
       <Pressable
   style={styles.card}
   onPress={() => {
-    createGameDraft.companionMode = 'dummy';
-    router.push('/dummy-players');
-  }}>
+  const playerCount = Number(createGameDraft.players);
+
+  if (playerCount > 6) {
+    Alert.alert(
+      'Too many players',
+      'Dummy Companion supports a maximum of 6 teams.'
+    );
+    return;
+  }
+
+  createGameDraft.companionMode = 'dummy';
+  router.push('/dummy-players');
+}}>
         <Text style={styles.cardTitle}>Dummy Companion</Text>
 
         <Text style={styles.cardText}>

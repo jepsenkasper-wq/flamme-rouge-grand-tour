@@ -480,6 +480,26 @@ if (!teamId) {
   throw new Error('Live team ID not found');
 }
 
+const liveTeams =
+  await fetchLiveTeams(liveSession.gameId);
+
+const cleanName = name.trim();
+
+const nameAlreadyUsed = liveTeams.some(
+  (team) =>
+    team.id !== teamId &&
+    team.name.trim().toLowerCase() ===
+      cleanName.toLowerCase()
+);
+
+if (nameAlreadyUsed) {
+  Alert.alert(
+    'Name Already Used',
+    'Please choose a different player name.'
+  );
+  return;
+}
+
 const teamTypeChanged =
   originalLiveTeamType !== null &&
   teamType !== originalLiveTeamType;
@@ -585,7 +605,25 @@ if (teamTypeChanged) {
     return;
   }
 }
- createGameDraft.playerNames[playerIndex] = name;
+const cleanName = name.trim();
+
+const nameAlreadyUsed =
+  createGameDraft.playerNames.some(
+    (playerName, index) =>
+      index !== playerIndex &&
+      playerName.trim().toLowerCase() ===
+        cleanName.toLowerCase()
+  );
+
+if (nameAlreadyUsed) {
+  Alert.alert(
+    'Name Already Used',
+    'Please choose a different player name.'
+  );
+  return;
+}
+
+ createGameDraft.playerNames[playerIndex] = cleanName;
 createGameDraft.playerColors[playerIndex] = color;
 
 if (!isDummyGame) {
@@ -599,7 +637,7 @@ if (!isDummyGame) {
 if (isDummyGame && createGameDraft.dummyTeams[playerIndex]) {
   createGameDraft.dummyTeams[playerIndex] = {
     ...createGameDraft.dummyTeams[playerIndex],
-    name,
+    name: cleanName,
     color,
     teamType,
     drawMode,

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   Image,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -93,10 +94,28 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
 
   try {
     const nextPlayerName =
-      name ||
-      `Player ${createGameDraft.playerNames.length + 1}`;
+  name.trim() ||
+  `Player ${createGameDraft.playerNames.length + 1}`;
 
-    const newTeamId = await addLiveDummyTeam(
+const liveTeams = await fetchLiveTeams(
+  liveSession.gameId
+);
+
+const nameAlreadyUsed = liveTeams.some(
+  (team) =>
+    team.name.trim().toLowerCase() ===
+    nextPlayerName.toLowerCase()
+);
+
+if (nameAlreadyUsed) {
+  Alert.alert(
+    'Name Already Used',
+    'Please choose a different player name.'
+  );
+  return;
+}
+
+const newTeamId = await addLiveDummyTeam(
       liveSession.gameId,
       {
         name: nextPlayerName,
@@ -113,13 +132,13 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
       }
     );
 
-    const liveTeams = await fetchLiveTeams(
-      liveSession.gameId
-    );
+    const updatedLiveTeams = await fetchLiveTeams(
+  liveSession.gameId
+);
 
-    const newTeam = liveTeams.find(
-      (team) => team.id === newTeamId
-    );
+const newTeam = updatedLiveTeams.find(
+  (team) => team.id === newTeamId
+);
 
     if (!newTeam) {
       throw new Error(
@@ -311,18 +330,42 @@ const [rouleurSpecialRiderId, setRouleurSpecialRiderId] =
 
         <Pressable
           style={styles.button}
-          onPress={async () => {
-  if (createGameDraft.playerNames.length >= 6) {
-    return;
-  }
-
+         onPress={async () => {
   if (liveSession) {
     await addLivePlayer();
     return;
   }
 
+  const maxPlayers = isDummyGame ? 6 : 20;
+
+  if (createGameDraft.playerNames.length >= maxPlayers) {
+    Alert.alert(
+      'Maximum players reached',
+      isDummyGame
+        ? 'Dummy Companion supports a maximum of 6 teams.'
+        : 'Normal Companion supports a maximum of 20 teams.'
+    );
+    return;
+  }
+
   const nextPlayerName =
-    name || `Player ${createGameDraft.playerNames.length + 1}`;
+    name.trim() ||
+    `Player ${createGameDraft.playerNames.length + 1}`;
+
+  const nameAlreadyUsed =
+    createGameDraft.playerNames.some(
+      (playerName) =>
+        playerName.trim().toLowerCase() ===
+        nextPlayerName.toLowerCase()
+    );
+
+  if (nameAlreadyUsed) {
+    Alert.alert(
+      'Name Already Used',
+      'Please choose a different player name.'
+    );
+    return;
+  }
 
   createGameDraft.playerNames.push(nextPlayerName);
   createGameDraft.playerColors.push(color);

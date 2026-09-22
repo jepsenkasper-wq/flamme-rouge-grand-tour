@@ -57,7 +57,7 @@ export default function CreateGameScreen() {
         value={players}
         onChangeText={setPlayers}
         keyboardType="number-pad"
-        maxLength={1}
+        maxLength={2}
       />
 
       <Text style={styles.label}>Stages</Text>
@@ -85,13 +85,13 @@ export default function CreateGameScreen() {
           const restDayCount = Number(restDays);
           const playerCount = Number(players);
 
-          if (!playerCount || playerCount < 1 || playerCount > 6) {
-            Alert.alert(
-              'Invalid number of players',
-              'Please choose between 1 and 6 players.'
-            );
-            return;
-          }
+          if (!playerCount || playerCount < 1 || playerCount > 20) {
+  Alert.alert(
+    'Invalid number of players',
+    'Please choose between 1 and 20 players.'
+  );
+  return;
+}
 
           if (!stageCount || stageCount < 1) {
             Alert.alert(

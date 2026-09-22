@@ -178,10 +178,29 @@ const canEditGame =
           onPress={() => router.push('/create-game')}
         />
 
+<MenuButton
+  title="Create New Live Game"
+  onPress={() => router.push('/live-create-game')}
+/>
+
         <MenuButton
           title="My Games"
           onPress={() => router.push('/my-games')}
         />
+
+        {liveSession && (
+  <MenuButton
+    title="Live Chat"
+    onPress={() =>
+      router.push({
+        pathname: '/live-chat',
+        params: {
+          gameId: liveSession.gameId,
+        },
+      })
+    }
+  />
+)}
        {/* 
 <MoreButton
   title="Solo Test"

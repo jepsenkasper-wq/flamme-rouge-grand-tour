@@ -113,29 +113,6 @@ if (!fontsLoaded || !gameLoaded) {
   name="live-stage-overview"
   options={{
     title: 'Stage Overview',
-    headerLeft: () => (
-      <Pressable
-        onPress={() =>
-          router.replace('/live-stage-entry')
-        }
-        hitSlop={12}
-        style={{
-          paddingVertical: 6,
-          paddingRight: 18,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 34,
-            lineHeight: 34,
-            color: '#007AFF',
-            fontWeight: '300',
-          }}
-        >
-          ‹
-        </Text>
-      </Pressable>
-    ),
   }}
 />
       </Stack>

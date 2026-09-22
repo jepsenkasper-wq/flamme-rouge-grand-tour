@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+
 import BackgroundWatermark from '@/components/BackgroundWatermark';
 import { Colors } from '@/constants/colors';
 import {
@@ -592,6 +594,11 @@ const allTeamsComplete =
           </Text>
         </Pressable>
       </ScrollView>
+
+      <LiveChatBubble
+        gameId={gameId}
+        screenKey="live-special-riders-manual"
+      />
     </View>
   );
 }

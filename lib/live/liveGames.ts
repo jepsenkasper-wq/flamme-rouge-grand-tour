@@ -123,6 +123,74 @@ const LIVE_PLAYER_COLORS = [
   'Pink',
 ];
 
+export type LiveChatMessage = {
+  id: string;
+  gameId: string;
+  playerId: string;
+  message: string;
+  createdAt: string;
+  imagePath?: string;
+};
+
+export async function fetchLiveChatMessages(
+  gameId: string,
+  playerId: string,
+  playerToken: string
+): Promise<LiveChatMessage[]> {
+  const { data, error } = await supabase.rpc(
+    'fetch_live_chat_messages',
+    {
+      p_game_id: gameId,
+      p_player_id: playerId,
+      p_player_token: playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(
+    (message: {
+      id: string;
+      game_id: string;
+      player_id: string;
+      message: string;
+      created_at: string;
+      image_path: string | null;
+    }) => ({
+      id: message.id,
+      gameId: message.game_id,
+      playerId: message.player_id,
+      message: message.message,
+      createdAt: message.created_at,
+      imagePath:
+        message.image_path ?? undefined,
+    })
+  );
+}
+
+export async function sendLiveChatMessage(
+  gameId: string,
+  playerId: string,
+  playerToken: string,
+  message: string
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    'send_live_chat_message',
+    {
+      p_game_id: gameId,
+      p_player_id: playerId,
+      p_player_token: playerToken,
+      p_message: message,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function createLivePlayer(
   gameId: string,
   name: string,
@@ -193,41 +261,41 @@ return {
 };
 }
 
-export async function fetchLivePlayers(
-  gameId: string
-): Promise<LivePlayer[]> {
-  const { data, error } = await supabase
-    .from('live_players')
-   .select(
-  'id, game_id, name, color, is_admin, sprinteur_special_rider_id, rouleur_special_rider_id, sprinteur_special_rider_set, rouleur_special_rider_set, review_confirmed'
-)
-    .eq('game_id', gameId)
-    .order('created_at', { ascending: true });
+  export async function fetchLivePlayers(
+    gameId: string
+  ): Promise<LivePlayer[]> {
+    const { data, error } = await supabase
+      .from('live_players')
+    .select(
+    'id, game_id, name, color, is_admin, sprinteur_special_rider_id, rouleur_special_rider_id, sprinteur_special_rider_set, rouleur_special_rider_set, review_confirmed'
+  )
+      .eq('game_id', gameId)
+      .order('created_at', { ascending: true });
 
-  if (error) {
-    throw error;
+    if (error) {
+      throw error;
+    }
+
+  return (data ?? []).map((player) => ({
+    id: player.id as string,
+    gameId: player.game_id as string,
+    name: player.name as string,
+    color: player.color ?? undefined,
+    isAdmin: Boolean(player.is_admin),
+
+    sprinteurSpecialRiderId:
+      player.sprinteur_special_rider_id ?? undefined,
+
+    rouleurSpecialRiderId:
+      player.rouleur_special_rider_id ?? undefined,
+      sprinteurSpecialRiderSet:
+    Boolean(player.sprinteur_special_rider_set),
+
+  rouleurSpecialRiderSet:
+    Boolean(player.rouleur_special_rider_set),
+      reviewConfirmed: Boolean(player.review_confirmed),
+  }));
   }
-
- return (data ?? []).map((player) => ({
-  id: player.id as string,
-  gameId: player.game_id as string,
-  name: player.name as string,
-  color: player.color ?? undefined,
-  isAdmin: Boolean(player.is_admin),
-
-  sprinteurSpecialRiderId:
-    player.sprinteur_special_rider_id ?? undefined,
-
-  rouleurSpecialRiderId:
-    player.rouleur_special_rider_id ?? undefined,
-    sprinteurSpecialRiderSet:
-  Boolean(player.sprinteur_special_rider_set),
-
-rouleurSpecialRiderSet:
-  Boolean(player.rouleur_special_rider_set),
-    reviewConfirmed: Boolean(player.review_confirmed),
-}));
-}
 
 export function subscribeToLivePlayers(
   gameId: string,
@@ -262,6 +330,39 @@ export async function unsubscribeFromLivePlayers(
   await supabase.removeChannel(channel);
 }
 
+export function subscribeToLiveChatMessages(
+  gameId: string,
+  onChange: () => void
+) {
+  const channel = supabase
+    .channel(
+      `live-chat-${gameId}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'live_chat_messages',
+        filter: `game_id=eq.${gameId}`,
+      },
+      () => {
+        onChange();
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+export async function unsubscribeFromLiveChatMessages(
+  channel: ReturnType<typeof subscribeToLiveChatMessages>
+) {
+  await supabase.removeChannel(channel);
+}
+
 export type LiveGame = {
   id: string;
   joinCode: string;
@@ -279,6 +380,7 @@ export type LiveGame = {
   specialRiderMode: LiveSpecialRiderMode | null;
 
   gameData?: LiveGameData;
+  chatUpdatedAt?: string;
 };
 
 export type LiveStageState = {
@@ -724,8 +826,8 @@ export async function fetchLiveGame(
 ): Promise<LiveGame> {
   const { data, error } = await supabase
     .from('live_games')
-    .select(
-  'id, join_code, game_name, player_count, stage_count, rest_day_count, rest_day_stages, phase, draft_order, draft_round, draft_pick_index, draft_started, special_rider_mode, game_data'
+   .select(
+  'id, join_code, game_name, player_count, stage_count, rest_day_count, rest_day_stages, phase, draft_order, draft_round, draft_pick_index, draft_started, special_rider_mode, game_data, chat_updated_at'
 )
     .eq('id', gameId)
     .single();
@@ -754,6 +856,8 @@ export async function fetchLiveGame(
       null,
       gameData:
   (data.game_data as LiveGameData | null) ?? undefined,
+  chatUpdatedAt:
+  (data.chat_updated_at as string | null) ?? undefined,
   };
 }
 
@@ -1625,6 +1729,52 @@ export async function drawLiveRoundHand(
   return (data ?? []) as DummyCard[];
 }
 
+export async function fetchLiveHumanRiderCardInfo(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur'
+): Promise<{
+  deck: DummyCard[];
+  setAside: DummyCard[];
+  discard: DummyCard[];
+}> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { data, error } = await supabase.rpc(
+    'fetch_live_human_rider_card_info',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const result = data as {
+    deck?: DummyCard[];
+    setAside?: DummyCard[];
+    discard?: DummyCard[];
+  } | null;
+
+  return {
+    deck: result?.deck ?? [],
+    setAside: result?.setAside ?? [],
+    discard: result?.discard ?? [],
+  };
+}
+
 export async function submitLiveRoundCard(
   gameId: string,
   teamId: string,
@@ -1741,6 +1891,42 @@ export async function refreshLiveRoundRider(
       p_team_id: teamId,
       p_rider_key: riderKey,
       p_limit: limit,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DummyCard[];
+}
+
+export async function refreshLiveRoundRiderSelected(
+  gameId: string,
+  teamId: string,
+  riderKey: 'sprinteur' | 'rouleur',
+  limit: 24 | 25,
+  selectedCardIds: string[]
+): Promise<DummyCard[]> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found.'
+    );
+  }
+
+  const { data, error } = await supabase.rpc(
+    'refresh_live_round_rider_selected',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+      p_team_id: teamId,
+      p_rider_key: riderKey,
+      p_limit: limit,
+      p_card_ids: selectedCardIds,
     }
   );
 
@@ -2584,7 +2770,9 @@ export async function submitLiveAIRoundCard(
   teamId: string,
   riderKey: RiderType,
   riderState: DummyRiderState,
-  selectedCard: DummyCard
+  selectedCard: DummyCard,
+  effectiveMovement?: number,
+  canProvideSlipstream?: boolean
 ): Promise<void> {
   const identity =
     await getLivePlayerIdentity(gameId);
@@ -2606,6 +2794,10 @@ export async function submitLiveAIRoundCard(
       p_rider_key: riderKey,
       p_rider_state: riderState,
       p_selected_card: selectedCard,
+      p_effective_movement:
+  effectiveMovement ?? null,
+p_can_provide_slipstream:
+  canProvideSlipstream ?? null,
     }
   );
 
@@ -3148,6 +3340,32 @@ export async function finishLiveStageEntry(
   }
 }
 
+export async function unfinishLiveStageEntry(
+  gameId: string
+) {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'unfinish_live_stage_entry',
+    {
+      p_game_id: gameId,
+      p_player_id: identity.playerId,
+      p_player_token: identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function markLiveStageSaveReady(
   gameId: string
 ) {
@@ -3636,6 +3854,123 @@ export async function endLiveTour(
 
   if (error) {
     throw error;
+  }
+}
+
+export async function createLiveChatImageUpload(
+  gameId: string,
+  playerId: string,
+  playerToken: string,
+  fileExtension: string
+): Promise<{
+  path: string;
+  token: string;
+}> {
+  const { data, error } = await supabase.functions.invoke(
+    'create-live-chat-image-upload',
+    {
+      body: {
+        gameId,
+        playerId,
+        playerToken,
+        fileExtension,
+      },
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.path || !data?.token) {
+    throw new Error(
+      'Invalid chat image upload response'
+    );
+  }
+
+  return {
+    path: data.path as string,
+    token: data.token as string,
+  };
+}
+
+export async function sendLiveChatImage(
+  gameId: string,
+  playerId: string,
+  playerToken: string,
+  imagePath: string
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    'send_live_chat_image',
+    {
+      p_game_id: gameId,
+      p_player_id: playerId,
+      p_player_token: playerToken,
+      p_image_path: imagePath,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function createLiveChatImageUrl(
+  gameId: string,
+  playerId: string,
+  playerToken: string,
+  imagePath: string
+): Promise<string> {
+  const { data, error } =
+    await supabase.functions.invoke(
+      'create-live-chat-image-url',
+      {
+        body: {
+          gameId,
+          playerId,
+          playerToken,
+          imagePath,
+        },
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.signedUrl) {
+    throw new Error(
+      'Invalid chat image URL response'
+    );
+  }
+
+  return data.signedUrl as string;
+}
+
+export async function deleteLiveGame(
+  gameId: string,
+  playerId: string,
+  playerToken: string
+): Promise<void> {
+  const { data, error } = await supabase.functions.invoke(
+    'delete-live-game',
+    {
+      body: {
+        gameId,
+        playerId,
+        playerToken,
+      },
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data?.success) {
+    throw new Error(
+      data?.error ?? 'Could not delete live game'
+    );
   }
 }
 

@@ -28,19 +28,40 @@ function getPlayerColor(colorName: string) {
 export default function TourPointsOverviewScreen() {
 const bonusBreakdown = calculateBonusBreakdown();
   const rows = createGameDraft.playerNames.map((playerName, playerIndex) => {
-    let sprinteurPoints = 0;
-    let rouleurPoints = 0;
+    let sprinteurStagePoints = 0;
+let rouleurStagePoints = 0;
+let sprinteurRestDayPoints = 0;
+let rouleurRestDayPoints = 0;
 
-    gameResults.entries
-      .filter((entry) => entry.entryType === 'stage')
-      .forEach((entry) => {
-        const player = entry.players[playerIndex];
+    gameResults.entries.forEach((entry) => {
+  const player = entry.players[playerIndex];
 
-        if (!player) return;
+  if (!player) return;
 
-        sprinteurPoints += Number(player.sprinteur.tourPoints || 0);
-        rouleurPoints += Number(player.rouleur.tourPoints || 0);
-      });
+  const sprinteurPoints = Number(
+    player.sprinteur.tourPoints || 0
+  );
+
+  const rouleurPoints = Number(
+    player.rouleur.tourPoints || 0
+  );
+
+  if (entry.entryType === 'restDay') {
+    sprinteurRestDayPoints += sprinteurPoints;
+    rouleurRestDayPoints += rouleurPoints;
+  } else {
+    sprinteurStagePoints += sprinteurPoints;
+    rouleurStagePoints += rouleurPoints;
+  }
+});
+
+const sprinteurPoints =
+  sprinteurStagePoints +
+  sprinteurRestDayPoints;
+
+const rouleurPoints =
+  rouleurStagePoints +
+  rouleurRestDayPoints;
       
 const bonus = bonusBreakdown[playerIndex];
 
@@ -56,24 +77,30 @@ const rouleurBonus =
 
 const teamBonus = bonus?.team || 0;
 
-   return {
+return {
   playerName: playerName || `Player ${playerIndex + 1}`,
   playerColor: createGameDraft.playerColors[playerIndex],
   bonus,
-    sprinteurBonus,
-    rouleurBonus,
-    teamBonus,
-    overallPoints:
+  sprinteurBonus,
+  rouleurBonus,
+  teamBonus,
+
+  sprinteurStagePoints,
+  rouleurStagePoints,
+  sprinteurRestDayPoints,
+  rouleurRestDayPoints,
+
+  overallPoints:
     sprinteurPoints +
     rouleurPoints +
     sprinteurBonus +
     rouleurBonus +
     teamBonus,
-      sprinteurPoints,
-      rouleurPoints,
-      totalPoints: sprinteurPoints + rouleurPoints,
-    
-    };
+
+  sprinteurPoints,
+  rouleurPoints,
+  totalPoints: sprinteurPoints + rouleurPoints,
+};
   });
 
   return (
@@ -109,14 +136,44 @@ const teamBonus = bonus?.team || 0;
 
 <Text style={styles.bonusTitle}>Tour Points</Text>
           <View style={styles.line}>
-            <Text style={styles.label}>Sprinteur</Text>
-            <Text style={styles.value}>{row.sprinteurPoints} pts</Text>
-          </View>
+  <Text style={styles.label}>
+    Sprinteur – Stages
+  </Text>
+  <Text style={styles.value}>
+    {row.sprinteurStagePoints} pts
+  </Text>
+</View>
 
-          <View style={styles.line}>
-            <Text style={styles.label}>Rouleur</Text>
-            <Text style={styles.value}>{row.rouleurPoints} pts</Text>
-          </View>
+{row.sprinteurRestDayPoints > 0 && (
+  <View style={styles.line}>
+    <Text style={styles.label}>
+      Sprinteur – Rest Days
+    </Text>
+    <Text style={styles.value}>
+      {row.sprinteurRestDayPoints} pts
+    </Text>
+  </View>
+)}
+
+<View style={styles.line}>
+  <Text style={styles.label}>
+    Rouleur – Stages
+  </Text>
+  <Text style={styles.value}>
+    {row.rouleurStagePoints} pts
+  </Text>
+</View>
+
+{row.rouleurRestDayPoints > 0 && (
+  <View style={styles.line}>
+    <Text style={styles.label}>
+      Rouleur – Rest Days
+    </Text>
+    <Text style={styles.value}>
+      {row.rouleurRestDayPoints} pts
+    </Text>
+  </View>
+)}
           <View style={styles.bonusBox}>
   <Text style={styles.bonusTitle}>Bonus Points</Text>
 
