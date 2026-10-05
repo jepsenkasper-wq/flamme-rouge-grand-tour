@@ -433,6 +433,43 @@ const rouleurSpecialRiders =
   </View>
 )}
 
+<View style={styles.selectedRidersBox}>
+  <Text style={styles.selectedRidersTitle}>
+    Selected Special Riders
+  </Text>
+
+  {players.map((player) => {
+    const sprinteur =
+      player.sprinteurSpecialRiderId
+        ? specialRiders[player.sprinteurSpecialRiderId]
+        : null;
+
+    const rouleur =
+      player.rouleurSpecialRiderId
+        ? specialRiders[player.rouleurSpecialRiderId]
+        : null;
+
+    return (
+      <View
+        key={player.id}
+        style={styles.selectedRiderRow}
+      >
+        <Text style={styles.selectedPlayerName}>
+          {player.name}
+        </Text>
+
+        <Text style={styles.selectedRiderText}>
+          Sprinteur: {sprinteur?.name ?? '—'}
+        </Text>
+
+        <Text style={styles.selectedRiderText}>
+          Rouleur: {rouleur?.name ?? '—'}
+        </Text>
+      </View>
+    );
+  })}
+</View>
+
 {isMyTurn && (
   <View style={styles.specialRiderSection}>
 
@@ -678,5 +715,38 @@ specialRiderRowDisabled: {
 setupOptions: {
   gap: 12,
   marginTop: 20,
+},
+selectedRidersBox: {
+  marginTop: 18,
+  padding: 14,
+  backgroundColor: Colors.paper,
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: Colors.border,
+},
+
+selectedRidersTitle: {
+  fontSize: 18,
+  fontWeight: '900',
+  color: Colors.red,
+  marginBottom: 10,
+},
+
+selectedRiderRow: {
+  paddingVertical: 8,
+  borderBottomWidth: 1,
+  borderBottomColor: Colors.border,
+},
+
+selectedPlayerName: {
+  fontSize: 16,
+  fontWeight: '900',
+  color: Colors.brown,
+  marginBottom: 3,
+},
+
+selectedRiderText: {
+  fontSize: 15,
+  color: Colors.brown,
 },
 });

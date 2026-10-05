@@ -561,6 +561,156 @@ async function selectHumanCard(cardId: string) {
   await persistDrawState();
 }
 
+function renderSpecialCardIcons(card: DummyCard) {
+  const specialRiderId =
+    riderState?.specialRiderId;
+
+  if (!card.isSpecial || !specialRiderId) {
+    return null;
+  }
+
+  if (specialRiderId === 'flandrien') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/flandrien.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'grimpeur') {
+    if (card.value === 3) {
+      return (
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-7.png'
+          )}
+          style={styles.specialCardIcon}
+        />
+      );
+    }
+
+    if (card.value === 6) {
+      return (
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-6.png'
+          )}
+          style={styles.specialCardIcon}
+        />
+      );
+    }
+  }
+
+  if (specialRiderId === 'domestique') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/domestique.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'descender') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-7.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/domestique.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (
+    specialRiderId === 'super-rouleur' ||
+    specialRiderId === 'flahute'
+  ) {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/double-card.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'baroudeur') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-x.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'squirrel') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/flandrien.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'puncheur') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-x.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'mountaineer') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/mountaineer-7.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  return null;
+}
+
 async function performAddFatigue() {
   if (!riderState) return;
 
@@ -898,23 +1048,35 @@ soloStage.stageType === 'hilly'
     selectHumanCard(card.id);
   }
 }}>
-            <Text style={styles.drawnCardText}>
-              {formatCard(card)}
-            </Text>
+            <View style={styles.drawnCardContent}>
+  <Text style={styles.drawnCardText}>
+    {card.type === 'fatigue'
+      ? `F${card.displayValue ?? card.value}`
+      : card.displayValue ?? card.value}
+  </Text>
+
+  {renderSpecialCardIcons(card)}
+</View>
           </Pressable>
         ))}
       </View>
     )}
 
-    {selectedCard && (
+   {selectedCard && (
   <View style={styles.selectedCardBox}>
     <Text style={styles.sectionTitle}>
       {isBreakawayBid ? 'Breakaway Bid' : 'Played Card'}
     </Text>
 
-    <Text style={styles.playedCardText}>
-      {formatCard(selectedCard)}
-    </Text>
+    <View style={styles.playedCardContent}>
+      <Text style={styles.playedCardText}>
+        {selectedCard.type === 'fatigue'
+          ? `F${selectedCard.displayValue ?? selectedCard.value}`
+          : selectedCard.displayValue ?? selectedCard.value}
+      </Text>
+
+      {renderSpecialCardIcons(selectedCard)}
+    </View>
   </View>
 )}
 
@@ -1118,13 +1280,22 @@ soloStage.stageType === 'hilly'
 </Pressable>
 
     {selectedCard && (
-      <View style={styles.selectedCardBox}>
-        <Text style={styles.sectionTitle}>Played Card</Text>
-        <Text style={styles.playedCardText}>
-          {formatCard(selectedCard)}
-        </Text>
-      </View>
-    )}
+  <View style={styles.selectedCardBox}>
+    <Text style={styles.sectionTitle}>
+      Played Card
+    </Text>
+
+    <View style={styles.playedCardContent}>
+      <Text style={styles.playedCardText}>
+        {selectedCard.type === 'fatigue'
+          ? `F${selectedCard.displayValue ?? selectedCard.value}`
+          : selectedCard.displayValue ?? selectedCard.value}
+      </Text>
+
+      {renderSpecialCardIcons(selectedCard)}
+    </View>
+  </View>
+)}
 
 
 {/*
@@ -1705,5 +1876,37 @@ aiDebugText: {
   fontSize: 12,
   color: Colors.brown,
   marginBottom: 3,
+},
+
+drawnCardContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+},
+
+playedCardContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+},
+
+specialCardIcon: {
+  width: 30,
+  height: 30,
+  resizeMode: 'contain',
+},
+
+specialCardIconStack: {
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 1,
+},
+
+specialCardIconSmall: {
+  width: 22,
+  height: 22,
+  resizeMode: 'contain',
 },
 });

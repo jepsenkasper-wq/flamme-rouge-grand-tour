@@ -141,6 +141,26 @@ const params = useLocalSearchParams<{
     | 'peloton';
 }>();
 
+useEffect(() => {
+  console.log('LIVE DRAW MOUNT', {
+    gameId: params.gameId,
+    teamId: params.teamId,
+    riderKey: params.riderKey,
+  });
+
+  return () => {
+    console.log('LIVE DRAW UNMOUNT', {
+      gameId: params.gameId,
+      teamId: params.teamId,
+      riderKey: params.riderKey,
+    });
+  };
+}, [
+  params.gameId,
+  params.teamId,
+  params.riderKey,
+]);
+
 const isNormalAI =
   params.teamType === 'normal-ai';
 const isHuman =
@@ -256,7 +276,8 @@ useFocusEffect(
           );
 
         if (state) {
-          setStageState(state);
+  setStageState(state);
+  setIsLoadingStageState(false);
 
           const statusKey =
             `${params.teamId}:${params.riderKey}`;
@@ -291,25 +312,9 @@ useFocusEffect(
 const [stageState, setStageState] =
   useState<LiveStageState | null>(null);
 
-useEffect(() => {
-  async function loadStageState() {
-    try {
-      const state =
-        await fetchLiveStageState(
-          params.gameId
-        );
+const [isLoadingStageState, setIsLoadingStageState] =
+  useState(true);
 
-      setStageState(state);
-    } catch (error) {
-      console.error(
-        'LOAD LIVE STAGE STATE ERROR',
-        error
-      );
-    }
-  }
-
-  void loadStageState();
-}, [params.gameId]);
 
   const [actionMessage, setActionMessage] =
     useState('');
@@ -344,6 +349,153 @@ const riderShortLabel =
     : params.riderKey === 'sprinteur'
     ? 'S'
     : 'R';
+
+  function renderSpecialCardIcons(card: DummyCard) {
+  if (!card.isSpecial || !specialRiderId) {
+    return null;
+  }
+
+  if (specialRiderId === 'flandrien') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/flandrien.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'grimpeur') {
+    if (card.value === 3) {
+      return (
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-7.png'
+          )}
+          style={styles.specialCardIcon}
+        />
+      );
+    }
+
+    if (card.value === 6) {
+      return (
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-6.png'
+          )}
+          style={styles.specialCardIcon}
+        />
+      );
+    }
+  }
+
+  if (specialRiderId === 'domestique') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/domestique.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'descender') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-7.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/domestique.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (
+    specialRiderId === 'super-rouleur' ||
+    specialRiderId === 'flahute'
+  ) {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/double-card.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'baroudeur') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-x.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'squirrel') {
+    return (
+      <View style={styles.specialCardIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/flandrien.png'
+          )}
+          style={styles.specialCardIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'puncheur') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-x.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'mountaineer') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/mountaineer-7.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    );
+  }
+
+  return null;
+}
 
   async function drawHand() {
     try {
@@ -1089,6 +1241,24 @@ const currentDrawStatus =
 const hasSubmitted =
   currentDrawStatus?.submitted === true;
 
+  useEffect(() => {
+  console.log('LIVE DRAW STATE', {
+    round: stageState?.round,
+    phase: stageState?.phase,
+    statusKey,
+    submitted: currentDrawStatus?.submitted,
+    hasSubmitted,
+    drawnCards: drawnCards.length,
+    selectedCard: selectedCard?.id ?? null,
+  });
+}, [
+  stageState?.round,
+  stageState?.phase,
+  currentDrawStatus?.submitted,
+  drawnCards.length,
+  selectedCard,
+]);
+
   return (
   <View style={styles.screen}>
     <ScrollView
@@ -1207,7 +1377,8 @@ const hasSubmitted =
             Choose Card
           </Text>
 
-        {!hasSubmitted &&
+        {!isLoadingStageState &&
+  !hasSubmitted &&
   drawnCards.length === 0 &&
   !selectedCard && (
     <>
@@ -1324,41 +1495,53 @@ void drawHand();
   </>
 )}
 
-          {isHuman &&
+         {isHuman &&
   !hasSubmitted &&
   drawnCards.length > 0 && (
-            <View style={styles.cardRow}>
-              {drawnCards.map(
-                (card, index) => (
-                  <Pressable
-                    key={`${card.id}-${index}`}
-                    style={styles.drawnCard}
-                    onPress={() => {
-  void selectCard(card);
-}}
-                  >
-                    <Text
-                      style={
-                        styles.drawnCardText
-                      }
-                    >
-                      {formatCard(card)}
-                    </Text>
-                  </Pressable>
-                )
-              )}
-            </View>
-          )}
+    <View style={styles.cardRow}>
+      {drawnCards.map(
+        (card, index) => (
+          <Pressable
+            key={`${card.id}-${index}`}
+            style={styles.drawnCard}
+            onPress={() => {
+              void selectCard(card);
+            }}
+          >
+            <View style={styles.drawnCardContent}>
+  <Text style={styles.drawnCardText}>
+    {card.type === 'fatigue'
+      ? `F${card.displayValue ?? card.value}`
+      : card.displayValue ?? card.value}
+  </Text>
 
-       {isHuman && selectedCard && (
+  {renderSpecialCardIcons(card)}
+</View>
+          </Pressable>
+        )
+      )}
+    </View>
+  )}
+
+      {isHuman && selectedCard && (
   <View style={styles.selectedCardBox}>
     <Text style={styles.sectionTitle}>
       Played Card
     </Text>
 
-    <Text style={styles.playedCardText}>
-      {formatCard(selectedCard)}
-    </Text>
+    <View style={styles.playedCardContent}>
+      <Text style={styles.playedCardText}>
+        {selectedCard.type === 'fatigue'
+          ? `F${
+              selectedCard.displayValue ??
+              selectedCard.value
+            }`
+          : selectedCard.displayValue ??
+            selectedCard.value}
+      </Text>
+
+      {renderSpecialCardIcons(selectedCard)}
+    </View>
   </View>
 )}
 
@@ -1423,11 +1606,16 @@ void drawHand();
 
           <View style={styles.actionRow}>
          <Pressable
-  disabled={hasRefreshed}
+  disabled={
+  !stageState?.refreshRequested ||
+  hasRefreshed
+}
   style={[
-    styles.secondaryButton,
-    hasRefreshed && styles.disabledButton,
-  ]}
+  styles.secondaryButton,
+  (!stageState?.refreshRequested ||
+    hasRefreshed) &&
+    styles.disabledButton,
+]}
 onPress={() => {
   if (isNormalAI) {
     void refreshAI(24);
@@ -1462,11 +1650,16 @@ onPress={() => {
 </Pressable>
 
 <Pressable
-  disabled={hasRefreshed}
+  disabled={
+  !stageState?.refreshRequested ||
+  hasRefreshed
+}
   style={[
-    styles.secondaryButton,
-    hasRefreshed && styles.disabledButton,
-  ]}
+  styles.secondaryButton,
+  (!stageState?.refreshRequested ||
+    hasRefreshed) &&
+    styles.disabledButton,
+]}
 onPress={() => {
   if (isNormalAI) {
     void refreshAI(25);
@@ -1528,6 +1721,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.paper,
+    marginBottom: 10,
   },
 
   scrollView: {
@@ -1751,6 +1945,36 @@ deckInfoSmall: {
   textAlign: 'center',
   marginTop: 2,
   opacity: 0.7,
+},
+
+specialCardIcon: {
+  width: 30,
+  height: 30,
+  resizeMode: 'contain',
+},
+
+specialCardIconStack: {
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 1,
+},
+
+specialCardIconSmall: {
+  width: 22,
+  height: 22,
+  resizeMode: 'contain',
+},
+drawnCardContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
+},
+playedCardContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
 },
 
 });

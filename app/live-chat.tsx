@@ -237,6 +237,160 @@ async function testImageUploadUrl() {
 }
 }
 
+function openImageOptions() {
+  Alert.alert(
+    'Send image',
+    'Choose an image source',
+    [
+      {
+        text: 'Take photo',
+        onPress: takeChatPhoto,
+      },
+      {
+        text: 'Choose from library',
+        onPress: pickChatImage,
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]
+  );
+}
+
+async function takeChatPhoto() {
+  if (sendingImage) {
+    return;
+  }
+
+  try {
+    const permission =
+      await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Camera permission needed',
+        'Please allow camera access to take a photo.'
+      );
+      return;
+    }
+
+    const result =
+      await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const image = result.assets[0];
+
+    const longestSide = Math.max(
+      image.width,
+      image.height
+    );
+
+    const resizeAction =
+      longestSide > 1200
+        ? image.width >= image.height
+          ? { resize: { width: 1200 } }
+          : { resize: { height: 1200 } }
+        : null;
+
+    const manipulatedImage =
+      await ImageManipulator.manipulateAsync(
+        image.uri,
+        resizeAction ? [resizeAction] : [],
+        {
+          compress: 0.75,
+          format:
+            ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+
+    const identity =
+      await getLivePlayerIdentity(gameId);
+
+    if (!identity) {
+      throw new Error(
+        'Live player identity not found'
+      );
+    }
+
+    setSendingImage(true);
+
+    const uploadInfo =
+      await createLiveChatImageUpload(
+        gameId,
+        identity.playerId,
+        identity.playerToken,
+        'jpg'
+      );
+
+    const base64 =
+      await FileSystem.readAsStringAsync(
+        manipulatedImage.uri,
+        {
+          encoding:
+            FileSystem.EncodingType.Base64,
+        }
+      );
+
+    const binaryString = atob(base64);
+
+    const bytes = new Uint8Array(
+      binaryString.length
+    );
+
+    for (
+      let i = 0;
+      i < binaryString.length;
+      i++
+    ) {
+      bytes[i] =
+        binaryString.charCodeAt(i);
+    }
+
+    const { error: uploadError } =
+      await supabase.storage
+        .from('live-chat-images')
+        .uploadToSignedUrl(
+          uploadInfo.path,
+          uploadInfo.token,
+          bytes.buffer,
+          {
+            contentType: 'image/jpeg',
+          }
+        );
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    await sendLiveChatImage(
+      gameId,
+      identity.playerId,
+      identity.playerToken,
+      uploadInfo.path
+    );
+  } catch (error) {
+    console.error(
+      'CHAT CAMERA ERROR',
+      error
+    );
+
+    Alert.alert(
+      'Could not send image',
+      'Please try again.'
+    );
+  } finally {
+    setSendingImage(false);
+  }
+}
+
 async function pickChatImage() {
   if (sendingImage) {
     return;
@@ -641,7 +795,7 @@ return (
     styles.imageButton,
     sendingImage && styles.imageButtonDisabled,
   ]}
-  onPress={pickChatImage}
+  onPress={openImageOptions}
   disabled={sendingImage}
 >
   <Text style={styles.imageButtonText}>
@@ -710,7 +864,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
     backgroundColor: Colors.paper,
-    marginBottom: 26,
+    marginBottom: 40,
   },
 
   messages: {

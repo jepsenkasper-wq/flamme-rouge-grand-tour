@@ -39,11 +39,6 @@ import type {
   PlayerStageEntry,
 } from '@/lib/stageDraft';
 
-import {
-  saveGame,
-  updateActiveSavedGame,
-} from '@/lib/storage';
-
 import type { GameResultEntry } from '@/lib/gameResults';
 
 export function generateLiveJoinCode() {
@@ -130,6 +125,12 @@ export type LiveChatMessage = {
   message: string;
   createdAt: string;
   imagePath?: string;
+};
+
+export type LiveRoundHistory = {
+  stageNumber: number;
+  roundNumber: number;
+  revealedCards: Record<string, any>;
 };
 
 export async function fetchLiveChatMessages(
@@ -399,6 +400,7 @@ export type LiveStageState = {
   stageEndReadyPlayerIds: string[];
   stageEntryReadyPlayerIds: string[];
   stageSaveReadyPlayerIds: string[];
+  refreshRequested: boolean;
 };
 
 export async function initializeLiveStageState(
@@ -449,8 +451,8 @@ export async function fetchLiveStageState(
 ): Promise<LiveStageState | null> {
   const { data, error } = await supabase
     .from('live_stage_state')
-    .select(
-  'game_id, stage_number, phase, race_type, stage_type, round, breakaway, draw_status, revealed_cards, round_ready_player_ids, stage_end_requested, stage_end_ready_player_ids, stage_entry_ready_player_ids, stage_save_ready_player_ids, allow_incomplete_round'
+  .select(
+  'game_id, stage_number, phase, race_type, stage_type, round, breakaway, draw_status, revealed_cards, round_ready_player_ids, stage_end_requested, stage_end_ready_player_ids, stage_entry_ready_player_ids, stage_save_ready_player_ids, allow_incomplete_round, refresh_requested'
 )
     .eq('game_id', gameId)
     .maybeSingle();
@@ -498,6 +500,9 @@ export async function fetchLiveStageState(
 
     allowIncompleteRound: Boolean(
   data.allow_incomplete_round
+),
+refreshRequested: Boolean(
+  data.refresh_requested
 ),
   };
 }
@@ -635,6 +640,32 @@ export async function requestLiveStageEnd(
   }
 }
 
+export async function requestLiveRefresh(
+  gameId: string
+) {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found'
+    );
+  }
+
+  const { error } = await supabase.rpc(
+    'request_live_refresh',
+    {
+      p_game_id: gameId,
+      p_admin_player_id: identity.playerId,
+      p_admin_player_token: identity.playerToken,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function confirmLiveStageEnd(
   gameId: string
 ) {
@@ -716,18 +747,18 @@ export type LivePresencePlayer = {
 let activeLivePresenceChannel:
   ReturnType<typeof supabase.channel> | null = null;
 
-export function subscribeToLivePresence(
+export async function subscribeToLivePresence(
   gameId: string,
   playerId: string,
   onChange: (onlinePlayerIds: string[]) => void
 ) {
-  if (activeLivePresenceChannel) {
-    void supabase.removeChannel(
-      activeLivePresenceChannel
-    );
+if (activeLivePresenceChannel) {
+  await supabase.removeChannel(
+    activeLivePresenceChannel
+  );
 
-    activeLivePresenceChannel = null;
-  }
+  activeLivePresenceChannel = null;
+}
 
   const channel = supabase.channel(
     `live-presence-${gameId}`,
@@ -776,8 +807,8 @@ export function subscribeToLivePresence(
 }
 
 export async function unsubscribeFromLivePresence(
-  channel: ReturnType<
-    typeof subscribeToLivePresence
+  channel: Awaited<
+    ReturnType<typeof subscribeToLivePresence>
   >
 ) {
   await channel.untrack();
@@ -3183,6 +3214,31 @@ export async function fetchLiveStageResults(
   }));
 }
 
+export async function fetchLiveRoundHistory(
+  gameId: string
+): Promise<LiveRoundHistory[]> {
+  const { data, error } = await supabase.rpc(
+    'fetch_live_round_history',
+    {
+      p_game_id: gameId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row: {
+    stage_number: number;
+    round_number: number;
+    revealed_cards: Record<string, any>;
+  }) => ({
+    stageNumber: Number(row.stage_number),
+    roundNumber: Number(row.round_number),
+    revealedCards: row.revealed_cards ?? {},
+  }));
+}
+
 export async function updateLiveStageResultField(
   gameId: string,
   stageNumber: number,
@@ -3447,49 +3503,6 @@ return orderedTeams.map((team) => {
       },
     };
   });
-}
-
-export async function syncCompletedLiveStage(
-  teams: LiveTeam[],
-  results: LiveStageResult[],
-  stageNumber: number,
-  teamIds: string[]
-) {
-  const alreadySaved = gameResults.entries.some(
-    (entry) =>
-      entry.entryType === 'stage' &&
-      entry.stageNumber === stageNumber
-  );
-
-  if (!alreadySaved) {
-    const playersToSave =
-  buildLiveStagePlayers(
-    teams,
-    results,
-    teamIds
-  );
-
-    gameResults.addEntry({
-      entryType: 'stage',
-      stageNumber,
-      players: playersToSave,
-    });
-
-    const restDayStages =
-      createGameDraft.restDayStages.map(Number);
-
-    if (restDayStages.includes(stageNumber)) {
-      gameState.currentStage = stageNumber;
-      gameState.currentEntryType = 'restDay';
-    } else {
-      gameState.currentStage =
-        stageNumber + 1;
-      gameState.currentEntryType = 'stage';
-    }
-  }
-
-  await saveGame();
-  await updateActiveSavedGame();
 }
 
 export async function completeLiveStage(
@@ -3915,6 +3928,42 @@ export async function sendLiveChatImage(
   }
 }
 
+export async function deleteLiveStageChatImages(
+  gameId: string,
+  stageNumber: number
+): Promise<number> {
+  const identity =
+    await getLivePlayerIdentity(gameId);
+
+  if (!identity) {
+    throw new Error(
+      'Live player identity not found'
+    );
+  }
+
+  const { data, error } =
+    await supabase.functions.invoke(
+      'delete-live-stage-chat-images',
+      {
+        body: {
+          gameId,
+          playerId: identity.playerId,
+          playerToken: identity.playerToken,
+          stageNumber,
+        },
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data?.deletedImages ?? 0;
+}
 export async function createLiveChatImageUrl(
   gameId: string,
   playerId: string,

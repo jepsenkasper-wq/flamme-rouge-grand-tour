@@ -22,6 +22,7 @@ import {
   fetchLiveGame,
   buildLiveStagePlayers,
   subscribeToLiveStageState,
+  deleteLiveStageChatImages,
 unsubscribeFromLiveStageState,
 unfinishLiveStageEntry,
 completeLiveStage,
@@ -260,6 +261,28 @@ await completeLiveStage(
   updatedStageState.stageNumber,
   playersToSave
 );
+
+try {
+  const deletedImages =
+    await deleteLiveStageChatImages(
+  liveSession.gameId,
+  updatedStageState.stageNumber
+);
+
+  console.log(
+    'LIVE STAGE CHAT IMAGES DELETED',
+    {
+      stageNumber:
+        updatedStageState.stageNumber,
+      deletedImages,
+    }
+  );
+} catch (error) {
+  console.error(
+    'DELETE LIVE STAGE CHAT IMAGES ERROR',
+    error
+  );
+}
 
 const updatedLiveGame =
   await fetchLiveGame(

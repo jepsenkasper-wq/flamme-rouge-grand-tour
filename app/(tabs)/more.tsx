@@ -5,6 +5,12 @@ import { Colors } from '@/constants/colors';
 import { deleteActiveSavedGame, unfollowActiveGame } from '@/lib/storage';
 import { createRemoteGame } from '@/lib/remoteGames';
 import BackgroundWatermark from '@/components/BackgroundWatermark';
+import {
+  fetchLiveRoundHistory,
+  fetchLiveTeams,
+  fetchLiveGame,
+  fetchLiveStageResults,
+} from '@/lib/live/liveGames';
 
 import { useEffect, useState } from 'react';
 import {
@@ -26,6 +32,8 @@ export default function MoreScreen() {
   const [activeGameRole, setActiveGameRole] = useState<
     string | undefined
   >();
+
+  
   const [followCode, setFollowCode] = useState<string | undefined>();
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -76,6 +84,172 @@ await FileSystem.writeAsStringAsync(
     });
   } catch {
     Alert.alert('Export failed', 'Unable to export the game.');
+  }
+}
+
+async function exportLiveGameData() {
+  if (!liveSession) {
+    Alert.alert(
+      'No Live Game found',
+      'There is no active Live Game to export.'
+    );
+    return;
+  }
+
+
+  try {
+    const [history, teams, game] = await Promise.all([
+  fetchLiveRoundHistory(liveSession.gameId),
+  fetchLiveTeams(liveSession.gameId),
+  fetchLiveGame(liveSession.gameId),
+]);
+
+const stageResults = (
+  await Promise.all(
+    Array.from(
+      { length: game.stageCount },
+      (_, index) =>
+        fetchLiveStageResults(
+          liveSession.gameId,
+          index + 1
+        )
+    )
+  )
+).flat();
+
+  const rows: string[][] = [
+  ['GAME CONFIGURATION'],
+  ['Game name', game.gameName],
+  ['Players', String(game.playerCount)],
+  ['Stages', String(game.stageCount)],
+  ['Rest days', String(game.restDayCount)],
+  ['Rest day stages', game.restDayStages.join(', ')],
+  [],
+  ['TEAMS'],
+  ['Team', 'Color', 'Type'],
+];
+
+for (const team of teams) {
+  rows.push([
+    team.name,
+    team.color ?? '',
+    team.teamType,
+  ]);
+}
+
+rows.push(
+  [],
+  ['CARD HISTORY'],
+  ['Stage', 'Round', 'Team', 'Rider', 'Card']
+);
+
+    for (const round of history) {
+      for (const [key, card] of Object.entries(
+        round.revealedCards
+      )) {
+        const [teamId, rider = 'peloton'] =
+          key.split(':');
+
+          const team =
+  teams.find((item) => item.id === teamId);
+
+const teamName =
+  team?.name ?? teamId;
+
+        const cardData = card as {
+          value?: number;
+          displayValue?: string;
+        };
+
+        rows.push([
+          String(round.stageNumber),
+          String(round.roundNumber),
+          teamName,
+          rider,
+          String(
+            cardData.displayValue ??
+              cardData.value ??
+              ''
+          ),
+        ]);
+      }
+    }
+
+    rows.push(
+  [],
+  ['STAGE RESULTS'],
+  [
+    'Stage',
+    'Team',
+    'Rider',
+    'Time',
+    'Tour Points',
+    'Sprint Points',
+    'Mountain Points',
+    'Fatigue Cards',
+  ]
+);
+
+for (const result of stageResults) {
+  const team =
+    teams.find(
+      (item) => item.id === result.teamId
+    );
+
+  rows.push([
+    String(result.stageNumber),
+    team?.name ?? result.teamId,
+    result.riderKey,
+    result.time,
+    result.tourPoints,
+    result.sprintPoints,
+    result.mountainPoints,
+    result.fatigueCards,
+  ]);
+}
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map(
+            (value) =>
+              `"${value.replace(/"/g, '""')}"`
+          )
+          .join(';')
+      )
+      .join('\n');
+
+    const today =
+      new Date().toISOString().split('T')[0];
+
+   const safeName = game.gameName
+  .trim()
+  .replace(/[<>:"/\\|?*]/g, '')
+  .replace(/\s+/g, '_');
+
+const fileUri =
+  `${FileSystem.documentDirectory}` +
+  `${safeName}_${today}_data.csv`;
+
+    await FileSystem.writeAsStringAsync(
+      fileUri,
+      '\uFEFF' + csv
+    );
+
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'text/csv',
+      dialogTitle: 'Export Game Data',
+    });
+  } catch (error) {
+    console.error(
+      'EXPORT LIVE GAME DATA ERROR',
+      error
+    );
+
+    Alert.alert(
+      'Export failed',
+      'Unable to export the Live Game data.'
+    );
   }
 }
 
@@ -234,6 +408,13 @@ const canEditGame =
   title="Export Game"
   onPress={exportActiveGame}
 />
+
+{liveSession && (
+  <MenuButton
+    title="Export Game Data"
+    onPress={exportLiveGameData}
+  />
+)}
 
 <MenuButton
   title="Import Game"

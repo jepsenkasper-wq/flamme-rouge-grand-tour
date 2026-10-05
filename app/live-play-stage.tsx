@@ -4,11 +4,17 @@ import {
   Alert,
   StyleSheet,
   Pressable,
+  Platform,
   ScrollView,
   Image,
   Text,
   View,
 } from 'react-native';
+
+import {
+  activateKeepAwakeAsync,
+  deactivateKeepAwake,
+} from 'expo-keep-awake';
 
 import {
   specialRiders,
@@ -45,6 +51,7 @@ import {
   allowLiveIncompleteRound,
   revealLiveIncompleteRound,
   confirmLiveStageEnd,
+  requestLiveRefresh,
 LiveTeam,
 requestLiveStageEnd,
   type LiveStageState,
@@ -71,6 +78,18 @@ const riderImages: Record<string, any> = {
 
 
 export default function LivePlayStageScreen() {
+  useEffect(() => {
+  if (Platform.OS === 'web') {
+    return;
+  }
+
+  void activateKeepAwakeAsync('live-play-stage');
+
+  return () => {
+    deactivateKeepAwake('live-play-stage');
+  };
+}, []);
+
   const [stageState, setStageState] =
     useState<LiveStageState | null>(null);
 
@@ -80,6 +99,14 @@ const [players, setPlayers] =
   const [teams, setTeams] =
   useState<LiveTeam[]>([]);
 
+const revealBackgroundColors: Record<string, string> = {
+  Blue: '#d5dfef',
+  White: '#f7f1df',
+  Green: '#d5e8d8',
+  Red: '#e3a8a3',
+  Black: '#d3d3d3',
+  Pink: '#f3e0e8',
+};
 
   const [loading, setLoading] =
     useState(true);
@@ -147,6 +174,11 @@ const [selectedBreakawayWinnerIds, setSelectedBreakawayWinnerIds] =
       active &&
       currentLoadVersion === loadVersion
     ) {
+      console.log('LIVE PLAY STATE UPDATE', {
+  round: state?.round,
+  phase: state?.phase,
+  drawStatus: state?.drawStatus,
+});
   setStageState(state);
   setPlayers(livePlayers);
   setTeams(liveTeams);
@@ -195,12 +227,17 @@ const myBid = state?.breakaway.bids.find(
     void loadStageState();
 
     const channel =
-      subscribeToLiveStageState(
-        liveSession.gameId,
-        () => {
-          void loadStageState();
-        }
+  subscribeToLiveStageState(
+    liveSession.gameId,
+    () => {
+      console.log(
+        'LIVE PLAY REALTIME TRIGGER',
+        new Date().toISOString()
       );
+
+      void loadStageState();
+    }
+  );
 
     return () => {
       active = false;
@@ -633,6 +670,28 @@ const isReadyForNextRound =
 const allPlayersReady =
   humanPlayerCount > 0 &&
   readyPlayerCount === humanPlayerCount;
+
+const allRefreshesCompleted =
+  liveDrawList.length > 0 &&
+  liveDrawList.every((item) => {
+    const statusKey =
+      item.teamType === 'peloton'
+        ? item.teamId
+        : `${item.teamId}:${item.riderKey}`;
+
+    const status =
+      stageState?.drawStatus?.[
+        statusKey
+      ] as
+        | { refreshed?: boolean }
+        | undefined;
+
+    return status?.refreshed === true;
+  }); 
+
+const isRefreshBlockingNextRound =
+  stageState?.refreshRequested === true &&
+  !allRefreshesCompleted;
 
 const stageEndReadyCount =
   stageState?.stageEndReadyPlayerIds.length ?? 0;
@@ -1470,6 +1529,7 @@ onPress={() => {
   </View>
 )}
 
+
 {stageState.phase === 'round-reveal' && (
   <View style={styles.card}>
     <Text style={styles.sectionTitle}>
@@ -1497,11 +1557,14 @@ onPress={() => {
   key={item.id}
   disabled={!item.canOpen}
   style={[
-    styles.row,
-    {
-      opacity: item.canOpen ? 1 : 0.45,
-    },
-  ]}
+  styles.row,
+  {
+    backgroundColor:
+      revealBackgroundColors[
+        item.color ?? 'Blue'
+      ],
+  },
+]}
   onPress={() => {
     if (
       item.teamType !== 'peloton' &&
@@ -1549,13 +1612,157 @@ onPress={() => {
 </Text>
           </View>
 
-          <Text style={styles.breakawayBidValue}>
-  {revealedCard
-    ? revealedCard.isSpecial
-      ? `${revealedCard.value}*`
-      : revealedCard.displayValue ?? revealedCard.value
-    : '-'}
-</Text>
+   <View style={styles.revealedCardValue}>
+  <Text style={styles.breakawayBidValue}>
+    {revealedCard
+      ? revealedCard.displayValue ??
+        revealedCard.value
+      : '-'}
+  </Text>
+
+  {revealedCard?.isSpecial &&
+    item.specialRiderId === 'flandrien' && (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/flandrien.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'domestique' && (
+    <Image
+      source={require(
+        '@/assets/images/special-icons/domestique.png'
+      )}
+      style={styles.specialCardIcon}
+    />
+  )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'descender' && (
+    <View style={styles.specialCardIconStack}>
+      <Image
+        source={require(
+          '@/assets/images/special-icons/grimpeur-7.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+      <Image
+        source={require(
+          '@/assets/images/special-icons/domestique.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+    </View>
+  )}
+
+  {revealedCard?.isSpecial &&
+  (item.specialRiderId === 'super-rouleur' ||
+    item.specialRiderId === 'flahute') && (
+    <Image
+      source={require(
+        '@/assets/images/special-icons/double-card.png'
+      )}
+      style={styles.specialCardIcon}
+    />
+  )}
+
+  {revealedCard?.isSpecial &&
+    item.specialRiderId === 'grimpeur' &&
+    revealedCard.value === 3 && (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/grimpeur-7.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    )}
+
+  {revealedCard?.isSpecial &&
+    item.specialRiderId === 'grimpeur' &&
+    revealedCard.value === 6 && (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/grimpeur-6.png'
+        )}
+        style={styles.specialCardIcon}
+      />
+    )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'baroudeur' && (
+    <View style={styles.specialCardIconStack}>
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-x.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-no-gravel.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+    </View>
+  )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'squirrel' && (
+    <View style={styles.specialCardIconStack}>
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-no-gravel.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+      <Image
+        source={require(
+          '@/assets/images/special-icons/flandrien.png'
+        )}
+        style={styles.specialCardIconSmall}
+      />
+    </View>
+  )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'puncheur' && (
+    <Image
+      source={require(
+        '@/assets/images/special-icons/baroudeur-x.png'
+      )}
+      style={styles.specialCardIcon}
+    />
+  )}
+
+  {revealedCard?.isSpecial &&
+  item.specialRiderId === 'mountaineer' && (
+    <Image
+      source={require(
+        '@/assets/images/special-icons/mountaineer-7.png'
+      )}
+      style={styles.specialCardIcon}
+    />
+  )}
+
+{revealedCard?.isSpecial &&
+  item.specialRiderId !== 'flandrien' &&
+  item.specialRiderId !== 'grimpeur' &&
+  item.specialRiderId !== 'domestique' &&
+  item.specialRiderId !== 'descender' &&
+  item.specialRiderId !== 'super-rouleur' &&
+  item.specialRiderId !== 'flahute' &&
+  item.specialRiderId !== 'squirrel' &&
+  item.specialRiderId !== 'puncheur' &&
+  item.specialRiderId !== 'mountaineer' &&
+  item.specialRiderId !== 'baroudeur' && (
+    <Text style={styles.specialCardStar}>
+      *
+    </Text>
+  )}
+</View>
         </Pressable>
       );
     })}
@@ -1569,14 +1776,14 @@ onPress={() => {
     onPress={() => {
   Alert.alert(
     'Ready for next round?',
-    'Remember to move the riders, add fatigue cards, and note down any points/time results outside the app before continuing',
+    'Remember to move the riders, add fatigue cards, and enter any points or finishing times before continuing.',
     [
       {
         text: 'Cancel',
         style: 'cancel',
       },
       {
-        text: 'Confirm',
+        text: 'Ready',
         onPress: async () => {
           try {
             await markLiveRoundReady(
@@ -1592,8 +1799,8 @@ onPress={() => {
       },
     ]
   );
-}}  
->
+}}
+  >
     <Text style={styles.buttonText}>
       READY FOR NEXT ROUND
     </Text>
@@ -1613,15 +1820,21 @@ onPress={() => {
   </Text>
 )}
 
+
+
 {liveSession.isAdmin &&
   allPlayersReady && (
     <Pressable
       style={[
-        styles.button,
-        isStartingNextRound &&
-          styles.buttonDisabled,
-      ]}
-      disabled={isStartingNextRound}
+  styles.button,
+  (isStartingNextRound ||
+    isRefreshBlockingNextRound) &&
+    styles.buttonDisabled,
+]}
+disabled={
+  isStartingNextRound ||
+  isRefreshBlockingNextRound
+}
       onPress={async () => {
         if (isStartingNextRound) {
           return;
@@ -1649,6 +1862,53 @@ onPress={() => {
           : `START ROUND ${
               stageState.round + 1
             }`}
+      </Text>
+    </Pressable>
+  )}
+
+  {liveSession.isAdmin &&
+  allPlayersReady &&
+  isRefreshBlockingNextRound && (
+    <Text style={styles.helperText}>
+      Waiting for all riders to refresh...
+    </Text>
+  )}
+
+  {liveSession.isAdmin &&
+  allPlayersReady &&
+  !stageState.refreshRequested && (
+    <Pressable
+      style={styles.button}
+      onPress={() => {
+  Alert.alert(
+    'Start Refresh?',
+    'Are you sure you want to start the refresh? All riders must complete their refresh before the next round can begin.',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Start Refresh',
+        onPress: async () => {
+          try {
+            await requestLiveRefresh(
+              liveSession.gameId
+            );
+          } catch (error) {
+            console.error(
+              'REQUEST LIVE REFRESH ERROR',
+              error
+            );
+          }
+        },
+      },
+    ]
+  );
+}}
+    >
+      <Text style={styles.buttonText}>
+        START REFRESH
       </Text>
     </Pressable>
   )}
@@ -1709,6 +1969,17 @@ onPress={() => {
     )}
   </View>
 )}
+
+<Pressable
+  style={styles.endStageButton}
+  onPress={() => {
+    router.push('/live-stage-entry');
+  }}
+>
+  <Text style={styles.endStageButtonText}>
+    ENTER STAGE RESULTS
+  </Text>
+</Pressable>
 
 {liveSession.isAdmin &&
   !stageState.stageEndRequested && (
@@ -1920,6 +2191,7 @@ row: {
   borderColor: Colors.border,
   borderRadius: 16,
   padding: 18,
+  paddingRight: 8,
   marginBottom: 12,
   flexDirection: 'row',
   alignItems: 'center',
@@ -2025,5 +2297,31 @@ stageEntryText: {
   marginTop: 8,
   marginBottom: 24,
 },
+revealedCardValue: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 3,
+},
 
+specialCardIcon: {
+  width: 30,
+  height: 30,
+  resizeMode: 'contain',
+},
+
+specialCardStar: {
+  fontSize: 24,
+  fontWeight: '700',
+},
+specialCardIconStack: {
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 1,
+},
+
+specialCardIconSmall: {
+  width: 22,
+  height: 22,
+  resizeMode: 'contain',
+},
 });

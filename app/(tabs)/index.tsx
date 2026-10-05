@@ -69,7 +69,7 @@ export default function HomeScreen() {
   const [hasActiveLiveStage, setHasActiveLiveStage] =
   useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
   const liveSession =
     getActiveLiveGameSession();
 
@@ -77,71 +77,43 @@ export default function HomeScreen() {
     return;
   }
 
-  const channel = subscribeToLivePresence(
-    liveSession.gameId,
-    liveSession.playerId,
-    (playerIds) => {
-      setOnlinePlayerIds(playerIds);
+  let active = true;
+  let channel: Awaited<
+    ReturnType<typeof subscribeToLivePresence>
+  > | null = null;
+
+  async function setupPresence() {
+    const newChannel =
+      await subscribeToLivePresence(
+        liveSession!.gameId,
+        liveSession!.playerId,
+        (playerIds) => {
+          if (active) {
+            setOnlinePlayerIds(playerIds);
+          }
+        }
+      );
+
+    if (!active) {
+      await unsubscribeFromLivePresence(
+        newChannel
+      );
+      return;
     }
-  );
+
+    channel = newChannel;
+  }
+
+  void setupPresence();
 
   return () => {
-    void unsubscribeFromLivePresence(
-      channel
-    );
-  };
-}, []);
+    active = false;
 
-useEffect(() => {
-  const liveSession =
-    getActiveLiveGameSession();
-
-  if (!liveSession) {
-    return;
-  }
-
-  void fetchLiveStageState(
-  liveSession.gameId
-).then((stageState) => {
-  setHasActiveLiveStage(!!stageState);
-}).catch((error) => {
-  console.error(
-    'LOAD LIVE STAGE STATE ERROR',
-    error
-  );
-});
-
-  const channel = subscribeToLiveStageState(
-    liveSession.gameId,
-    async () => {
-try {
-  const stageState =
-    await fetchLiveStageState(
-      liveSession.gameId
-    );
-
-  setHasActiveLiveStage(!!stageState);
-
-  if (
-    stageState &&
-    !liveSession.isAdmin
-  ) {
-    router.replace('/live-play-stage');
-  }
-
-  } catch (error) {
-    console.error(
-      'LIVE HOME STAGE STATE SYNC ERROR',
-      error
-    );
-  }
-}
-  );
-
-  return () => {
-    void unsubscribeFromLiveStageState(
-      channel
-    );
+    if (channel) {
+      void unsubscribeFromLivePresence(
+        channel
+      );
+    }
   };
 }, []);
 

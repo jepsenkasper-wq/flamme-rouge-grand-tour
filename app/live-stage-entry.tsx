@@ -183,7 +183,7 @@ const [
   ),
 ]);
 
-if (liveStageState) {
+if (liveStageState?.phase === 'stage-entry') {
   await Promise.all(
     liveRiderStates.map((row) =>
       initializeLiveStageResultFatigue(
@@ -736,11 +736,12 @@ return (
       placeholder="0"
     />
   </View>
- {(
-  currentTeam.teamType === 'human' ||
-  currentTeam.teamType === 'normal-ai'
-) && (
-  <View style={styles.fatigueCard}>
+{stageState?.phase === 'stage-entry' &&
+  (
+    currentTeam.teamType === 'human' ||
+    currentTeam.teamType === 'normal-ai'
+  ) && (
+    <View style={styles.fatigueCard}>
     <View style={styles.resultHeader}>
       <MaterialCommunityIcons
         name="cards-outline"
@@ -821,29 +822,42 @@ return (
   </Pressable>
 ) : (
   <View style={{ flex: 1 }}>
-    <Pressable
-      style={[
-        styles.button,
+  <Pressable
+    style={[
+      styles.button,
+      stageState?.phase === 'stage-entry' &&
         hasFinishedStageEntry &&
-          styles.disabledButton,
-      ]}
-      disabled={hasFinishedStageEntry}
-      onPress={handleFinishStage}
-    >
-      <Text style={styles.buttonText}>
-        {hasFinishedStageEntry
+        styles.disabledButton,
+    ]}
+    disabled={
+      stageState?.phase === 'stage-entry' &&
+      hasFinishedStageEntry
+    }
+    onPress={() => {
+      if (stageState?.phase === 'stage-entry') {
+        void handleFinishStage();
+      } else {
+        router.replace('/live-play-stage');
+      }
+    }}
+  >
+    <Text style={styles.buttonText}>
+      {stageState?.phase !== 'stage-entry'
+        ? 'BACK TO STAGE'
+        : hasFinishedStageEntry
           ? 'STAGE FINISHED'
           : 'FINISH STAGE'}
-      </Text>
-    </Pressable>
+    </Text>
+  </Pressable>
 
-    {hasFinishedStageEntry && (
+  {stageState?.phase === 'stage-entry' &&
+    hasFinishedStageEntry && (
       <Text style={styles.saveStatus}>
         Waiting for other players ·{' '}
         {stageEntryReadyCount}/{players.length} ready
       </Text>
     )}
-  </View>
+</View>
 )}
     </View>
   </>

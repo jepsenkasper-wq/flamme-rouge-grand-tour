@@ -123,6 +123,8 @@ function getCurrentRound(): number {
   return getActiveSoloStageState().round;
 }
 
+
+
 function canEndRound(): boolean {
   const soloStage = getActiveSoloStageState();
 
@@ -139,6 +141,156 @@ function canEndRound(): boolean {
 
     return Boolean(played.sprinteur && played.rouleur);
   });
+}
+
+function renderPlayedCardSpecialIcon(
+  specialRiderId?: string,
+  cardValue?: number
+) {
+  if (!specialRiderId) {
+    return null;
+  }
+
+  if (specialRiderId === 'grimpeur') {
+  if (cardValue === 3) {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/grimpeur-7.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (cardValue === 6) {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/grimpeur-6.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+}
+
+  if (specialRiderId === 'flandrien') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/flandrien.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'domestique') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/domestique.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (
+    specialRiderId === 'super-rouleur' ||
+    specialRiderId === 'flahute'
+  ) {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/double-card.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'puncheur') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/baroudeur-x.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'mountaineer') {
+    return (
+      <Image
+        source={require(
+          '@/assets/images/special-icons/mountaineer-7.png'
+        )}
+        style={styles.playedSpecialIcon}
+      />
+    );
+  }
+
+  if (specialRiderId === 'descender') {
+    return (
+      <View style={styles.playedSpecialIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/grimpeur-7.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/domestique.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'baroudeur') {
+    return (
+      <View style={styles.playedSpecialIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-x.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+      </View>
+    );
+  }
+
+  if (specialRiderId === 'squirrel') {
+    return (
+      <View style={styles.playedSpecialIconStack}>
+        <Image
+          source={require(
+            '@/assets/images/special-icons/baroudeur-no-gravel.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+        <Image
+          source={require(
+            '@/assets/images/special-icons/flandrien.png'
+          )}
+          style={styles.playedSpecialIconSmall}
+        />
+      </View>
+    );
+  }
+
+  return null;
 }
 
 export default function PlayStageScreen() {
@@ -1230,6 +1382,24 @@ Draw Human teams before dummy teams.
 
 const isDrawLocked = Boolean(playedCard);
 
+const draftTeam = createGameDraft.dummyTeams.find(
+  (team) => team.id === item.teamId
+);
+
+const specialRiderId =
+  item.riderKey === 'sprinteur'
+    ? draftTeam?.sprinteurSpecialRiderId
+    : item.riderKey === 'rouleur'
+    ? draftTeam?.rouleurSpecialRiderId
+    : undefined;
+
+const isSpecialPlayedCard =
+  playedCard?.displayValue?.includes('*') ?? false;
+
+const playedCardValue = playedCard
+  ? Number(playedCard.displayValue.replace('*', ''))
+  : undefined;
+
   return (
     <Pressable
             key={item.id}
@@ -1254,11 +1424,25 @@ const isDrawLocked = Boolean(playedCard);
     {item.riderLabel ? ` - ${item.riderLabel}` : ''}
   </Text>
 
+  {playedCard ? (
+  <View style={styles.playedCardRow}>
+    <Text style={styles.rowSubText}>
+      {getDrawModeLabel(item.drawMode)} • Played:{' '}
+      {playedCard.displayValue.replace('*', '')}
+    </Text>
+
+    {isSpecialPlayedCard &&
+      renderPlayedCardSpecialIcon(
+        specialRiderId,
+        playedCardValue
+      )}
+  </View>
+) : (
   <Text style={styles.rowSubText}>
-  {playedCard
-    ? `${getDrawModeLabel(item.drawMode)} • Played: ${playedCard.displayValue}`
-    : `${getDrawModeLabel(item.drawMode)} • Round ${getCurrentRound()}`}
-</Text>
+    {getDrawModeLabel(item.drawMode)} • Round{' '}
+    {getCurrentRound()}
+  </Text>
+)}
 </View>
 
 <Text style={styles.arrow}>
@@ -1672,5 +1856,28 @@ breakawayRiderChoice: {
   borderRadius: 8,
 },
 
+playedSpecialIcon: {
+  width: 18,
+  height: 18,
+  resizeMode: 'contain',
+},
 
+playedSpecialIconStack: {
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 0,
+},
+
+playedSpecialIconSmall: {
+  width: 13,
+  height: 13,
+  resizeMode: 'contain',
+},
+
+playedCardRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+},
 });
