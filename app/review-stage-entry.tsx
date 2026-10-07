@@ -317,6 +317,14 @@ if (
   prepareActiveSoloStageForNextStage();
 }
 
+if (
+  createGameDraft.companionMode === 'dummy' &&
+  editEntryIndex === null &&
+  entryToSave.entryType === 'restDay'
+) {
+  applyStageDraftFatigueToSoloStage(playersToSave);
+}
+
 
       const restDayStages = createGameDraft.restDayStages.map(Number);
 

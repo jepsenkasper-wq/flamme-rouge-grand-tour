@@ -298,16 +298,30 @@ const riderLabel =
 
       <View style={styles.card}>
   {isRestDay ? (
-    <>
-      <Text style={styles.label}>Tour Points</Text>
-      <TextInput
-        style={styles.input}
-        value={currentEntry.tourPoints}
-        onChangeText={(value) => updateEntry('tourPoints', value)}
-        keyboardType="number-pad"
-      />
-    </>
-  ) : (
+  <>
+    <Text style={styles.label}>Tour Points</Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.tourPoints}
+      onChangeText={(value) =>
+        updateEntry('tourPoints', value)
+      }
+      keyboardType="number-pad"
+    />
+
+    <Text style={styles.label}>
+      Fatigue Cards for Next Stage
+    </Text>
+    <TextInput
+      style={styles.input}
+      value={currentEntry.fatigueCards}
+      onChangeText={(value) =>
+        updateEntry('fatigueCards', value)
+      }
+      keyboardType="number-pad"
+    />
+  </>
+) : (
     <View style={styles.grid}>
       <View style={styles.gridRow}>
         <View style={styles.gridCard}>

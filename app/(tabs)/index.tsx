@@ -49,6 +49,7 @@ applyLiveGameData,
 } from '@/lib/live/liveGames';
 
 import LiveChatBubble from '@/components/LiveChatBubble';
+import { getActiveSoloStageState } from '@/lib/solo/activeSoloStage';
 
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
@@ -724,11 +725,44 @@ if (
   isLiveGame &&
   gameState.currentEntryType === 'restDay'
 ) {
-  stageDraft.initialize(
-    createGameDraft.playerNames.length
-  );
+  if (!liveSession) {
+    return;
+  }
 
-  router.push('/enter-stage');
+  try {
+    const liveGame = await fetchLiveGame(
+      liveSession.gameId
+    );
+
+    const stageEntry =
+      liveGame.gameData?.results.entries.find(
+        (entry) =>
+          entry.entryType === 'stage' &&
+          entry.stageNumber === gameState.currentStage
+      );
+
+    const fatigueTransfers =
+      stageEntry?.players.map((player) => ({
+        sprinteurFatigueCards:
+          Number(player.sprinteur.fatigueCards) || 0,
+        rouleurFatigueCards:
+          Number(player.rouleur.fatigueCards) || 0,
+      }));
+
+    stageDraft.initialize(
+      createGameDraft.playerNames.length,
+      fatigueTransfers,
+      gameState.currentStage
+    );
+
+    router.push('/enter-stage');
+  } catch (error) {
+    console.error(
+      'OPEN LIVE REST DAY ERROR',
+      error
+    );
+  }
+
   return;
 }
 
@@ -803,11 +837,30 @@ if (isLiveGame) {
 
     return;
   }
-  if (gameState.currentEntryType === 'restDay') {
-    stageDraft.initialize(createGameDraft.playerNames.length);
-    router.push('/enter-stage');
-    return;
-  }
+if (gameState.currentEntryType === 'restDay') {
+  const previousStageEntry = gameResults.entries.find(
+    (entry) =>
+      entry.entryType === 'stage' &&
+      entry.stageNumber === gameState.currentStage
+  );
+
+  const fatigueTransfers =
+    previousStageEntry?.players.map((player) => ({
+      sprinteurFatigueCards:
+        Number(player.sprinteur.fatigueCards) || 0,
+      rouleurFatigueCards:
+        Number(player.rouleur.fatigueCards) || 0,
+    }));
+
+  stageDraft.initialize(
+    createGameDraft.playerNames.length,
+    fatigueTransfers,
+    gameState.currentStage
+  );
+
+  router.push('/enter-stage');
+  return;
+}
 
 
   if (isDummyGame) {
@@ -815,9 +868,15 @@ if (isLiveGame) {
     return;
   }
 
-  stageDraft.initialize(
+  const fatigueTransfers =
+  createGameDraft.companionMode === 'dummy'
+    ? getActiveSoloStageState().fatigueTransfers
+    : undefined;
+
+
+stageDraft.initialize(
   createGameDraft.playerNames.length,
-  undefined,
+  fatigueTransfers,
   gameState.currentStage
 );
 

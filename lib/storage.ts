@@ -26,6 +26,7 @@ import {
 
 import {
   setActiveLiveGameSession,
+  clearActiveLiveGameSession,
 } from './live/activeLiveGame';
 
 import {
@@ -117,6 +118,8 @@ export async function openSavedGame(gameId: string) {
   if (!game) {
     return false;
   }
+
+  clearActiveLiveGameSession();
 
  // Standardværdier til ældre/importerede spil
 Object.assign(createGameDraft, {
