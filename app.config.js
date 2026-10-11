@@ -5,7 +5,7 @@ export default {
   expo: {
     name: appName,
     slug: 'flamme-rouge-grand-tour',
-    version: '1.1.0',
+    version: '2.0.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'flammerougegrandtour',

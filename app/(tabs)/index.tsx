@@ -1137,7 +1137,7 @@ podiumTitle: {
 },
 
 podium: {
-  height: 320,
+  minHeight: 340,
   justifyContent: 'flex-end',
   marginBottom: 22,
 },
@@ -1203,6 +1203,7 @@ podiumName: {
   fontWeight: '700',
   color: Colors.brown,
   textAlign: 'center',
+  width: 100,
   minHeight: 36,
   marginBottom: 6,
 },

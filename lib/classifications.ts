@@ -563,7 +563,10 @@ export function calculateBonusBreakdown() {
     type: 'yellow' | 'mountain' | 'sprint',
     bonus: number
   ) {
-    const [playerName, riderType] = riderName.split(' - ');
+    const separatorIndex = riderName.lastIndexOf(' - ');
+
+const playerName = riderName.slice(0, separatorIndex);
+const riderType = riderName.slice(separatorIndex + 3);
 
     const player = players.find((p) => p.playerName === playerName);
 
@@ -581,7 +584,10 @@ export function calculateBonusBreakdown() {
   }
 
     function hasRiderTime(riderName: string) {
-    const [playerName, riderType] = riderName.split(' - ');
+    const separatorIndex = riderName.lastIndexOf(' - ');
+
+const playerName = riderName.slice(0, separatorIndex);
+const riderType = riderName.slice(separatorIndex + 3);
 
     const player = players.find((p) => p.playerName === playerName);
 
