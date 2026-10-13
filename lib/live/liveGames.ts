@@ -747,18 +747,20 @@ export type LivePresencePlayer = {
 let activeLivePresenceChannel:
   ReturnType<typeof supabase.channel> | null = null;
 
+
+
 export async function subscribeToLivePresence(
   gameId: string,
   playerId: string,
   onChange: (onlinePlayerIds: string[]) => void
 ) {
-if (activeLivePresenceChannel) {
-  await supabase.removeChannel(
-    activeLivePresenceChannel
-  );
+  if (activeLivePresenceChannel) {
+    await supabase.removeChannel(
+      activeLivePresenceChannel
+    );
 
-  activeLivePresenceChannel = null;
-}
+    activeLivePresenceChannel = null;
+  }
 
   const channel = supabase.channel(
     `live-presence-${gameId}`,
@@ -772,24 +774,17 @@ if (activeLivePresenceChannel) {
   );
 
   activeLivePresenceChannel = channel;
+
   function updatePresence() {
     const presenceState = channel.presenceState();
 
-    const onlinePlayerIds = Object.keys(
-      presenceState
-    );
-
-    onChange(onlinePlayerIds);
+    onChange(Object.keys(presenceState));
   }
 
   channel.on(
     'presence',
-    {
-      event: 'sync',
-    },
-    () => {
-      updatePresence();
-    }
+    { event: 'sync' },
+    updatePresence
   );
 
   channel.subscribe(async (status) => {

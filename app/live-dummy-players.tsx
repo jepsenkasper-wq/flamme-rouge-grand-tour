@@ -8,6 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BackgroundWatermark from '@/components/BackgroundWatermark';
@@ -67,18 +69,26 @@ export default function LiveDummyPlayersScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <BackgroundWatermark />
+  <View
+    style={[
+      styles.screen,
+      { paddingBottom: insets.bottom },
+    ]}
+  >
+    <BackgroundWatermark />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom:
-              40 + insets.bottom,
-          },
-        ]}
-      >
+      <KeyboardAwareScrollView
+  enableOnAndroid={true}
+  extraScrollHeight={120}
+  keyboardShouldPersistTaps="handled"
+  enableAutomaticScroll={true}
+  contentContainerStyle={[
+  styles.content,
+  {
+    paddingBottom: 40 + insets.bottom,
+  },
+]}
+>
         <Text style={styles.title}>
           Dummy Players
         </Text>
@@ -224,7 +234,7 @@ export default function LiveDummyPlayersScreen() {
             Next
           </Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

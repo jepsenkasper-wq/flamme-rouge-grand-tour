@@ -10,7 +10,7 @@ import {
 
 import { Colors } from '@/constants/colors';
 import { fetchGameByFollowCode } from '@/lib/remoteGames';
-import { saveFollowedGame, openSavedGame } from '@/lib/storage';
+import { saveFollowedGame, openSavedGame, refreshFollowedGame } from '@/lib/storage';
 import { router } from 'expo-router';
 
 export default function FollowGameScreen() {
@@ -35,6 +35,8 @@ export default function FollowGameScreen() {
     const game = await fetchGameByFollowCode(followCode);
 
 const savedGame = await saveFollowedGame(game);
+
+await refreshFollowedGame(savedGame);
 
 const didOpen = await openSavedGame(savedGame.id);
 

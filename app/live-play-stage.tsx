@@ -1774,9 +1774,32 @@ onPress={() => {
   <Pressable
     style={styles.button}
     onPress={() => {
+  const handleReady = async () => {
+    try {
+      await markLiveRoundReady(
+        liveSession.gameId
+      );
+    } catch (error) {
+      console.error(
+        'MARK LIVE ROUND READY ERROR',
+        error
+      );
+    }
+  };
+
+  const message =
+    'Remember to move the riders, add fatigue cards, and enter any points or finishing times before continuing.';
+
+  if (Platform.OS === 'web') {
+    if (window.confirm(`Ready for next round?\n\n${message}`)) {
+      void handleReady();
+    }
+    return;
+  }
+
   Alert.alert(
     'Ready for next round?',
-    'Remember to move the riders, add fatigue cards, and enter any points or finishing times before continuing.',
+    message,
     [
       {
         text: 'Cancel',
@@ -1784,17 +1807,8 @@ onPress={() => {
       },
       {
         text: 'Ready',
-        onPress: async () => {
-          try {
-            await markLiveRoundReady(
-              liveSession.gameId
-            );
-          } catch (error) {
-            console.error(
-              'MARK LIVE ROUND READY ERROR',
-              error
-            );
-          }
+        onPress: () => {
+          void handleReady();
         },
       },
     ]

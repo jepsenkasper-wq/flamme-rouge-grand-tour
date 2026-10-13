@@ -50,75 +50,96 @@ export default function MyGamesScreen() {
   
     async function handleDeleteGame(game: SavedGame) {
   const isLiveAdmin =
+    game.role !== 'follower' &&
     game.gameMode === 'live' &&
     game.liveIsAdmin === true &&
     !!game.liveGameId;
 
-  Alert.alert(
-    isLiveAdmin ? 'Delete Live Game' : 'Delete game',
-    isLiveAdmin
-      ? `Are you sure you want to permanently delete "${game.name}"? This will delete the game for all players, including its chat messages and images. This cannot be undone.`
-      : `Are you sure you want to delete "${game.name}"?`,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Delete',
-        style: 'destructive',
-       onPress: async () => {
-  try {
-    if (isLiveAdmin && game.liveGameId) {
-      const identity =
-        await getLivePlayerIdentity(
+  const title = isLiveAdmin
+    ? 'Delete Live Game'
+    : 'Delete game';
+
+  const message = isLiveAdmin
+    ? `Are you sure you want to permanently delete "${game.name}"? This will delete the game for all players, including its chat messages and images. This cannot be undone.`
+    : `Are you sure you want to delete "${game.name}"?`;
+
+  async function confirmDelete() {
+    try {
+      if (isLiveAdmin && game.liveGameId) {
+        const identity = await getLivePlayerIdentity(
           game.liveGameId
         );
 
-      if (!identity) {
-        Alert.alert(
-          'Could not delete game',
-          'The Live Game identity could not be found.'
+        if (!identity) {
+          throw new Error(
+            'The Live Game identity could not be found.'
+          );
+        }
+
+        await deleteLiveGame(
+          game.liveGameId,
+          identity.playerId,
+          identity.playerToken
         );
-        return;
+
+        await clearLivePlayerIdentity(
+          game.liveGameId
+        );
+      } else if (
+        game.role === 'admin' &&
+        game.remoteId &&
+        game.adminKey
+      ) {
+        await deleteRemoteGame(game);
       }
 
-      await deleteLiveGame(
-        game.liveGameId,
-        identity.playerId,
-        identity.playerToken
-      );
+      const remainingGames =
+        await deleteSavedGameById(game.id);
 
-      await clearLivePlayerIdentity(
-        game.liveGameId
-      );
-    } else if (
-      game.role === 'admin' &&
-      game.remoteId &&
-      game.adminKey
-    ) {
-      await deleteRemoteGame(game);
+      setGames(remainingGames);
+    } catch (error) {
+      console.error('DELETE GAME ERROR', error);
+
+      if (Platform.OS === 'web') {
+        window.alert(
+          'The game could not be deleted. Please try again.'
+        );
+      } else {
+        Alert.alert(
+          'Could not delete game',
+          'The game could not be deleted. Please try again.'
+        );
+      }
+    }
+  }
+
+  // Web: brug browserens bekræftelsesdialog
+  if (Platform.OS === 'web') {
+    const confirmed = window.confirm(
+      `${title}\n\n${message}`
+    );
+
+    if (confirmed) {
+      await confirmDelete();
     }
 
-    const remainingGames =
-      await deleteSavedGameById(game.id);
-
-    setGames(remainingGames);
-  } catch (error) {
-    console.error(
-      'DELETE GAME ERROR',
-      error
-    );
-
-    Alert.alert(
-      'Could not delete game',
-      'The game could not be deleted. Please try again.'
-    );
+    return;
   }
-},
+
+  // Android og iOS: behold den normale dialog
+  Alert.alert(title, message, [
+    {
+      text: 'Cancel',
+      style: 'cancel',
+    },
+    {
+      text: 'Delete',
+      style: 'destructive',
+      onPress: () => {
+        void confirmDelete();
       },
-    ]
-  );
+    },
+  ]);
 }
 
 
@@ -176,7 +197,11 @@ onPress={async () => {
 }}>
             <Text style={styles.cardTitle}>{game.name}</Text>
             <Text style={styles.roleText}>
-  {game.role === 'admin'
+  {game.gameMode === 'live'
+    ? game.liveIsAdmin
+      ? 'Live Admin'
+      : 'Live Player'
+    : game.role === 'admin'
     ? 'Admin'
     : game.role === 'follower'
     ? 'Follower'

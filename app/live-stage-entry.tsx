@@ -38,6 +38,8 @@ import {
   getFatigueCardsForStageResult,
 } from '@/lib/solo/dummyDeckEngine';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import LiveChatBubble from '@/components/LiveChatBubble';
 
 function getPlayerColor(colorName: string) {
@@ -132,6 +134,8 @@ const [players, setPlayers] =
 
   const [loading, setLoading] =
     useState(true);
+
+const insets = useSafeAreaInsets();
 
 const [teamIndex, setTeamIndex] =
   useState(0);
@@ -519,7 +523,12 @@ const stageEntryReadyCount =
   stageState?.stageEntryReadyPlayerIds.length ?? 0;
 
 return (
-  <View style={styles.screen}>
+  <View
+    style={[
+      styles.screen,
+      { paddingBottom: insets.bottom },
+    ]}
+  >
     <KeyboardAwareScrollView
       style={styles.scrollView}
       contentContainerStyle={styles.content}

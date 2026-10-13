@@ -310,6 +310,10 @@ export async function saveFollowedGame(remoteGame: any) {
     createdAt: existingGame?.createdAt ?? remoteGame.created_at,
 
     role: 'follower',
+    gameMode: 'local',
+liveGameId: remoteGame.game_data.liveGameId,
+livePlayerId: undefined,
+liveIsAdmin: false,
     remoteId: remoteGame.id,
     followCode: remoteGame.follow_code,
     adminKey: undefined,
@@ -342,8 +346,45 @@ export async function refreshFollowedGame(savedGame: SavedGame) {
 
   const remoteGame = await fetchGameByFollowCode(savedGame.followCode);
 
-  return saveFollowedGame(remoteGame);
+  // Almindelig Follow Game-opdatering
+  const updatedGame = await saveFollowedGame(remoteGame);
+
+  // Hvis det ikke er et Live Game, er vi færdige
+  if (!updatedGame.liveGameId) {
+    return updatedGame;
+  }
+
+  // Hent de aktuelle resultater fra Live Game
+  const liveGame = await fetchLiveGame(updatedGame.liveGameId);
+
+  if (!liveGame.gameData) {
+    return updatedGame;
+  }
+
+  const liveResults = liveGame.gameData.results;
+
+  const games = await getSavedGames();
+
+  const refreshedGame: SavedGame = {
+    ...updatedGame,
+    gameResults: {
+      ...updatedGame.gameResults,
+      entries: liveResults.entries,
+    },
+  };
+
+  const updatedGames = games.map((game) =>
+    game.id === refreshedGame.id ? refreshedGame : game
+  );
+
+  await AsyncStorage.setItem(
+    SAVED_GAMES_KEY,
+    JSON.stringify(updatedGames)
+  );
+
+  return refreshedGame;
 }
+
 export async function unfollowActiveGame() {
   const games = await getSavedGames();
 
