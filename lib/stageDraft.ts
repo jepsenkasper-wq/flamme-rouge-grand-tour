@@ -27,6 +27,7 @@ function createEmptyRiderEntry(): RiderStageEntry {
 
 export const stageDraft = {
   stageNumber: 1,
+  entryType: 'stage' as 'stage' | 'restDay',
 
   players: [] as PlayerStageEntry[],
 
@@ -36,27 +37,21 @@ initialize(
     sprinteurFatigueCards: number;
     rouleurFatigueCards: number;
   }[],
-  stageNumber?: number
+  stageNumber?: number,
+  entryType: 'stage' | 'restDay' = 'stage'
 ) {
- if (
-  stageNumber !== undefined &&
-  this.stageNumber === stageNumber &&
-  this.players.length === playerCount
-) {
-  if (fatigueTransfers) {
-    this.players.forEach((player, index) => {
-      player.sprinteur.fatigueCards =
-        fatigueTransfers[index]?.sprinteurFatigueCards?.toString() ?? '';
-
-      player.rouleur.fatigueCards =
-        fatigueTransfers[index]?.rouleurFatigueCards?.toString() ?? '';
-    });
+  if (
+    stageNumber !== undefined &&
+    this.stageNumber === stageNumber &&
+    this.entryType === entryType &&
+    this.players.length === playerCount
+  ) {
+    // Bevar eksisterende indtastninger
+    return;
   }
 
-  return;
-}
-
   this.stageNumber = stageNumber ?? this.stageNumber;
+  this.entryType = entryType;
 
   this.players = Array.from({ length: playerCount }, (_, index) => ({
     sprinteur: {

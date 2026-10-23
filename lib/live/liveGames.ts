@@ -40,6 +40,7 @@ import type {
 } from '@/lib/stageDraft';
 
 import type { GameResultEntry } from '@/lib/gameResults';
+import { getClassificationBonusRules } from '../classifications';
 
 export function generateLiveJoinCode() {
   const number = Math.floor(1000 + Math.random() * 9000);
@@ -964,12 +965,9 @@ teamTypes: teams.map(
 
       restDayStages: game.restDayStages,
 
-    scoringRules: {
-  yellow: [5, 4, 3, 2, 1],
-  sprint: [4, 3, 2, 1],
-  mountain: [4, 3, 2, 1],
-  team: [3, 2, 1],
-},
+    scoringRules: getClassificationBonusRules(
+  Number(game.stageCount)
+),
 
 bonusAwardMode: 'each-stage',
     },

@@ -249,6 +249,7 @@ useFocusEffect(
   const playerColors = createGameDraft.playerColors;
   const overallClassification = calculateOverallClassification();
 
+
   const podium = overallClassification.slice(0, 3);
   function getRiderImage(playerName: string) {
   const playerIndex = playerNames.findIndex((name) => name === playerName);
@@ -372,8 +373,19 @@ const buttonTitle = canEndTour
       : `Enter Stage ${gameState.currentStage}`;
 
   if (gameState.tourEnded) {
-  return <TourReviewContent />;
-}    
+  return (
+    <View style={styles.screen}>
+      <TourReviewContent />
+
+      {liveSession && (
+        <LiveChatBubble
+          gameId={liveSession.gameId}
+          screenKey="tour-review"
+        />
+      )}
+    </View>
+  );
+}
 
 const entryTitle =
   canEndTour
@@ -750,10 +762,11 @@ if (
       }));
 
     stageDraft.initialize(
-      createGameDraft.playerNames.length,
-      fatigueTransfers,
-      gameState.currentStage
-    );
+  createGameDraft.playerNames.length,
+  fatigueTransfers,
+  gameState.currentStage,
+  'restDay'
+);
 
     router.push('/enter-stage');
   } catch (error) {
@@ -853,10 +866,11 @@ if (gameState.currentEntryType === 'restDay') {
     }));
 
   stageDraft.initialize(
-    createGameDraft.playerNames.length,
-    fatigueTransfers,
-    gameState.currentStage
-  );
+  createGameDraft.playerNames.length,
+  fatigueTransfers,
+  gameState.currentStage,
+  'restDay'
+);
 
   router.push('/enter-stage');
   return;

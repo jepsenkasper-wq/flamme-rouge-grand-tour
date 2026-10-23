@@ -12,6 +12,9 @@ import {
   calculateTourChampions,
 } from '@/lib/tourChampions';
 
+import LiveChatBubble from '@/components/LiveChatBubble';
+import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
+
 type TeamColor =
   | 'Blue'
   | 'Red'
@@ -286,7 +289,20 @@ function getRiderImage(riderName?: string) {
 }
 
 export default function TourReviewScreen() {
-  return <TourReviewContent />;
+  const liveSession = getActiveLiveGameSession();
+
+  return (
+    <View style={{ flex: 1 }}>
+      <TourReviewContent />
+
+      {liveSession && (
+        <LiveChatBubble
+          gameId={liveSession.gameId}
+          screenKey="tour-review"
+        />
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
