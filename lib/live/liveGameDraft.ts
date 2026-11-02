@@ -1,7 +1,8 @@
 export type LiveAITeamType =
   | 'normal-ai'
   | 'muscle'
-  | 'peloton';
+  | 'peloton'
+  | 'challenger';
 
 export type LiveAITeamSetup = {
   id: string;

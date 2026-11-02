@@ -363,13 +363,15 @@ useEffect(() => {
       : team.rouleurSpecialRiderId;
 
   const teamTypeLabel =
-    team.teamType === 'human'
-      ? 'Human'
-      : team.teamType === 'normal-ai'
-      ? 'Normal AI'
-      : team.teamType === 'muscle'
-      ? 'Muscle'
-      : 'Peloton';
+  team.teamType === 'human'
+    ? 'Human'
+    : team.teamType === 'normal-ai'
+    ? 'Normal AI'
+    : team.teamType === 'muscle'
+    ? 'Muscle'
+    : team.teamType === 'challenger'
+    ? 'Challenger'
+    : 'Peloton';
 
   return (
     <View

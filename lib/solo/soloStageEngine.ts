@@ -15,6 +15,7 @@ import type {
 
 import { createMuscleTeam } from './muscleDeckEngine';
 import { createPelotonTeam } from './peletonDeckEngine';
+import { createChallengerDeck, type ChallengerDeckState } from './challengerDeckEngine';
 
 function teamUsesAppDraw(team: DummyTeamSetup): boolean {
   if (team.teamType === 'human') {
@@ -53,6 +54,16 @@ if (team.teamType === 'peloton') {
   };
 }
 
+if (team.teamType === 'challenger') {
+  return {
+    teamId: team.id,
+    teamType: team.teamType,
+    usesAppDraw: false,
+    playedCards: {},
+    refreshUsed: {},
+  };
+}
+
 if (!usesAppDraw) {
   return {
     teamId: team.id,
@@ -80,12 +91,23 @@ return {
 };
   });
 
+  
+
  return {
   stageNumber,
   raceType: 'normal',
   stageType: setup.stageType,
   round: 1,
   teams,
+
+  challengerDeck: setup.teams.some(
+    (team) => team.teamType === 'challenger'
+  )
+    ? createChallengerDeck()
+    : undefined,
+
+  challengerRefreshUsed: false,
+  
   fatigueTransfers: teams.map((team) => ({
     teamId: team.teamId,
     sprinteurFatigueCards: 0,

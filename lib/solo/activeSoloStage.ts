@@ -11,6 +11,8 @@ import {
 import { prepareMuscleTeamForNextStage } from './muscleDeckEngine';
 import { preparePelotonTeamForNextStage } from './peletonDeckEngine';
 
+import { createChallengerDeck } from './challengerDeckEngine';
+
 let activeSoloStageState: SoloStageState | null = null;
 
 export function getRawActiveSoloStageState() {
@@ -64,6 +66,17 @@ export function prepareActiveSoloStageForNextStage(): void {
 
   activeSoloStageState.round = 1;
   activeSoloStageState.stageType = 'standard';
+
+  activeSoloStageState.challengerDeck =
+  activeSoloStageState.teams.some(
+    (team) => team.teamType === 'challenger'
+  )
+    ? createChallengerDeck()
+    : undefined;
+
+  activeSoloStageState.challengerLastDraw = undefined;
+
+  activeSoloStageState.challengerRefreshUsed = false;
 
   activeSoloStageState.breakaway = {
   mode: 'none',

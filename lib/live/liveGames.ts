@@ -1190,6 +1190,7 @@ teamTypes: (
   | 'normal-ai'
   | 'muscle'
   | 'peloton'
+  | 'challenger'
 )[];
 
     scoringRules: {
@@ -1610,6 +1611,11 @@ export async function initializeLiveTeamRiders(
   team: LiveTeam,
   ownerPlayer?: LivePlayer
 ) {
+    // Challenger bruger én fælles kortbunke.
+  // Der skal ikke oprettes individuelle rytterbunker.
+  if (team.teamType === 'challenger') {
+    return;
+  }
   if (team.teamType === 'peloton') {
   const pelotonTeam = createPelotonTeam();
 
@@ -2115,10 +2121,11 @@ export type LiveTeam = {
   name: string;
   color?: string;
   teamType:
-    | 'human'
-    | 'normal-ai'
-    | 'muscle'
-    | 'peloton';
+  | 'human'
+  | 'normal-ai'
+  | 'muscle'
+  | 'peloton'
+  | 'challenger';
   ownerPlayerId?: string;
   sprinteurSpecialRiderId?: SpecialRiderId;
   rouleurSpecialRiderId?: SpecialRiderId;
@@ -3670,7 +3677,7 @@ export async function updateLiveTeamSettings(
   settings: {
     name: string;
     color: string;
-    teamType: 'human' | 'normal-ai' | 'muscle' | 'peloton';
+    teamType: 'human' | 'normal-ai' | 'muscle' | 'peloton' | 'challenger';
     sprinteurSpecialRiderId: string;
     rouleurSpecialRiderId: string;
   }

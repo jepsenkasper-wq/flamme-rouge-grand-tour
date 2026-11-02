@@ -4,6 +4,8 @@ import type { DummyRiderState } from './dummyDeckEngine';
 
 import type { MuscleTeamState } from './muscleDeckEngine';
 import type { PelotonTeamState } from './peletonDeckEngine';
+import { ChallengerDeckState, ChallengerDrawResult } from './challengerDeckEngine';
+
 
 export type CompanionMode = 'normal' | 'dummy';
 
@@ -11,7 +13,8 @@ export type DummyTeamType =
   | 'human'
   | 'normal-ai'
   | 'muscle'
-  | 'peloton';
+  | 'peloton'
+  | 'challenger';
 
 export type HumanDrawMode =
   | 'app-draw'
@@ -113,6 +116,13 @@ export type SoloStageState = {
   stageType: SoloStageType;
   round: number;
   teams: SoloTeamStageState[];
+
+  challengerDeck?: ChallengerDeckState;
+
+  challengerLastDraw?: ChallengerDrawResult;
+
+  challengerRefreshUsed?: boolean;
+
   fatigueTransfers: SoloFatigueTransfer[];
   breakaway: BreakawayState;
 };

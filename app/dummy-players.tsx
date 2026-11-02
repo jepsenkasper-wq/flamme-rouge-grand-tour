@@ -174,11 +174,12 @@ return (
 
 <View style={styles.optionRow}>
   {[
-    { label: 'Human', value: 'human' },
-    { label: 'Normal AI', value: 'normal-ai' },
-    { label: 'Muscle', value: 'muscle' },
-    { label: 'Peloton', value: 'peloton' },
-  ].map((option) => (
+  { label: 'Human', value: 'human' },
+  { label: 'Normal AI', value: 'normal-ai' },
+  { label: 'Muscle', value: 'muscle' },
+  { label: 'Peloton', value: 'peloton' },
+  { label: 'Challenger', value: 'challenger' },
+].map((option) => (
     <Pressable
       key={option.value}
       style={[

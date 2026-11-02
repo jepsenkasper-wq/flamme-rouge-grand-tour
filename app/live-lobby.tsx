@@ -363,12 +363,14 @@ const isAdmin = currentPlayer?.isAdmin ?? false;
             </View>
 
             <Text style={styles.adminLabel}>
-              {team.teamType === 'normal-ai'
-                ? 'Normal AI'
-                : team.teamType === 'muscle'
-                ? 'Muscle'
-                : 'Peloton'}
-            </Text>
+  {team.teamType === 'normal-ai'
+    ? 'Normal AI'
+    : team.teamType === 'muscle'
+    ? 'Muscle'
+    : team.teamType === 'challenger'
+    ? 'Challenger'
+    : 'Peloton'}
+</Text>
           </View>
         ))}
     </View>

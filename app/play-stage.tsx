@@ -34,6 +34,16 @@ import {
 chooseWeightedBreakawayTarget,
 } from '@/lib/solo/breakawayEngine';
 
+import {
+  drawChallengerCard,
+  getChallengerValues,
+  refreshChallengerDeck,
+} from '@/lib/solo/challengerDeckEngine';
+
+import type {
+  ChallengerColor,
+} from '@/lib/solo/challengerCards';
+
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
   White: require('@/assets/images/riders/rider-white.png'),
@@ -50,7 +60,12 @@ type DrawListItem = {
   color: string;
   riderLabel?: 'S' | 'R';
   riderKey?: 'sprinteur' | 'rouleur';
-  drawMode: 'human-app' | 'normal-ai' | 'muscle' | 'peloton';
+  drawMode:
+    | 'human-app'
+    | 'normal-ai'
+    | 'muscle'
+    | 'peloton'
+    | 'challenger';
 };
 
 function getDrawList(): DrawListItem[] {
@@ -58,6 +73,29 @@ function getDrawList(): DrawListItem[] {
     if (team.teamType === 'human' && team.drawMode !== 'app-draw') {
       return [];
     }
+
+   if (team.teamType === 'challenger') {
+  return [
+    {
+      id: `${team.id}-sprinteur`,
+      teamId: team.id,
+      label: team.name,
+      color: team.color,
+      riderLabel: 'S',
+      riderKey: 'sprinteur',
+      drawMode: 'challenger',
+    },
+    {
+      id: `${team.id}-rouleur`,
+      teamId: team.id,
+      label: team.name,
+      color: team.color,
+      riderLabel: 'R',
+      riderKey: 'rouleur',
+      drawMode: 'challenger',
+    },
+  ];
+}
 
     if (team.teamType === 'peloton') {
       return [
@@ -116,6 +154,8 @@ function getDrawModeLabel(
       return 'Muscle Team';
     case 'peloton':
       return 'Peloton Team';
+    case 'challenger':
+      return 'Challenger';
   }
 }
 
@@ -302,6 +342,8 @@ const [allowIncompleteRound, setAllowIncompleteRound] =
 useFocusEffect(
   useCallback(() => {
     setRefreshKey((current) => current + 1);
+    void drawChallengersIfReady();
+    void refreshChallengersIfReady();
   }, [])
 );
 
@@ -350,10 +392,12 @@ const allHumanBid2Completed =
 
 const stageHasStarted =
   soloStage.round > 1 ||
-  soloStage.teams.some((team) =>
-    Object.values(team.playedCards ?? {}).some(Boolean)
-  );
-
+  soloStage.teams
+    .filter((team) => team.teamType !== 'challenger')
+    .some((team) =>
+      Object.values(team.playedCards ?? {}).some(Boolean)
+    );
+    
   const insets = useSafeAreaInsets();
 
 const contentStyle = {
@@ -412,12 +456,189 @@ async function endRound() {
   }
 }
 
+soloStage.challengerLastDraw = undefined;
+
 await saveGame();
 await updateActiveSavedGame();
 
 setAllowIncompleteRound(false);
 
 setRefreshKey((c) => c + 1);
+
+await drawChallengersIfReady();
+}
+
+async function drawChallengersIfReady(forceDraw = false) {
+  
+
+  const stage = getActiveSoloStageState();
+
+  const challengerTeams = stage.teams.filter(
+    (team) => team.teamType === 'challenger'
+  );
+
+   
+
+  if (
+    challengerTeams.length === 0 ||
+    !stage.challengerDeck
+  ) {
+    return;
+  }
+
+
+  // Challenger må kun trække én gang pr. runde.
+  if (
+    challengerTeams.some(
+      (team) =>
+        team.playedCards?.sprinteur ||
+        team.playedCards?.rouleur
+    )
+  ) {
+    return;
+  }
+
+  // Kontrollér, at alle øvrige hold er færdige.
+  const otherTeamsReady = stage.teams
+    .filter((team) => team.teamType !== 'challenger')
+    .every((team) => {
+      if (team.teamType === 'human' && !team.usesAppDraw) {
+        return true;
+      }
+
+      if (team.teamType === 'peloton') {
+        return Boolean(team.playedCards?.peloton);
+      }
+
+      return Boolean(
+        team.playedCards?.sprinteur &&
+        team.playedCards?.rouleur
+      );
+    });
+
+
+
+ if (!otherTeamsReady && !forceDraw) {
+  return;
+}
+
+  // Ét fælles kort til alle Challenger-hold.
+  const result = drawChallengerCard(stage.challengerDeck);
+
+stage.challengerLastDraw = result;
+
+  for (const team of challengerTeams) {
+    const draftTeam = createGameDraft.dummyTeams.find(
+      (item) => item.id === team.teamId
+    );
+
+    if (!draftTeam) continue;
+
+  
+
+    const values = getChallengerValues(
+  result,
+  draftTeam.color.toLowerCase() as ChallengerColor
+);
+
+    team.playedCards = {
+      sprinteur: {
+        cardId: `challenger-${result.cardId ?? 'fatigue'}`,
+        displayValue: String(values.sprinteur),
+      },
+      rouleur: {
+        cardId: `challenger-${result.cardId ?? 'fatigue'}`,
+        displayValue: String(values.rouleur),
+      },
+    };
+  }
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+}
+
+function areOtherTeamsRefreshed(): boolean {
+  const stage = getActiveSoloStageState();
+
+  return stage.teams
+    .filter((team) => team.teamType !== 'challenger')
+    .every((team) => {
+      if (team.teamType === 'peloton') {
+        return team.refreshUsed?.peloton === true;
+      }
+
+      if (team.teamType === 'human' && !team.usesAppDraw) {
+        return true;
+      }
+
+      return (
+        team.refreshUsed?.sprinteur === true &&
+        team.refreshUsed?.rouleur === true
+      );
+    });
+}
+
+async function refreshChallengersIfReady() {
+  const stage = getActiveSoloStageState();
+
+if (!stage.challengerDeck) return;
+if (stage.challengerRefreshUsed) return;
+
+const hasAppAssistedTeam = stage.teams.some(
+  (team) =>
+    team.teamType !== 'challenger' &&
+    (team.teamType !== 'human' || team.usesAppDraw)
+);
+
+if (!hasAppAssistedTeam) return;
+if (!areOtherTeamsRefreshed()) return;
+
+  const cardsBefore = stage.challengerDeck.deck.length;
+
+  refreshChallengerDeck(stage.challengerDeck);
+
+  const cardsReturned =
+    stage.challengerDeck.deck.length - cardsBefore;
+
+  stage.challengerRefreshUsed = true;
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+
+  Alert.alert(
+  'Challenger Deck Refreshed',
+  `${cardsReturned} cards returned to the deck and shuffled.`
+);
+}
+
+async function refreshChallengerManually() {
+  const stage = getActiveSoloStageState();
+
+  if (!stage.challengerDeck) return;
+  if (stage.challengerRefreshUsed) return;
+
+  const cardsBefore = stage.challengerDeck.deck.length;
+
+  refreshChallengerDeck(stage.challengerDeck);
+
+  const cardsReturned =
+    stage.challengerDeck.deck.length - cardsBefore;
+
+  stage.challengerRefreshUsed = true;
+
+  await saveGame();
+  await updateActiveSavedGame();
+
+  setRefreshKey((current) => current + 1);
+
+  Alert.alert(
+    'Challenger Deck Refreshed',
+    `${cardsReturned} cards returned to the deck and shuffled.`
+  );
 }
 
 async function drawAIBreakawayBid1() {
@@ -482,13 +703,7 @@ const target = chooseWeightedBreakawayTarget(
 
 bid.target = target;
 
-console.log('BREAKAWAY TARGET', {
-  playerIndex,
-  targetRange,
-  fatigueCards,
-  stageType: soloStage.stageType,
-  target,
-});
+
 
 const selectedCard =
   chooseAIBreakawayBid1Card(
@@ -787,9 +1002,22 @@ return (
       <Pressable
         style={styles.breakawayButton}
        onPress={() => {
-  Alert.alert(
-    'No Breakaway',
-    'Are you sure? This choice cannot be changed.',
+  const hasChallenger = soloStage.teams.some(
+  (team) => team.teamType === 'challenger'
+);
+
+const onlyHumanDraw = soloStage.teams
+  .filter((team) => team.teamType !== 'challenger')
+  .every(
+    (team) =>
+      team.teamType === 'human' && !team.usesAppDraw
+  );
+
+Alert.alert(
+  'No Breakaway',
+  hasChallenger && onlyHumanDraw
+    ? 'Are you sure? This choice cannot be changed.\n\nChallenger cards are drawn immediately. Remember to draw your Human cards now.'
+    : 'Are you sure? This choice cannot be changed.',
     [
       {
         text: 'Cancel',
@@ -1380,6 +1608,16 @@ Draw Human teams before dummy teams.
     ? teamState?.playedCards?.[playedCardKey]
     : undefined;
 
+const challengerDraw =
+  item.drawMode === 'challenger'
+    ? soloStage.challengerLastDraw
+    : undefined;
+
+const challengerBaseValue =
+  challengerDraw && playedCard
+    ? Number(playedCard.displayValue) - challengerDraw.bonus
+    : undefined;
+
 const isDrawLocked = Boolean(playedCard);
 
 const draftTeam = createGameDraft.dummyTeams.find(
@@ -1402,18 +1640,21 @@ const playedCardValue = playedCard
 
   return (
     <Pressable
-            key={item.id}
-            style={styles.row}
- onPress={() => {
-  router.push({
-    pathname: '/draw',
-    params: {
-      teamId: item.teamId,
-      riderKey: item.riderKey ?? '',
-      drawMode: item.drawMode,
-    },
-  });
-}}>
+  key={item.id}
+  style={styles.row}
+  disabled={item.drawMode === 'challenger'}
+  onPress={() => {
+    if (item.drawMode === 'challenger') return;
+
+    router.push({
+      pathname: '/draw',
+      params: {
+        teamId: item.teamId,
+        riderKey: item.riderKey ?? '',
+        drawMode: item.drawMode,
+      },
+    });
+  }}>
                 <Image
   source={riderImages[item.color]}
   style={styles.avatar}
@@ -1427,9 +1668,15 @@ const playedCardValue = playedCard
   {playedCard ? (
   <View style={styles.playedCardRow}>
     <Text style={styles.rowSubText}>
-      {getDrawModeLabel(item.drawMode)} • Played:{' '}
-      {playedCard.displayValue.replace('*', '')}
-    </Text>
+  {getDrawModeLabel(item.drawMode)} • Played:{' '}
+  {playedCard.displayValue.replace('*', '')}
+
+  {item.drawMode === 'challenger' &&
+  challengerDraw &&
+  challengerDraw.bonus > 0 &&
+  challengerBaseValue !== undefined &&
+  ` (${challengerBaseValue} + 1)\n(${challengerDraw.plusOneCount} × +1 cards drawn)`}
+</Text>
 
     {isSpecialPlayedCard &&
       renderPlayedCardSpecialIcon(
@@ -1446,17 +1693,86 @@ const playedCardValue = playedCard
 </View>
 
 <Text style={styles.arrow}>
-  {isDrawLocked ? '✓' : '›'}
+  {isDrawLocked ? '✓' : item.drawMode === 'challenger' ? '–' : '›'}
 </Text>
               </Pressable>
   );
 })}
 
+{soloStage.challengerDeck &&
+  !soloStage.challengerRefreshUsed &&
+  soloStage.teams.every(
+    (team) =>
+      team.teamType === 'challenger' ||
+      (team.teamType === 'human' && !team.usesAppDraw)
+  ) && (
+    <Pressable
+      style={styles.button}
+      onPress={() => {
+        Alert.alert(
+          'Refresh Challenger?',
+          'Have all human players completed their refresh?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Refresh',
+              onPress: () => {
+                void refreshChallengerManually();
+              },
+            },
+          ]
+        );
+      }}
+    >
+      <Text style={styles.buttonText}>
+        Refresh Challenger
+      </Text>
+    </Pressable>
+  )}
+
 <Pressable
   style={styles.incompleteRoundRow}
-  onPress={() =>
-    setAllowIncompleteRound((current) => !current)
-  }>
+  onPress={() => {
+  // Hvis incomplete round allerede er aktiveret,
+  // skal den bare kunne slås fra igen.
+  if (allowIncompleteRound) {
+    setAllowIncompleteRound(false);
+    return;
+  }
+
+  const stage = getActiveSoloStageState();
+
+  const challengerNeedsDraw =
+    stage.teams.some(
+      (team) =>
+        team.teamType === 'challenger' &&
+        !team.playedCards?.sprinteur &&
+        !team.playedCards?.rouleur
+    );
+
+  if (challengerNeedsDraw) {
+    Alert.alert(
+      'Incomplete Round',
+      'Challenger cards will be drawn automatically for this round. Continue?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            await drawChallengersIfReady(true);
+            setAllowIncompleteRound(true);
+          },
+        },
+      ]
+    );
+    return;
+  }
+
+  setAllowIncompleteRound(true);
+}}>
   <View
     style={[
       styles.incompleteRoundToggle,
@@ -1480,7 +1796,41 @@ const playedCardValue = playedCard
       styles.buttonDisabled,
   ]}
   disabled={!(canEndRound() || allowIncompleteRound)}
-  onPress={endRound}>
+  onPress={() => {
+  const stage = getActiveSoloStageState();
+
+  const hasChallenger = stage.teams.some(
+    (team) => team.teamType === 'challenger'
+  );
+
+  const otherTeams = stage.teams.filter(
+    (team) => team.teamType !== 'challenger'
+  );
+
+  const onlyHumanDraw =
+    otherTeams.length > 0 &&
+    otherTeams.every(
+      (team) =>
+        team.teamType === 'human' && !team.usesAppDraw
+    );
+
+  if (hasChallenger && onlyHumanDraw) {
+    Alert.alert(
+      'Next Round',
+      'Challenger cards will be drawn automatically. Remember to draw the Human cards first.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: () => void endRound(),
+        },
+      ]
+    );
+    return;
+  }
+
+  void endRound();
+}}>
   <Text style={styles.buttonText}>
     End Round {getCurrentRound()}
   </Text>

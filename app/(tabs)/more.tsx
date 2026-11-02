@@ -385,8 +385,13 @@ const canEditGame =
   title="Special Rider Test"
   onPress={() => router.push('/special-rider-test')}
 />
-*/}
 
+
+<MenuButton
+  title="Challenger Test"
+  onPress={() => router.push('/dev/challenger-test')}
+/>
+*/}
         {canEditGame && (
   <MenuButton
     title="Edit Game"

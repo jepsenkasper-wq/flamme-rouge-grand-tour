@@ -202,6 +202,28 @@ export default function LiveDummyPlayersScreen() {
                   Peloton
                 </Text>
               </Pressable>
+
+                  <Pressable
+  onPress={() =>
+    updateDummyType(index, 'challenger')
+  }
+  style={[
+    styles.typeButton,
+    dummyTypes[index] === 'challenger' &&
+      styles.typeButtonSelected,
+  ]}
+>
+  <Text
+    style={[
+      styles.typeButtonText,
+      dummyTypes[index] === 'challenger' &&
+        styles.typeButtonTextSelected,
+    ]}
+  >
+    Challenger
+  </Text>
+</Pressable>
+
             </View>
           </View>
         ))}

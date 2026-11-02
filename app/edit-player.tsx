@@ -35,6 +35,7 @@ const TEAM_TYPES = [
   { label: 'Normal AI', value: 'normal-ai' },
   { label: 'Muscle', value: 'muscle' },
   { label: 'Peloton', value: 'peloton' },
+  { label: 'Challenger', value: 'challenger' },
 ] as const;
 
 const DRAW_MODES = [
@@ -79,11 +80,11 @@ export default function EditPlayerScreen() {
   useState(false);
 
 const [liveTeamType, setLiveTeamType] = useState<
-  'human' | 'normal-ai' | 'muscle' | 'peloton' | null
+  'human' | 'normal-ai' | 'muscle' | 'peloton' | 'challenger' | null
 >(null);
 
 const [liveTeamTypes, setLiveTeamTypes] = useState<
-  ('human' | 'normal-ai' | 'muscle' | 'peloton')[]
+  ('human' | 'normal-ai' | 'muscle' | 'peloton' | 'challenger')[]
 >([]);
 
   const playerName =
@@ -110,7 +111,7 @@ const [drawMode, setDrawMode] = useState(
 
 const [originalLiveTeamType, setOriginalLiveTeamType] =
   useState<
-    'human' | 'normal-ai' | 'muscle' | 'peloton' | null
+    'human' | 'normal-ai' | 'muscle' | 'peloton' | 'challenger' | null
   >(null);
 
 const [originalSprinteurSpecialRiderId, setOriginalSprinteurSpecialRiderId] =
@@ -465,6 +466,20 @@ const canDeleteLivePlayer =
   </>
 )}
 
+{isDummyGame && !liveSession && (
+  <Text
+    style={{
+      fontSize: 13,
+      color: Colors.brown,
+      textAlign: 'center',
+      marginTop: 12,
+      marginBottom: 4,
+    }}
+  >
+    Changes made during an active stage will restart the stage.
+    All card draws from the current stage will be lost.
+  </Text>
+)}
   <Pressable
   style={styles.button}
   onPress={async () => {

@@ -66,6 +66,12 @@ import { getActiveLiveGameSession } from '@/lib/live/activeLiveGame';
 import { createGameDraft } from '@/lib/createGameDraft';
 import { getLivePlayerIdentity } from '@/lib/livePlayerIdentity';
 
+import { getChallengerValues, ChallengerDrawResult } from '@/lib/solo/challengerDeckEngine';
+
+import type {
+  ChallengerColor,
+} from '@/lib/solo/challengerCards';
+
 const riderImages: Record<string, any> = {
   Blue: require('@/assets/images/riders/rider-blue.png'),
   White: require('@/assets/images/riders/rider-white.png'),
@@ -584,10 +590,11 @@ type LiveDrawListItem = {
   teamName: string;
   color?: string;
   teamType:
-    | 'human'
-    | 'normal-ai'
-    | 'muscle'
-    | 'peloton';
+  | 'human'
+  | 'normal-ai'
+  | 'muscle'
+  | 'peloton'
+  | 'challenger';
   riderKey?: 'sprinteur' | 'rouleur';
   riderLabel: string;
   specialRiderId?: SpecialRiderId;
@@ -605,10 +612,12 @@ const liveDrawList: LiveDrawListItem[] =
       )
     : undefined;
     const canOpen =
-      team.teamType === 'human'
-        ? team.ownerPlayerId ===
-          liveSession?.playerId
-        : liveSession?.isAdmin === true;
+  team.teamType === 'challenger'
+    ? false
+    : team.teamType === 'human'
+      ? team.ownerPlayerId ===
+        liveSession?.playerId
+      : liveSession?.isAdmin === true;
 
     if (team.teamType === 'peloton') {
       return [
@@ -674,6 +683,11 @@ const allPlayersReady =
 const allRefreshesCompleted =
   liveDrawList.length > 0 &&
   liveDrawList.every((item) => {
+    // Challenger bruger sin egen fælles refresh.
+    if (item.teamType === 'challenger') {
+      return true;
+    }
+
     const statusKey =
       item.teamType === 'peloton'
         ? item.teamId
@@ -687,7 +701,14 @@ const allRefreshesCompleted =
         | undefined;
 
     return status?.refreshed === true;
-  }); 
+  });
+
+// NY KONTROL
+const hasStageBeenRefreshed =
+  Object.values(stageState?.drawStatus ?? {}).some(
+    (status) =>
+      (status as { refreshed?: boolean })?.refreshed === true
+  );
 
 const isRefreshBlockingNextRound =
   stageState?.refreshRequested === true &&
@@ -1547,6 +1568,21 @@ onPress={() => {
           revealKey
         ] as DummyCard | undefined;
 
+      const challengerDraw =
+  item.teamType === 'challenger'
+    ? stageState.revealedCards?.[
+        revealKey
+      ] as ChallengerDrawResult | undefined
+    : undefined;
+
+const challengerValue =
+  challengerDraw && item.riderKey
+    ? getChallengerValues(
+        challengerDraw,
+        (item.color ?? 'Blue').toLowerCase() as ChallengerColor
+      )[item.riderKey]
+    : undefined;
+
       const specialRider =
   item.specialRiderId
     ? specialRiders[item.specialRiderId]
@@ -1614,10 +1650,16 @@ onPress={() => {
 
    <View style={styles.revealedCardValue}>
   <Text style={styles.breakawayBidValue}>
-    {revealedCard
-      ? revealedCard.displayValue ??
-        revealedCard.value
-      : '-'}
+    {item.teamType === 'challenger'
+  ? challengerValue !== undefined
+    ? challengerDraw?.bonus === 1
+      ? `${challengerValue} (${challengerValue - 1}+1)`
+      : challengerValue
+    : '-'
+  : revealedCard
+    ? revealedCard.displayValue ??
+      revealedCard.value
+    : '-'}
   </Text>
 
   {revealedCard?.isSpecial &&
@@ -1890,7 +1932,8 @@ disabled={
 
   {liveSession.isAdmin &&
   allPlayersReady &&
-  !stageState.refreshRequested && (
+  !stageState.refreshRequested &&
+  !hasStageBeenRefreshed && (
     <Pressable
       style={styles.button}
       onPress={() => {

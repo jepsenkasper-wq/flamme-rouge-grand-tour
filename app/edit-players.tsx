@@ -31,7 +31,7 @@ export default function EditPlayersScreen() {
   const [, setRefreshVersion] = useState(0);
 
 const [liveTeamTypes, setLiveTeamTypes] = useState<
-  ('human' | 'normal-ai' | 'muscle' | 'peloton')[]
+  ('human' | 'normal-ai' | 'muscle' | 'peloton' | 'challenger')[]
 >([]);
 
 useFocusEffect(
@@ -128,6 +128,10 @@ const sprinteurSpecialRiderId = liveSession
 
 {teamType === 'peloton' && (
   <Text>Peloton Team</Text>
+)}
+
+{teamType === 'challenger' && (
+  <Text>Challenger Team</Text>
 )}
 
         {showSpecialRiders && (
